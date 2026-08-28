@@ -1,11 +1,13 @@
 'use client';
-
+import { supabase } from '@/lib/supabase';
+import { getDeviceId } from '@/lib/deviceId';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { Tier } from '@/types';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+
+type Tier = 'standard' | 'premium';
 import { CamelIcon, GuidingStarIcon, PaymeBadge, ClickBadge, UzumBadge } from '@/components/Icons';
 import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock } from 'lucide-react';
 import Link from 'next/link';
@@ -52,6 +54,8 @@ export default function CounselorPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [bookingTicket, setBookingTicket] = useState<BookingTicketData | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   if (!counselor) {
     return (
@@ -116,44 +120,65 @@ export default function CounselorPage() {
     if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      return;
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!validateForm()) {
+    return;
+  }
 
-    const bookingId = `RNM-${Math.floor(1000 + Math.random() * 9000)}`;
-    const price = selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice;
+  setSubmitError('');
+  setIsSubmitting(true);
 
-    const newBooking: BookingTicketData = {
-      id: bookingId,
-      counselorId: counselor.id,
-      counselorName: counselor.fullName,
-      counselorHeadline: counselor.headline,
-      counselorAvatar: counselor.avatarUrl,
-      tier: selectedTier,
-      price: price,
-      paymentMethod: paymentMethod,
-      slot: selectedSlot,
-      studentName: fullName,
-      email: email,
-      phone: phone,
-      telegram: telegram,
-      education: education,
-      question: question,
-      createdAt: new Date().toISOString(),
-    };
+  const bookingId = `RNM-${Math.floor(1000 + Math.random() * 9000)}`;
+  const price = selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice;
 
-    // Save to LocalStorage
-    try {
-      const existing = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-      localStorage.setItem('rahnamo_bookings', JSON.stringify([newBooking, ...existing]));
-    } catch (err) {
-      console.error(err);
-    }
-
-    setBookingTicket(newBooking);
+  const newBooking: BookingTicketData = {
+    id: bookingId,
+    counselorId: counselor.id,
+    counselorName: counselor.fullName,
+    counselorHeadline: counselor.headline,
+    counselorAvatar: counselor.avatarUrl,
+    tier: selectedTier,
+    price: price,
+    paymentMethod: paymentMethod,
+    slot: selectedSlot,
+    studentName: fullName,
+    email: email,
+    phone: phone,
+    telegram: telegram,
+    education: education,
+    question: question,
+    createdAt: new Date().toISOString(),
   };
+
+  const { error } = await supabase.from('bookings').insert({
+    id: newBooking.id,
+    device_id: getDeviceId(),
+    counselor_id: newBooking.counselorId,
+    counselor_name: newBooking.counselorName,
+    counselor_headline: newBooking.counselorHeadline,
+    counselor_avatar: newBooking.counselorAvatar,
+    tier: newBooking.tier,
+    price: newBooking.price,
+    slot: newBooking.slot,
+    student_name: newBooking.studentName,
+    email: newBooking.email,
+    phone: newBooking.phone,
+    telegram: newBooking.telegram,
+    education: newBooking.education,
+    question: newBooking.question,
+  });
+
+  setIsSubmitting(false);
+
+  if (error) {
+    console.error(error);
+    setSubmitError("Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.");
+    return;
+  }
+
+  setBookingTicket(newBooking);
+};
 
   const copyBookingId = () => {
     if (bookingTicket) {
@@ -537,10 +562,16 @@ export default function CounselorPage() {
 
               <button
                 type="submit"
-                className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                To'lovni amalga oshirish ({selectedTier === 'standard' ? counselor.standardPrice.toLocaleString() : counselor.premiumPrice.toLocaleString()} UZS)
+                {isSubmitting
+                  ? 'Yuborilmoqda...'
+                  : `To'lovni amalga oshirish (${(selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString()} UZS)`}
               </button>
+              {submitError && (
+                <p className="text-xs text-red-600 mt-2 text-center">{submitError}</p>
+              )}
             </form>
           )}
         </div>

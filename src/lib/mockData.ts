@@ -1,4 +1,16 @@
-import { Counselor } from '@/types';
+type Counselor = {
+  id: string;
+  fullName: string;
+  headline: string;
+  avatarUrl: string;
+  specialties: string[];
+  bio: string;
+  standardPrice: number;
+  premiumPrice: number;
+  rating: number;
+  reviewsCount: number;
+  availableSlots: string[];
+};
 
 export const INITIAL_COUNSELORS: Counselor[] = [
   {
