@@ -196,6 +196,25 @@ export default function CounselorPage() {
       meetLink: newBooking.meetLink || meetLink,
     }).catch((err) => console.warn('Telegram notify error:', err));
 
+    // Send Email Receipt (non-blocking)
+    fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newBooking.id,
+        studentName: newBooking.studentName,
+        counselorName: newBooking.counselorName,
+        tier: newBooking.tier,
+        price: newBooking.price,
+        slot: newBooking.slot,
+        paymentMethod: newBooking.paymentMethod,
+        email: newBooking.email,
+        telegram: newBooking.telegram,
+        question: newBooking.question,
+        meetLink: newBooking.meetLink || meetLink,
+      }),
+    }).catch((err) => console.warn('Email receipt error:', err));
+
     // Non-blocking sync to Supabase (if configured)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
