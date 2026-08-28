@@ -79,7 +79,7 @@ export default function Home() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-3.5 text-xs text-stone-400 hover:text-stone-600 font-bold"
+                  className="absolute right-3 top-3.5 text-xs text-stone-400 hover:text-stone-600 font-bold cursor-pointer"
                 >
                   ✕ Clear
                 </button>
@@ -157,32 +157,36 @@ export default function Home() {
               {sortedCounselors.map((counselor) => (
                 <div
                   key={counselor.id}
-                  className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group hover:-translate-y-1 relative"
+                  className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group hover:-translate-y-1"
                 >
                   <div>
-                    {/* Avatar & Header */}
+                    {/* Top Row: Verified Badge & Response Time */}
+                    <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-amber-900/10">
+                      <div className="flex items-center gap-1.5 bg-amber-100/70 text-amber-950 text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-amber-300/50">
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-700 fill-amber-100" />
+                        <span>Tasdiqlangan Rahnamo</span>
+                      </div>
+
+                      {counselor.responseTime && (
+                        <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                          <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
+                          <span>Javob: {counselor.responseTime}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Avatar & Name Header */}
                     <div className="flex items-start gap-4">
                       <img
                         src={counselor.avatarUrl}
                         alt={counselor.fullName}
-                        className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-200 shadow-xs group-hover:border-amber-400 transition-all flex-shrink-0"
+                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-amber-200 shadow-xs group-hover:border-amber-400 transition-all flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-1 flex-wrap">
-                          <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-1.5 group-hover:text-amber-800 transition-colors">
-                            {counselor.fullName}
-                            <ShieldCheck className="w-4 h-4 text-amber-700 fill-amber-100 flex-shrink-0" />
-                          </h3>
-
-                          {counselor.responseTime && (
-                            <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
-                              <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
-                              <span>{counselor.responseTime}</span>
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="text-xs text-stone-600 mt-1 line-clamp-2 leading-relaxed">
+                        <h3 className="font-serif font-bold text-base text-amber-950 group-hover:text-amber-800 transition-colors truncate">
+                          {counselor.fullName}
+                        </h3>
+                        <p className="text-xs text-stone-600 mt-0.5 line-clamp-2 leading-relaxed">
                           {counselor.headline}
                         </p>
                         
@@ -194,7 +198,7 @@ export default function Home() {
                             <span className="text-stone-400 font-normal">({counselor.reviewsCount})</span>
                           </div>
                           {counselor.totalSessions && (
-                            <span className="text-[10px] text-stone-500 font-normal">
+                            <span className="text-[10px] text-stone-500 font-normal truncate">
                               • {counselor.totalSessions} ta qabul
                             </span>
                           )}
@@ -299,7 +303,7 @@ export default function Home() {
               </div>
               <h3 className="font-serif font-bold text-lg text-amber-100">1-ga-1 Video muloqot</h3>
               <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                Chipta va Google Meet havolasi darhol elektron pochtangizga va Telegram hisobingizga yuboriladi. Belgilangan vaqtda suhbatni boshlang.
+                Chipta va Google Meet havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang.
               </p>
             </div>
           </div>
