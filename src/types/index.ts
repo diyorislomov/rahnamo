@@ -12,4 +12,8 @@ export interface Counselor {
   rating: number;
   reviewsCount: number;
   availableSlots: string[];
+  responseTime?: string;
+  totalSessions?: number;
+  companyBadge?: string;
+  outcomes?: string[];
 }

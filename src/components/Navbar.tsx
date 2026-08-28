@@ -2,51 +2,62 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CamelIcon, GuidingStarIcon } from '@/components/Icons';
-import { Menu, X, CalendarCheck, HelpCircle, UserCheck } from 'lucide-react';
+import { CamelIcon } from '@/components/Icons';
+import { Menu, X, CalendarCheck, UserCheck, Compass, Sparkles } from 'lucide-react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-amber-900/10 bg-[#FAF6EE]/95 backdrop-blur-md px-6 py-4">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-[#FAF6EE]/90 backdrop-blur-md border-b border-amber-900/15 transition-all">
+      {/* Top Banner Notice */}
+      <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 text-amber-100 text-[11px] font-medium py-1.5 px-4 text-center flex items-center justify-center gap-2 shadow-inner">
+        <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" />
+        <span>Buyuk Ipak Yo'li karyera konsultatsiyasi va 1-ga-1 mentorlik platformasi</span>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-700 via-orange-800 to-amber-950 flex items-center justify-center text-amber-100 shadow-md shadow-amber-900/20">
-            <CamelIcon className="w-5 h-5 fill-amber-100" />
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-800 to-amber-950 text-amber-100 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform border border-amber-600/30">
+            <CamelIcon className="w-6 h-6 fill-amber-100" />
           </div>
           <div>
-            <span className="font-serif font-black text-2xl tracking-wide text-amber-950 flex items-center gap-1.5">
+            <span className="font-serif font-extrabold text-xl tracking-tight text-amber-950 block leading-none">
               rahnamo
             </span>
-            <span className="block text-[10px] tracking-widest uppercase font-semibold text-amber-800/70 -mt-1">
-              Silk Road Career Mentors
+            <span className="text-[9px] uppercase tracking-widest text-amber-800 font-bold font-sans block mt-0.5">
+              Silk Road Mentors
             </span>
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-stone-700">
-          <Link href="/" className="hover:text-amber-900 transition-colors">
-            Rahnamolar
+        {/* Desktop Navigation Links */}
+        <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-stone-700">
+          <Link
+            href="/"
+            className="hover:text-amber-900 transition-colors flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-amber-100/60"
+          >
+            <Compass className="w-4 h-4 text-amber-800" /> Rahnamolar Katalogi
           </Link>
-          <Link href="/#how-it-works" className="hover:text-amber-900 transition-colors flex items-center gap-1.5">
-            <HelpCircle className="w-3.5 h-3.5 text-amber-800" />
+          <Link
+            href="/#how-it-works"
+            className="hover:text-amber-900 transition-colors py-1 px-2.5 rounded-lg hover:bg-amber-100/60"
+          >
             Qanday ishlaydi?
           </Link>
           <Link
             href="/my-bookings"
-            className="hover:text-amber-900 transition-colors flex items-center gap-1.5 bg-amber-100/80 text-amber-950 px-3.5 py-1.5 rounded-full border border-amber-300/60"
+            className="flex items-center gap-1.5 bg-amber-100/80 hover:bg-amber-200/80 text-amber-950 px-3.5 py-2 rounded-xl border border-amber-300/80 shadow-2xs transition-all"
           >
-            <CalendarCheck className="w-3.5 h-3.5 text-amber-800" />
+            <CalendarCheck className="w-4 h-4 text-amber-800" />
             Mening qabullarim
           </Link>
           <Link
             href="/become-counselor"
-            className="bg-amber-900 hover:bg-amber-800 text-amber-50 px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+            className="bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5 border border-amber-700/50"
           >
-            <UserCheck className="w-3.5 h-3.5" />
+            <UserCheck className="w-4 h-4" />
             Rahnamo bo'lish
           </Link>
         </nav>
@@ -54,7 +65,7 @@ export default function Navbar() {
         {/* Mobile Hamburger */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden p-2 text-stone-700 hover:text-amber-900 focus:outline-none"
+          className="md:hidden p-2 text-amber-950 hover:text-amber-700 focus:outline-none rounded-xl bg-amber-100/60"
           aria-label="Toggle navigation menu"
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -63,32 +74,32 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       {isOpen && (
-        <div className="md:hidden pt-4 pb-3 border-t border-amber-900/10 mt-3 space-y-3">
+        <div className="md:hidden bg-[#FAF6EE] border-b border-amber-900/20 px-4 pt-2 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
           <Link
             href="/"
             onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/50 rounded-lg"
+            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
           >
             Rahnamolar katalogi
           </Link>
           <Link
             href="/#how-it-works"
             onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/50 rounded-lg"
+            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
           >
             Qanday ishlaydi?
           </Link>
           <Link
             href="/my-bookings"
             onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-amber-950 px-3 py-2 bg-amber-100/80 rounded-lg border border-amber-300/60"
+            className="block text-sm font-semibold text-amber-950 px-3 py-2.5 bg-amber-100/80 rounded-xl border border-amber-300/60"
           >
             Mening qabullarim
           </Link>
           <Link
             href="/become-counselor"
             onClick={() => setIsOpen(false)}
-            className="block text-center text-xs font-bold text-amber-50 bg-amber-900 px-4 py-2.5 rounded-xl"
+            className="block text-center text-xs font-bold text-amber-50 bg-amber-900 px-4 py-3 rounded-xl shadow-xs"
           >
             Rahnamo bo'lib qo'shilish
           </Link>

@@ -1,16 +1,4 @@
-type Counselor = {
-  id: string;
-  fullName: string;
-  headline: string;
-  avatarUrl: string;
-  specialties: string[];
-  bio: string;
-  standardPrice: number;
-  premiumPrice: number;
-  rating: number;
-  reviewsCount: number;
-  availableSlots: string[];
-};
+import { Counselor } from '@/types';
 
 export const INITIAL_COUNSELORS: Counselor[] = [
   {
@@ -24,6 +12,10 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     premiumPrice: 130000,
     rating: 4.9,
     reviewsCount: 38,
+    responseTime: '< 1 soat',
+    totalSessions: 142,
+    companyBadge: 'Ex-Ankara Hospital',
+    outcomes: ['Germany Residency Licensing Pass', 'Turkey TUS Exam Strategy'],
     availableSlots: [
       'Saturday, 15:00 - 15:30',
       'Saturday, 16:00 - 16:30',
@@ -41,6 +33,10 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     premiumPrice: 120000,
     rating: 5.0,
     reviewsCount: 29,
+    responseTime: '< 2 soat',
+    totalSessions: 98,
+    companyBadge: 'Shodieva Design Studio',
+    outcomes: ['International Studio Placement', 'First 3 Freelance Clients'],
     availableSlots: [
       'Friday, 18:00 - 18:30',
       'Saturday, 12:00 - 12:30',
@@ -58,6 +54,10 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     premiumPrice: 150000,
     rating: 4.8,
     reviewsCount: 22,
+    responseTime: '< 3 soat',
+    totalSessions: 76,
+    companyBadge: 'LL.M. Leiden Alumnus',
+    outcomes: ['Top Tashkent Law Firm Hire', 'Leiden LL.M. Admission'],
     availableSlots: [
       'Saturday, 10:00 - 10:30',
       'Sunday, 17:00 - 17:30',
@@ -74,6 +74,10 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     premiumPrice: 140000,
     rating: 4.9,
     reviewsCount: 45,
+    responseTime: '< 30 daqiqa',
+    totalSessions: 185,
+    companyBadge: 'Fulbright Scholar',
+    outcomes: ['Fulbright 2024 Awardee', '100% Scholarship Winner'],
     availableSlots: [
       'Monday, 19:00 - 19:30',
       'Thursday, 19:00 - 19:30',
@@ -91,6 +95,10 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     premiumPrice: 110000,
     rating: 4.9,
     reviewsCount: 16,
+    responseTime: '< 2 soat',
+    totalSessions: 54,
+    companyBadge: 'Central Asia Agribiz',
+    outcomes: ['First Agri-Export Contract', 'Cold Chain Supply Plan'],
     availableSlots: [
       'Saturday, 13:00 - 13:30',
       'Sunday, 15:00 - 15:30',
@@ -107,6 +115,10 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     premiumPrice: 160000,
     rating: 5.0,
     reviewsCount: 52,
+    responseTime: '< 15 daqiqa',
+    totalSessions: 210,
+    companyBadge: 'Ex-Senior Architect',
+    outcomes: ['FAANG/Global Tech Offer', 'System Design Mastery'],
     availableSlots: [
       'Saturday, 16:00 - 16:30',
       'Sunday, 10:00 - 10:45',

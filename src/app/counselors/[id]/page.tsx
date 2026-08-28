@@ -317,10 +317,41 @@ export default function CounselorPage() {
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-amber-900/10">
+          {/* Mentor Cruise Key Stats */}
+          <div className="mt-4 pt-4 border-t border-amber-900/10 grid grid-cols-2 gap-2 text-[11px] font-semibold text-amber-950">
+            {counselor.responseTime && (
+              <div className="bg-emerald-50/80 p-2 rounded-xl border border-emerald-200 text-emerald-900 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
+                <span>{counselor.responseTime} javob</span>
+              </div>
+            )}
+            {counselor.totalSessions && (
+              <div className="bg-amber-50/80 p-2 rounded-xl border border-amber-200 text-amber-900 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                <span>{counselor.totalSessions} ta qabul</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-amber-900/10">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Rahnamo haqida</h4>
             <p className="text-xs text-stone-600 mt-2 leading-relaxed">{counselor.bio}</p>
           </div>
+
+          {/* Student Outcomes */}
+          {counselor.outcomes && counselor.outcomes.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-amber-900/10">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Natijalar & Yutuqlar</h4>
+              <div className="space-y-1.5 mt-2">
+                {counselor.outcomes.map((out) => (
+                  <div key={out} className="flex items-center gap-1.5 text-[11px] font-medium text-amber-950 bg-amber-50 p-2 rounded-xl border border-amber-200/60">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                    <span>{out}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 pt-4 border-t border-amber-900/10">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Yo'nalishlar</h4>

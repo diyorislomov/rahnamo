@@ -5,10 +5,15 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
-import { CamelIcon, GuidingStarIcon } from '@/components/Icons';
-import { ArrowLeft, CheckCircle2, UserCheck, Send, Mail, Phone, Shield, Sparkles } from 'lucide-react';
+import { CamelIcon } from '@/components/Icons';
+import { ArrowLeft, CheckCircle2, UserCheck, Send, Mail, Phone, Shield, Sparkles, DollarSign, Calendar, Globe, Award, TrendingUp } from 'lucide-react';
 
 export default function BecomeCounselorPage() {
+  // Earnings Calculator State
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(5);
+  const [avgPrice, setAvgPrice] = useState(120000);
+
+  // Form State
   const [fullName, setFullName] = useState('');
   const [headline, setHeadline] = useState('');
   const [specialties, setSpecialties] = useState('');
@@ -22,6 +27,9 @@ export default function BecomeCounselorPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Monthly Earnings Calculation
+  const estimatedMonthlyEarnings = sessionsPerWeek * avgPrice * 4;
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -48,7 +56,7 @@ export default function BecomeCounselorPage() {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
-      newErrors.email = "To'g me'yoriy email kiriting.";
+      newErrors.email = "To'g'ri email kiriting.";
     }
 
     if (phone.replace(/\D/g, '').length < 9) {
@@ -108,7 +116,7 @@ export default function BecomeCounselorPage() {
       <div>
         <Navbar />
 
-        <main className="max-w-3xl mx-auto px-6 py-10">
+        <main className="max-w-5xl mx-auto px-6 py-10">
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 bg-amber-100 px-3.5 py-2 rounded-xl border border-amber-300/60 mb-6 shadow-xs"
@@ -116,19 +124,113 @@ export default function BecomeCounselorPage() {
             <ArrowLeft className="w-4 h-4" /> Bosh sahifa
           </Link>
 
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/5 border border-amber-900/10 text-amber-900 text-xs font-semibold mb-3">
+          {/* Hero Header */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-semibold mb-3">
               <Sparkles className="w-3.5 h-3.5 text-amber-700" />
-              <span>Rahnamolar safiga qo'shiling</span>
+              <span>MentorCruise darajasidagi platforma</span>
             </div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-amber-950">
-              Rahnamo bo'lib tajribangizni ulashing
+            <h1 className="font-serif text-3xl sm:text-5xl font-extrabold text-amber-950 leading-tight">
+              Rahnamo bo'lib o'zingiz xohlagan grafikda daromad oling
             </h1>
-            <p className="text-stone-600 text-xs sm:text-sm mt-2 max-w-lg mx-auto">
-              Yoshlarga to'g'ri yo'l ko me'yorini ko'rsating, 1-ga-1 sessiyalar o'tkazing va o'z vaqtingiz uchun munosib daromad oling.
+            <p className="text-stone-600 text-xs sm:text-base mt-3 max-w-2xl mx-auto">
+              Markaziy Osiyoning iqtidorli yoshlariga 1-ga-1 yo'l-yo'riq ko'rsating, shaxsiy brendingizni rivojlantiring va bo'sh vaqtingizda daromadga ega bo'ling.
             </p>
           </div>
 
+          {/* MentorCruise Style Calculator & Perks Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            {/* Left Col: Earnings Calculator */}
+            <div className="md:col-span-1 bg-gradient-to-b from-[#1E1B4B] to-[#2A265F] text-amber-50 p-6 sm:p-8 rounded-3xl border border-amber-400/20 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                  <TrendingUp className="w-4 h-4" /> Daromad kalkulyatori
+                </div>
+                <h3 className="font-serif font-bold text-xl text-amber-100 mt-2">
+                  Qancha daromad olishingiz mumkin?
+                </h3>
+                <p className="text-xs text-amber-200/70 mt-1">
+                  Haftasiga necha soat konsultatsiya bera olasiz?
+                </p>
+
+                {/* Slider */}
+                <div className="my-6 space-y-3">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span>Haftalik qabullar:</span>
+                    <span className="text-amber-300 font-bold text-sm">{sessionsPerWeek} ta sessiya</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    value={sessionsPerWeek}
+                    onChange={(e) => setSessionsPerWeek(parseInt(e.target.value, 10))}
+                    className="w-full accent-amber-400 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-amber-300/60">
+                    <span>1 sessiya</span>
+                    <span>20 sessiya</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Monthly Result Card */}
+              <div className="bg-white/10 border border-amber-300/20 p-4 rounded-2xl text-center">
+                <span className="text-[11px] text-amber-200/80 uppercase font-semibold block">Taxminiy oylik daromad</span>
+                <div className="text-2xl sm:text-3xl font-serif font-extrabold text-amber-300 mt-1">
+                  ~{estimatedMonthlyEarnings.toLocaleString()} <span className="text-xs text-amber-100 font-normal">UZS / oy</span>
+                </div>
+                <span className="text-[10px] text-amber-300/60 block mt-1">
+                  *Platforma komissiyasi ayirilgan
+                </span>
+              </div>
+            </div>
+
+            {/* Right Col: 4 Perks Cards */}
+            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+                  <Calendar className="w-5 h-5 text-amber-800" />
+                </div>
+                <h4 className="font-serif font-bold text-base text-amber-950">100% Moslashuvchan Grafik</h4>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Qachon va qaysi soatlarda konsultatsiya berishni o'zingiz hal qilasiz. Dam olish kunlari yoki kechki payt 30 minut ajratish kifoya.
+                </p>
+              </div>
+
+              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+                  <Globe className="w-5 h-5 text-amber-800" />
+                </div>
+                <h4 className="font-serif font-bold text-base text-amber-950">Masofaviy Muloqot</h4>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Dunyoning qaysi nuqtasida bo'lishingizdan qat'i nazar, Google Meet video havolasi orqali 1-ga-1 suhbat o'tkazing.
+                </p>
+              </div>
+
+              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+                  <Award className="w-5 h-5 text-amber-800" />
+                </div>
+                <h4 className="font-serif font-bold text-base text-amber-950">Shaxsiy Brend & Maqom</h4>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  O'z sohangizda taniling va Markaziy Osiyo yoshlari uchun rasmiy mentor maqomiga ega bo'ling.
+                </p>
+              </div>
+
+              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+                  <Shield className="w-5 h-5 text-amber-800" />
+                </div>
+                <h4 className="font-serif font-bold text-base text-amber-950">Kafolatlangan To'lov</h4>
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Talabalar to'lovni oldindan amalga oshiradilar. Har bir yakunlangan sessiya uchun to'lov kartangizga o'tkazib beriladi.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Section */}
           {submitted ? (
             <div className="bg-white/95 rounded-3xl p-8 border-2 border-emerald-500/30 text-center shadow-md animate-in fade-in zoom-in duration-300">
               <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -148,9 +250,9 @@ export default function BecomeCounselorPage() {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-5">
+            <form onSubmit={handleSubmit} className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm space-y-5">
               <h2 className="font-serif font-bold text-xl text-amber-950 flex items-center gap-2 border-b border-amber-900/10 pb-3">
-                <UserCheck className="w-5 h-5 text-amber-800" /> Profil ma'lumotlaringiz
+                <UserCheck className="w-5 h-5 text-amber-800" /> Rahnamo bo'lib qo'shilish anketasi
               </h2>
 
               <div>
