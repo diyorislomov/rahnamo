@@ -159,28 +159,30 @@ export default function Home() {
                   key={counselor.id}
                   className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group hover:-translate-y-1 relative"
                 >
-                  {/* Top Badge: Response Speed */}
-                  {counselor.responseTime && (
-                    <div className="absolute top-4 right-4 flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full">
-                      <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
-                      <span>Javob: {counselor.responseTime}</span>
-                    </div>
-                  )}
-
                   <div>
                     {/* Avatar & Header */}
                     <div className="flex items-start gap-4">
                       <img
                         src={counselor.avatarUrl}
                         alt={counselor.fullName}
-                        className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-200 shadow-xs group-hover:border-amber-400 transition-all"
+                        className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-200 shadow-xs group-hover:border-amber-400 transition-all flex-shrink-0"
                       />
-                      <div>
-                        <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-1.5 group-hover:text-amber-800 transition-colors">
-                          {counselor.fullName}
-                          <ShieldCheck className="w-4 h-4 text-amber-700 fill-amber-100 flex-shrink-0" />
-                        </h3>
-                        <p className="text-xs text-stone-600 mt-0.5 line-clamp-2 leading-relaxed">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-1 flex-wrap">
+                          <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-1.5 group-hover:text-amber-800 transition-colors">
+                            {counselor.fullName}
+                            <ShieldCheck className="w-4 h-4 text-amber-700 fill-amber-100 flex-shrink-0" />
+                          </h3>
+
+                          {counselor.responseTime && (
+                            <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                              <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
+                              <span>{counselor.responseTime}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-stone-600 mt-1 line-clamp-2 leading-relaxed">
                           {counselor.headline}
                         </p>
                         
