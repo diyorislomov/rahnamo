@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import { CaravanHeroIllustration, GuidingStarIcon } from '@/components/Icons';
 import { Star, ShieldCheck, Search } from 'lucide-react';
 
 export default function HomePage() {
@@ -34,11 +36,11 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200 selection:text-amber-900">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-16 px-6 text-center bg-gradient-to-b from-[#F3EAD8] via-[#FAF6EE] to-[#FAF6EE] border-b border-amber-900/5">
+      {/* Hero Section with Vector Illustration */}
+      <section className="relative overflow-hidden pt-10 pb-6 px-6 text-center bg-gradient-to-b from-[#F3EAD8] via-[#FAF6EE] to-[#FAF6EE] border-b border-amber-900/5">
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-900/5 border border-amber-900/10 text-amber-900 text-xs font-semibold mb-6">
-            <span>✨</span>
+            <GuidingStarIcon className="w-3.5 h-3.5 text-amber-700" />
             <span>Yo'lingizni o'z sohasining yetuk ustozlari bilan toping</span>
           </div>
 
@@ -59,6 +61,7 @@ export default function HomePage() {
               <Search className="absolute left-4 top-3.5 h-5 w-5 text-amber-800/60" />
               <input
                 type="text"
+                aria-label="Rahnamolarni qidirish"
                 placeholder="Qidiruv: shifokor, arxitektor, huquqshunos, stipendiyalar..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -85,14 +88,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Decorative Caravan Silhouette Graphic */}
-        <div className="mt-10 flex items-center justify-center gap-4 text-amber-900/40 text-2xl select-none opacity-80">
-          <span>🏜️</span>
-          <span>🐪</span>
-          <span>🐪</span>
-          <span>🐪</span>
-          <span>✨</span>
-          <span>🕌</span>
+        {/* Crisp Vector Hero Illustration */}
+        <div className="mt-6">
+          <CaravanHeroIllustration />
         </div>
       </section>
 
@@ -191,9 +189,9 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-amber-100 text-amber-900 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold font-serif">
                 2
               </div>
-              <h3 className="font-serif font-bold text-base text-amber-950 mt-4">Vaqtni belgilang</h3>
+              <h3 className="font-serif font-bold text-base text-amber-950 mt-4">Vaqt & To'lov</h3>
               <p className="text-xs text-stone-600 mt-2">
-                O'zingizga ma'qul bo'lgan vaqtni tanlang va rahnamoga asosiy savollaringizni yozing.
+                Qulay vaqtni tanlang, savollaringizni yozing va Payme yoki Click orqali tasdiqlang.
               </p>
             </div>
 
@@ -201,7 +199,7 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-amber-100 text-amber-900 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold font-serif">
                 3
               </div>
-              <h3 className="font-serif font-bold text-base text-amber-950 mt-4">1-ga-1 Suhbat</h3>
+              <h3 className="font-serif font-bold text-base text-amber-950 mt-4">1-ga-1 Jonli Suhbat</h3>
               <p className="text-xs text-stone-600 mt-2">
                 Google Meet orqali jonli muloqot qilib, aniq yo'l xaritasiga ega bo'ling.
               </p>
@@ -209,6 +207,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

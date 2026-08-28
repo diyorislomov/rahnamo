@@ -5,8 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { Tier } from '@/types';
 import Navbar from '@/components/Navbar';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone } from 'lucide-react';
+import Footer from '@/components/Footer';
+import { CamelIcon, GuidingStarIcon, PaymeBadge, ClickBadge, UzumBadge } from '@/components/Icons';
+import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock } from 'lucide-react';
 import Link from 'next/link';
+
+type PaymentMethod = 'payme' | 'click' | 'uzum';
 
 interface BookingTicketData {
   id: string;
@@ -16,6 +20,7 @@ interface BookingTicketData {
   counselorAvatar: string;
   tier: Tier;
   price: number;
+  paymentMethod: PaymentMethod;
   slot: string;
   studentName: string;
   email: string;
@@ -33,6 +38,7 @@ export default function CounselorPage() {
 
   const [selectedTier, setSelectedTier] = useState<Tier>('standard');
   const [selectedSlot, setSelectedSlot] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -42,7 +48,7 @@ export default function CounselorPage() {
   const [education, setEducation] = useState('');
   const [question, setQuestion] = useState('');
 
-  // Validation errors & ticket state
+  // Errors & Ticket state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [bookingTicket, setBookingTicket] = useState<BookingTicketData | null>(null);
   const [copied, setCopied] = useState(false);
@@ -127,6 +133,7 @@ export default function CounselorPage() {
       counselorAvatar: counselor.avatarUrl,
       tier: selectedTier,
       price: price,
+      paymentMethod: paymentMethod,
       slot: selectedSlot,
       studentName: fullName,
       email: email,
@@ -137,7 +144,7 @@ export default function CounselorPage() {
       createdAt: new Date().toISOString(),
     };
 
-    // Save to LocalStorage for "Mening qabullarim"
+    // Save to LocalStorage
     try {
       const existing = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
       localStorage.setItem('rahnamo_bookings', JSON.stringify([newBooking, ...existing]));
@@ -157,7 +164,7 @@ export default function CounselorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans pb-24 selection:bg-amber-200">
+    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans pb-16 selection:bg-amber-200">
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-6 py-6">
@@ -169,7 +176,7 @@ export default function CounselorPage() {
         </Link>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="max-w-4xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
         {/* Left Column: Counselor Profile Card */}
         <div className="md:col-span-1 bg-white/95 p-6 rounded-3xl border border-amber-900/10 shadow-sm h-fit">
           <img
@@ -213,11 +220,13 @@ export default function CounselorPage() {
             /* Digital Rahnamo Ticket */
             <div className="bg-white/95 rounded-3xl border-2 border-amber-900/20 p-6 md:p-8 shadow-md">
               <div className="flex items-center justify-between border-b border-dashed border-amber-900/20 pb-4">
-                <div className="flex items-center gap-2">
-                  <div className="text-2xl">🐪</div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-900 flex items-center justify-center text-amber-100">
+                    <CamelIcon className="w-5 h-5 fill-amber-100" />
+                  </div>
                   <div>
                     <h3 className="font-serif font-bold text-lg text-amber-950">Qabul Tasdiqlandi!</h3>
-                    <p className="text-[11px] text-stone-500">Rahnamo qabul chiptasi</p>
+                    <p className="text-[11px] text-stone-500">Rahnamo rasmiy qabul chiptasi</p>
                   </div>
                 </div>
                 <button
@@ -246,8 +255,10 @@ export default function CounselorPage() {
                   <span className="font-bold text-amber-900">{bookingTicket.slot}</span>
                 </div>
                 <div>
-                  <span className="text-stone-500 block">Sessiya turi:</span>
-                  <span className="font-bold text-amber-900 uppercase">{bookingTicket.tier} ({bookingTicket.price.toLocaleString()} UZS)</span>
+                  <span className="text-stone-500 block">Sessiya & To'lov:</span>
+                  <span className="font-bold text-amber-900 uppercase">
+                    {bookingTicket.tier} ({bookingTicket.price.toLocaleString()} UZS via {bookingTicket.paymentMethod.toUpperCase()})
+                  </span>
                 </div>
               </div>
 
@@ -257,7 +268,7 @@ export default function CounselorPage() {
                   Keyingi qadamlar:
                 </div>
                 <p>
-                  1. Tasdiq xabari <span className="font-bold">{bookingTicket.email}</span> va Telegram <span className="font-bold">{bookingTicket.telegram}</span> hisobingizga yuborildi.
+                  1. To'lov tasdig'i <span className="font-bold">{bookingTicket.email}</span> va Telegram <span className="font-bold">{bookingTicket.telegram}</span> hisobingizga yuborildi.
                 </p>
                 <p>
                   2. Google Meet video havolasi suhbat boshlanishidan 1 soat oldin yetkaziladi.
@@ -348,14 +359,17 @@ export default function CounselorPage() {
                 </div>
               </div>
 
-              {/* 3. Validated Intake Questions */}
+              {/* 3. Validated Intake Questions (Accessible with htmlFor and id) */}
               <div className="space-y-4 pt-4 border-t border-amber-900/10">
                 <h3 className="font-serif text-lg font-bold text-amber-950">3. Ma'lumotlaringizni to'ldiring</h3>
 
                 {/* Name */}
                 <div>
-                  <label className="text-xs font-semibold text-stone-700">Ism va Familiyangiz *</label>
+                  <label htmlFor="student-fullname" className="text-xs font-semibold text-stone-700 block">
+                    Ism va Familiyangiz *
+                  </label>
                   <input
+                    id="student-fullname"
                     type="text"
                     value={fullName}
                     onChange={(e) => {
@@ -372,10 +386,11 @@ export default function CounselorPage() {
 
                 {/* Email */}
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 flex items-center gap-1">
+                  <label htmlFor="student-email" className="text-xs font-semibold text-stone-700 flex items-center gap-1">
                     <Mail className="w-3 h-3 text-stone-500" /> Elektron pochta (Email) *
                   </label>
                   <input
+                    id="student-email"
                     type="email"
                     value={email}
                     onChange={(e) => {
@@ -392,10 +407,11 @@ export default function CounselorPage() {
 
                 {/* Phone */}
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 flex items-center gap-1">
+                  <label htmlFor="student-phone" className="text-xs font-semibold text-stone-700 flex items-center gap-1">
                     <Phone className="w-3 h-3 text-stone-500" /> Telefon raqam *
                   </label>
                   <input
+                    id="student-phone"
                     type="text"
                     value={phone}
                     onChange={handlePhoneChange}
@@ -409,8 +425,11 @@ export default function CounselorPage() {
 
                 {/* Telegram */}
                 <div>
-                  <label className="text-xs font-semibold text-stone-700">Telegram foydalanuvchi nomi (@username) *</label>
+                  <label htmlFor="student-telegram" className="text-xs font-semibold text-stone-700 block">
+                    Telegram foydalanuvchi nomi (@username) *
+                  </label>
                   <input
+                    id="student-telegram"
                     type="text"
                     value={telegram}
                     onChange={(e) => {
@@ -427,8 +446,11 @@ export default function CounselorPage() {
 
                 {/* Current Status */}
                 <div>
-                  <label className="text-xs font-semibold text-stone-700">Hozirgi mashg'ulotingiz / Ta'lim bosqichingiz *</label>
+                  <label htmlFor="student-education" className="text-xs font-semibold text-stone-700 block">
+                    Hozirgi mashg'ulotingiz / Ta'lim bosqichingiz *
+                  </label>
                   <input
+                    id="student-education"
                     type="text"
                     value={education}
                     onChange={(e) => {
@@ -445,8 +467,11 @@ export default function CounselorPage() {
 
                 {/* Question */}
                 <div>
-                  <label className="text-xs font-semibold text-stone-700">Rahnamoga asosiy savolingiz yoki maqsadingiz nima? *</label>
+                  <label htmlFor="student-question" className="text-xs font-semibold text-stone-700 block">
+                    Rahnamoga asosiy savolingiz yoki maqsadingiz nima? *
+                  </label>
                   <textarea
+                    id="student-question"
                     rows={3}
                     value={question}
                     onChange={(e) => {
@@ -462,16 +487,66 @@ export default function CounselorPage() {
                 </div>
               </div>
 
+              {/* 4. Payment Gateway Selection Step */}
+              <div className="space-y-3 pt-4 border-t border-amber-900/10">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-serif text-lg font-bold text-amber-950">4. To'lov usulini tanlang</h3>
+                  <span className="text-[11px] text-stone-500 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-emerald-700" /> Xavfsiz to'lov
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div
+                    onClick={() => setPaymentMethod('payme')}
+                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all ${
+                      paymentMethod === 'payme'
+                        ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
+                        : 'border-amber-900/10 hover:bg-amber-50/30'
+                    }`}
+                  >
+                    <span className="font-bold text-xs text-amber-950 block">Payme</span>
+                    <span className="text-[10px] text-stone-500">Uzcard / Humo</span>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentMethod('click')}
+                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all ${
+                      paymentMethod === 'click'
+                        ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
+                        : 'border-amber-900/10 hover:bg-amber-50/30'
+                    }`}
+                  >
+                    <span className="font-bold text-xs text-amber-950 block">Click</span>
+                    <span className="text-[10px] text-stone-500">Click Up / Karta</span>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentMethod('uzum')}
+                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all ${
+                      paymentMethod === 'uzum'
+                        ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
+                        : 'border-amber-900/10 hover:bg-amber-50/30'
+                    }`}
+                  >
+                    <span className="font-bold text-xs text-amber-950 block">Uzum Bank</span>
+                    <span className="text-[10px] text-stone-500">Uzum kartasi</span>
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
               >
-                Qabulni tasdiqlash ({selectedTier === 'standard' ? counselor.standardPrice.toLocaleString() : counselor.premiumPrice.toLocaleString()} UZS)
+                To'lovni amalga oshirish ({selectedTier === 'standard' ? counselor.standardPrice.toLocaleString() : counselor.premiumPrice.toLocaleString()} UZS)
               </button>
             </form>
           )}
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }
