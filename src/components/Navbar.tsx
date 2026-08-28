@@ -31,10 +31,10 @@ export default function Navbar() {
           <Link href="/" className="hover:text-amber-900 transition-colors">
             Rahnamolar
           </Link>
-          <a href="#how-it-works" className="hover:text-amber-900 transition-colors flex items-center gap-1.5">
+          <Link href="/#how-it-works" className="hover:text-amber-900 transition-colors flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-amber-800" />
             Qanday ishlaydi?
-          </a>
+          </Link>
           <Link
             href="/my-bookings"
             className="hover:text-amber-900 transition-colors flex items-center gap-1.5 bg-amber-100/80 text-amber-950 px-3.5 py-1.5 rounded-full border border-amber-300/60"
@@ -42,15 +42,13 @@ export default function Navbar() {
             <CalendarCheck className="w-3.5 h-3.5 text-amber-800" />
             Mening qabullarim
           </Link>
-          <a
-            href="https://t.me/rahnamo_admin"
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href="/become-counselor"
             className="bg-amber-900 hover:bg-amber-800 text-amber-50 px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
           >
             <UserCheck className="w-3.5 h-3.5" />
             Rahnamo bo'lish
-          </a>
+          </Link>
         </nav>
 
         {/* Mobile Hamburger */}
@@ -73,13 +71,13 @@ export default function Navbar() {
           >
             Rahnamolar katalogi
           </Link>
-          <a
-            href="#how-it-works"
+          <Link
+            href="/#how-it-works"
             onClick={() => setIsOpen(false)}
             className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/50 rounded-lg"
           >
             Qanday ishlaydi?
-          </a>
+          </Link>
           <Link
             href="/my-bookings"
             onClick={() => setIsOpen(false)}
@@ -87,14 +85,13 @@ export default function Navbar() {
           >
             Mening qabullarim
           </Link>
-          <a
-            href="https://t.me/rahnamo_admin"
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href="/become-counselor"
+            onClick={() => setIsOpen(false)}
             className="block text-center text-xs font-bold text-amber-50 bg-amber-900 px-4 py-2.5 rounded-xl"
           >
             Rahnamo bo'lib qo'shilish
-          </a>
+          </Link>
         </div>
       )}
     </header>

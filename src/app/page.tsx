@@ -73,8 +73,9 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
               {tags.map((tag) => (
                 <button
+                  type="button"
                   key={tag}
-                  onClick={() => setSelectedTag(tag)}
+                  onClick={() => setSelectedTag((prev) => (prev === tag ? null : tag))}
                   className={`text-xs px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
                     (selectedTag === tag || (!selectedTag && tag === 'All'))
                       ? 'bg-amber-900 text-amber-50 shadow-sm font-medium'
@@ -106,66 +107,82 @@ export default function HomePage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCounselors.map((c) => (
-            <div
-              key={c.id}
-              className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 border border-amber-900/10 shadow-sm hover:shadow-md hover:border-amber-700/30 transition-all flex flex-col justify-between group"
+        {filteredCounselors.length === 0 ? (
+          <div className="bg-white/90 rounded-3xl p-12 border border-amber-900/10 text-center shadow-xs my-6">
+            <h3 className="font-serif text-lg font-bold text-amber-950">Mos rahnamolar topilmadi</h3>
+            <p className="text-xs text-stone-600 mt-1 max-w-md mx-auto">
+              Qidiruv mezoningizga mos mutaxassis topilmadi. Iltimos, boshqa kalit so'zni kiriting yoki tanlangan filterni o'zgartiring.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setSearch(''); setSelectedTag('All'); }}
+              className="mt-4 px-4 py-2 bg-amber-900 text-amber-50 text-xs font-semibold rounded-xl hover:bg-amber-800 transition-all cursor-pointer"
             >
-              <div>
-                <div className="flex items-center gap-4">
-                  <img
-                    src={c.avatarUrl}
-                    alt={c.fullName}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-200/80 shadow-xs"
-                  />
-                  <div>
-                    <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-1.5">
-                      {c.fullName}
-                      <ShieldCheck className="w-4 h-4 text-amber-700 fill-amber-100" />
-                    </h3>
-                    <p className="text-xs text-stone-600 line-clamp-1">{c.headline}</p>
-                    <div className="flex items-center gap-1 mt-1 text-xs font-semibold text-amber-800">
-                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                      <span>{c.rating}</span>
-                      <span className="text-stone-400 font-normal">({c.reviewsCount} ta baho)</span>
+              Filtrlarni tozalash
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCounselors.map((c: any) => (
+              <div
+                key={c.id}
+                className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 border border-amber-900/10 shadow-sm hover:shadow-md hover:border-amber-700/30 transition-all flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={c.avatarUrl}
+                      alt={c.fullName}
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-200/80 shadow-xs"
+                    />
+                    <div>
+                      <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-1.5">
+                        {c.fullName}
+                        <ShieldCheck className="w-4 h-4 text-amber-700 fill-amber-100" />
+                      </h3>
+                      <p className="text-xs text-stone-600 line-clamp-1">{c.headline}</p>
+                      <div className="flex items-center gap-1 mt-1 text-xs font-semibold text-amber-800">
+                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                        <span>{c.rating}</span>
+                        <span className="text-stone-400 font-normal">({c.reviewsCount} ta baho)</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                  {c.specialties.map((spec) => (
-                    <span
-                      key={spec}
-                      className="bg-amber-50 text-amber-900 border border-amber-200/60 text-[11px] font-medium px-2.5 py-0.5 rounded-lg"
-                    >
-                      {spec}
-                    </span>
-                  ))}
-                </div>
+                  <div className="flex flex-wrap gap-1.5 mt-4">
+                    {c.specialties.map((spec: string) => (
+                      <span
+                        key={spec}
+                        className="bg-amber-50 text-amber-900 border border-amber-200/60 text-[11px] font-medium px-2.5 py-0.5 rounded-lg"
+                      >
+                        {spec}
+                      </span>
+                    ))}
+                  </div>
 
-                <p className="text-stone-600 text-xs mt-3 line-clamp-3 leading-relaxed">
-                  {c.bio}
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-amber-900/10 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-amber-800/70 tracking-wider">Sessiya narxi</span>
-                  <p className="text-sm font-black text-amber-950 font-serif">
-                    {c.standardPrice.toLocaleString()} <span className="text-xs font-normal text-stone-500 font-sans">so'm</span>
+                  <p className="text-stone-600 text-xs mt-3 line-clamp-3 leading-relaxed">
+                    {c.bio}
                   </p>
                 </div>
-                <Link
-                  href={`/counselors/${c.id}`}
-                  className="bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-amber-950/10"
-                >
-                  Suhbatga yozilish
-                </Link>
+
+                <div className="mt-6 pt-4 border-t border-amber-900/10 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-amber-800/70 tracking-wider">Sessiya narxi</span>
+                    <p className="text-sm font-black text-amber-950 font-serif">
+                      {c.standardPrice.toLocaleString()} <span className="text-xs font-normal text-stone-500 font-sans">so'm</span>
+                    </p>
+                  </div>
+                  <Link
+                    href={`/counselors/${c.id}`}
+                    className="bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-amber-950/10"
+                  >
+                    Suhbatga yozilish
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
 
       {/* How It Works Section */}

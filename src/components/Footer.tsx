@@ -38,9 +38,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="#how-it-works" className="hover:text-amber-900 transition-colors">
+                <Link href="/#how-it-works" className="hover:text-amber-900 transition-colors">
                   Qanday ishlaydi?
-                </a>
+                </Link>
               </li>
               <li>
                 <Link href="/my-bookings" className="hover:text-amber-900 transition-colors">
