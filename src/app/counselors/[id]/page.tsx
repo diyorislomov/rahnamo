@@ -65,6 +65,14 @@ export default function CounselorPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
+  const [cardError, setCardError] = useState('');
+
+  const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawDigits = e.target.value.replace(/\D/g, '').slice(0, 16);
+    const formatted = rawDigits.replace(/(\d{4})(?=\d)/g, '$1 ');
+    setCardNumber(formatted);
+    if (cardError) setCardError('');
+  };
 
   if (!counselor) {
     return (
@@ -105,9 +113,9 @@ export default function CounselorPage() {
       }
     }
 
-    const phoneDigits = phone.replace(/\D/g, '');
-    if (phoneDigits.length < 9) {
-      newErrors.phone = "O'zbekiston telefon raqamini to'liq kiriting (+998 90 123 45 67).";
+    const phoneDigits = phone.replace(/\D/g, '').replace(/^998/, '');
+    if (phoneDigits.length !== 9) {
+      newErrors.phone = "O'zbekiston telefon raqamini to'liq 9 xonali formatda kiriting (+998 90 123 45 67).";
     }
 
     if (!education.trim()) {
@@ -123,11 +131,18 @@ export default function CounselorPage() {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value;
-    if (!val.startsWith('+998') && val.length > 0) {
-      val = '+998 ' + val.replace(/\D/g, '');
-    }
-    setPhone(val);
+    let input = e.target.value;
+    const digits = input.replace(/\D/g, '');
+    let phoneDigits = digits.startsWith('998') ? digits.slice(3) : digits;
+    phoneDigits = phoneDigits.slice(0, 9);
+
+    let formatted = '+998';
+    if (phoneDigits.length > 0) formatted += ' ' + phoneDigits.slice(0, 2);
+    if (phoneDigits.length > 2) formatted += ' ' + phoneDigits.slice(2, 5);
+    if (phoneDigits.length > 5) formatted += ' ' + phoneDigits.slice(5, 7);
+    if (phoneDigits.length > 7) formatted += ' ' + phoneDigits.slice(7, 9);
+
+    setPhone(formatted);
     if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
   };
 
@@ -140,6 +155,12 @@ export default function CounselorPage() {
   };
 
   const handleConfirmPayment = () => {
+    const rawCardDigits = cardNumber.replace(/\D/g, '');
+    if (rawCardDigits.length !== 16) {
+      setCardError("Karta raqami to'liq 16 xonali bo'lishi kerak (Uzcard / Humo / Visa).");
+      return;
+    }
+
     setIsProcessingPayment(true);
 
     let cleanedTelegram = telegram.trim().replace(/^https?:\/\/t\.me\//, '');
@@ -791,10 +812,13 @@ export default function CounselorPage() {
                     maxLength={19}
                     placeholder="8600 0000 0000 0000"
                     value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
+                    onChange={handleCardChange}
+                    className={`w-full pl-9 pr-3 py-2.5 bg-stone-50 border rounded-xl text-xs outline-none transition-all ${
+                      cardError ? 'border-red-500 bg-red-50/20' : 'border-stone-300 focus:ring-2 focus:ring-amber-700'
+                    }`}
                   />
                 </div>
+                {cardError && <p className="text-[11px] text-red-600 mt-1">{cardError}</p>}
               </div>
 
               <button
