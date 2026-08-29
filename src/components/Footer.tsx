@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CamelIcon } from '@/components/Icons';
+import RahnamoLogo from '@/components/RahnamoLogo';
 import { Shield, Sparkles, Send, Mail, Heart } from 'lucide-react';
 
 export default function Footer() {
@@ -8,12 +8,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
         {/* Col 1: Brand Info */}
         <div className="md:col-span-1 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-900 text-amber-100 flex items-center justify-center border border-amber-700/50">
-              <CamelIcon className="w-5 h-5 fill-amber-100" />
-            </div>
-            <span className="font-serif font-bold text-xl text-amber-50">rahnamo</span>
-          </div>
+          <RahnamoLogo className="h-10" light={true} />
           <p className="text-xs text-amber-200/70 leading-relaxed">
             Ipak Yo'li karyera konsultatsiyasi. Markaziy Osiyo yoshlarini tajribali mutaxassislar bilan bog'laydigan 1-ga-1 shaxsiy mentorlik platformasi.
           </p>

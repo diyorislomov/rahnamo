@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CamelIcon } from '@/components/Icons';
+import RahnamoLogo from '@/components/RahnamoLogo';
 import { Menu, X, CalendarCheck, UserCheck, Compass, Sparkles } from 'lucide-react';
 
 export default function Navbar() {
@@ -17,19 +17,9 @@ export default function Navbar() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-800 to-amber-950 text-amber-100 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform border border-amber-600/30">
-            <CamelIcon className="w-6 h-6 fill-amber-100" />
-          </div>
-          <div>
-            <span className="font-serif font-extrabold text-xl tracking-tight text-amber-950 block leading-none">
-              rahnamo
-            </span>
-            <span className="text-[9px] uppercase tracking-widest text-amber-800 font-bold font-sans block mt-0.5">
-              Silk Road Mentors
-            </span>
-          </div>
+        {/* Official Startup Brand Logo */}
+        <Link href="/" className="group py-1">
+          <RahnamoLogo className="h-9" />
         </Link>
 
         {/* Desktop Navigation Links */}

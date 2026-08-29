@@ -34,6 +34,8 @@ interface BookingTicketData {
   education: string;
   question: string;
   meetLink?: string;
+  paymentStatus?: 'pending' | 'confirmed' | 'rejected';
+  paymentReceipt?: string;
   createdAt: string;
 }
 
@@ -438,17 +440,30 @@ export default function CounselorPage() {
                 </div>
               </div>
 
-              <div className="space-y-2 bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
-                <div className="flex items-center gap-2 font-bold text-emerald-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                  Keyingi qadamlar:
+              <div className="space-y-3 bg-emerald-50/80 p-5 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
+                <div className="flex items-center gap-2 font-bold text-emerald-900 text-sm">
+                  <CheckCircle2 className="w-4.5 h-4.5 text-emerald-700" />
+                  Qabul chiptangiz tayyor!
                 </div>
-                <p>
-                  1. To'lov tasdig'i <span className="font-bold">{bookingTicket.email}</span> va Telegram <span className="font-bold">{bookingTicket.telegram}</span> hisobingizga yuborildi.
+                <p className="leading-relaxed">
+                  Elektron pochtangizga (<span className="font-bold">{bookingTicket.email}</span>) va tizimimizga uchrashuv ma'lumotlari kiritildi.
                 </p>
-                <p>
-                  2. Google Meet video havolasi suhbat boshlanishidan 1 soat oldin yetkaziladi.
-                </p>
+                <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap gap-2">
+                  <a
+                    href={`https://t.me/rahnamo_admin?start=${bookingTicket.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
+                  >
+                    <span>💬 Telegram'da chipta bildirishnomasini olish</span>
+                  </a>
+                  <Link
+                    href="/my-bookings"
+                    className="inline-flex items-center gap-1 bg-emerald-800 hover:bg-emerald-900 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
+                  >
+                    <span>Mening Qabullarim sahifasiga o'tish</span>
+                  </Link>
+                </div>
               </div>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
