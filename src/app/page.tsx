@@ -7,49 +7,49 @@ import Footer from '@/components/Footer';
 import DesertCaravan from '@/components/DesertCaravan';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { Counselor } from '@/types';
-import { Star, ShieldCheck, ArrowRight, Search, Clock, Award, CheckCircle2, ChevronDown, Sparkles, UserCheck, MessageSquare, Zap, Compass, CreditCard, Video } from 'lucide-react';
+import { Star, ShieldCheck, ArrowRight, Search, Clock, Award, CheckCircle2, ChevronDown, Sparkles, UserCheck, MessageSquare, Zap, Compass, CreditCard, Video, Plus, Minus } from 'lucide-react';
 
 const SPECIALTY_CONFIG: { [key: string]: { label: string; activeClass: string; inactiveClass: string; icon: string } } = {
   All: {
     label: 'Barcha sohalar',
-    activeClass: 'bg-amber-900 text-amber-50 border-amber-950 shadow-md scale-105',
-    inactiveClass: 'bg-amber-50/70 text-amber-950 border-amber-900/15 hover:bg-amber-100',
+    activeClass: 'bg-amber-900 text-amber-50 border-amber-950 shadow-md ring-2 ring-amber-900/30 scale-105',
+    inactiveClass: 'bg-amber-100/90 text-amber-950 border-amber-300 hover:bg-amber-200/80',
     icon: '✨',
   },
   'Medicine & Healthcare': {
     label: 'Tibbiyot & Salomatlik',
-    activeClass: 'bg-emerald-700 text-emerald-50 border-emerald-800 shadow-md scale-105',
-    inactiveClass: 'bg-emerald-50 text-emerald-900 border-emerald-300/70 hover:bg-emerald-100',
+    activeClass: 'bg-emerald-700 text-emerald-50 border-emerald-800 shadow-md ring-2 ring-emerald-600/30 scale-105',
+    inactiveClass: 'bg-emerald-100/90 text-emerald-950 border-emerald-300/80 hover:bg-emerald-200/80',
     icon: '🩺',
   },
   'Architecture & Design': {
     label: 'Arxitektura & Dizayn',
-    activeClass: 'bg-rose-700 text-rose-50 border-rose-800 shadow-md scale-105',
-    inactiveClass: 'bg-rose-50 text-rose-900 border-rose-300/70 hover:bg-rose-100',
+    activeClass: 'bg-rose-700 text-rose-50 border-rose-800 shadow-md ring-2 ring-rose-600/30 scale-105',
+    inactiveClass: 'bg-rose-100/90 text-rose-950 border-rose-300/80 hover:bg-rose-200/80',
     icon: '🏛️',
   },
   'Law & Legal Practice': {
     label: 'Huquq & Korporativ',
-    activeClass: 'bg-indigo-800 text-indigo-50 border-indigo-900 shadow-md scale-105',
-    inactiveClass: 'bg-indigo-50 text-indigo-950 border-indigo-300/70 hover:bg-indigo-100',
+    activeClass: 'bg-indigo-800 text-indigo-50 border-indigo-900 shadow-md ring-2 ring-indigo-600/30 scale-105',
+    inactiveClass: 'bg-indigo-100/90 text-indigo-950 border-indigo-300/80 hover:bg-indigo-200/80',
     icon: '⚖️',
   },
   'Study Abroad': {
     label: 'Xalqaro Grantlar',
-    activeClass: 'bg-purple-800 text-purple-50 border-purple-900 shadow-md scale-105',
-    inactiveClass: 'bg-purple-50 text-purple-950 border-purple-300/70 hover:bg-purple-100',
+    activeClass: 'bg-purple-800 text-purple-50 border-purple-900 shadow-md ring-2 ring-purple-600/30 scale-105',
+    inactiveClass: 'bg-purple-100/90 text-purple-950 border-purple-300/80 hover:bg-purple-200/80',
     icon: '🎓',
   },
   'Agriculture & Trade': {
     label: 'Qishloq xo\'jaligi & Eksport',
-    activeClass: 'bg-amber-700 text-amber-50 border-amber-800 shadow-md scale-105',
-    inactiveClass: 'bg-amber-100/80 text-amber-950 border-amber-300/80 hover:bg-amber-200/60',
+    activeClass: 'bg-amber-800 text-amber-50 border-amber-900 shadow-md ring-2 ring-amber-600/30 scale-105',
+    inactiveClass: 'bg-amber-100/90 text-amber-950 border-amber-300/80 hover:bg-amber-200/80',
     icon: '🌾',
   },
   'Engineering & Tech': {
     label: 'Dasturlash & IT',
-    activeClass: 'bg-sky-700 text-sky-50 border-sky-800 shadow-md scale-105',
-    inactiveClass: 'bg-sky-50 text-sky-950 border-sky-300/70 hover:bg-sky-100',
+    activeClass: 'bg-sky-700 text-sky-50 border-sky-800 shadow-md ring-2 ring-sky-600/30 scale-105',
+    inactiveClass: 'bg-sky-100/90 text-sky-950 border-sky-300/80 hover:bg-sky-200/80',
     icon: '💻',
   },
 };
@@ -98,7 +98,7 @@ export default function Home() {
         {/* Hero Banner Section */}
         <DesertCaravan />
 
-        {/* MentorCruise Search & Multi-Colored Category Filter Bar */}
+        {/* MentorCruise Search & Distinct Multi-Colored Rounded-Full Category Filter Bar */}
         <section className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm my-8 space-y-5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* Search Input */}
@@ -137,8 +137,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Category Filter Pills (Distinct Accent Colors per Category) */}
-          <div className="flex flex-wrap gap-2 pt-3 border-t border-amber-900/10">
+          {/* Category Filter Pills (Distinct Accent Colors & Rounded-Full Pills) */}
+          <div className="flex flex-wrap gap-2.5 pt-3 border-t border-amber-900/10">
             {Object.keys(SPECIALTY_CONFIG).map((key) => {
               const cfg = SPECIALTY_CONFIG[key];
               const isSelected = selectedTag === key;
@@ -146,7 +146,7 @@ export default function Home() {
                 <button
                   key={key}
                   onClick={() => setSelectedTag(key)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 border flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-4.5 py-2.5 rounded-full text-xs font-bold transition-all duration-200 border flex items-center gap-1.5 cursor-pointer shadow-xs ${
                     isSelected ? cfg.activeClass : cfg.inactiveClass
                   }`}
                 >
@@ -203,7 +203,7 @@ export default function Home() {
                   <div>
                     {/* Top Row: Verified Badge & Response Time */}
                     <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-amber-900/10">
-                      <div className="flex items-center gap-1.5 bg-amber-100/80 text-amber-950 text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-amber-300/50">
+                      <div className="flex items-center gap-1.5 bg-amber-100/70 text-amber-950 text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-amber-300/50">
                         <ShieldCheck className="w-3.5 h-3.5 text-amber-700 fill-amber-100" />
                         <span>Tasdiqlangan Rahnamo</span>
                       </div>
@@ -252,12 +252,12 @@ export default function Home() {
                       {counselor.bio}
                     </p>
 
-                    {/* Outcome Achievement Badges (Vibrant Chips) */}
+                    {/* Outcome Badges */}
                     {counselor.outcomes && counselor.outcomes.length > 0 && (
-                      <div className="mt-3 space-y-1.5">
+                      <div className="mt-3 space-y-1">
                         {counselor.outcomes.map((outcome) => (
-                          <div key={outcome} className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-950 bg-gradient-to-r from-emerald-50 to-emerald-100/70 px-2.5 py-1 rounded-lg border border-emerald-200/80 shadow-2xs">
-                            <Sparkles className="w-3 h-3 text-emerald-700 flex-shrink-0" />
+                          <div key={outcome} className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200/50">
+                            <CheckCircle2 className="w-3 h-3 text-amber-700 flex-shrink-0" />
                             <span className="truncate">{outcome}</span>
                           </div>
                         ))}
@@ -269,7 +269,7 @@ export default function Home() {
                       {counselor.specialties.map((s) => (
                         <span
                           key={s}
-                          className="bg-amber-100/60 text-amber-950 text-[10px] font-semibold px-2.5 py-0.5 rounded-md border border-amber-300/40"
+                          className="bg-amber-100/60 text-amber-950 text-[10px] font-medium px-2.5 py-0.5 rounded-md border border-amber-300/40"
                         >
                           {s}
                         </span>
@@ -288,7 +288,7 @@ export default function Home() {
 
                     <Link
                       href={`/counselors/${counselor.id}`}
-                      className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition-all group-hover:gap-2 group-hover:shadow-md cursor-pointer"
+                      className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition-all group-hover:gap-2"
                     >
                       <span>Vaqt tanlash</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -300,89 +300,57 @@ export default function Home() {
           )}
         </section>
 
-        {/* "3 ta oddiy qadam" (How It Works) with Silk Road Caravan Path Trail */}
+        {/* How Rahnamo Works Section (Desert Oasis Theme) */}
         <section id="how-it-works" className="bg-gradient-to-b from-[#1E1B4B] via-[#2A265F] to-[#1E1B4B] text-amber-50 rounded-3xl p-8 sm:p-12 my-16 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
 
           <div className="text-center max-w-2xl mx-auto mb-12 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold mb-3 backdrop-blur-xs">
-              <Compass className="w-3.5 h-3.5 text-amber-300" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-semibold mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
               <span>3 ta oddiy qadam</span>
             </div>
             <h2 className="font-serif font-bold text-2xl sm:text-4xl text-amber-100">
               Rahnamo platformasi qanday ishlaydi?
             </h2>
             <p className="text-xs sm:text-sm text-amber-200/70 mt-2">
-              Markaziy Osiyoning eng yaxshi ekspertlaridan 1-ga-1 konsultatsiya olish yo'li
+              Markaziy Osiyoning eng yaxshi ekspertlaridan 1-ga-1 konsultatsiya olish tartibi
             </p>
           </div>
 
-          {/* Caravan Trail Path Line (Desktop SVG) */}
-          <div className="relative">
-            <svg
-              className="hidden md:block absolute top-12 left-1/6 right-1/6 w-2/3 h-1 z-0"
-              viewBox="0 0 600 4"
-              fill="none"
-            >
-              <line
-                x1="0"
-                y1="2"
-                x2="600"
-                y2="2"
-                stroke="#D97706"
-                strokeWidth="2"
-                strokeDasharray="6 6"
-                className="animate-trail-dash opacity-60"
-              />
-            </svg>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-              {/* Step 1 */}
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs hover:border-amber-400/40 transition-all group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center border border-amber-400/30 group-hover:scale-110 transition-transform">
-                    <Compass className="w-6 h-6 text-amber-300" />
-                  </div>
-                  <span className="text-amber-400/60 font-mono font-bold text-xs">01 STEP</span>
-                </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">Rahnamoni va vaqtni tanlang</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  Katalogdan o'zingizga ma'qul bo'lgan mutaxassisni tanlang, Standart yoki Premium paketni ko'rsatib, mos keladigan vaqtni belgilang.
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+            <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
+                1
               </div>
+              <h3 className="font-serif font-bold text-lg text-amber-100">Rahnamoni va vaqtni tanlang</h3>
+              <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                Katalogdan o'zingizga ma'qul bo'lgan mutaxassisni tanlang, Standart yoki Premium paketni ko'rsatib, mos keladigan vaqtni belgilang.
+              </p>
+            </div>
 
-              {/* Step 2 */}
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs hover:border-amber-400/40 transition-all group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center border border-amber-400/30 group-hover:scale-110 transition-transform">
-                    <CreditCard className="w-6 h-6 text-amber-300" />
-                  </div>
-                  <span className="text-amber-400/60 font-mono font-bold text-xs">02 STEP</span>
-                </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">To'lov va ma'lumotlarni to'ldirish</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  Payme, Click yoki Uzum Bank orqali xavfsiz to'lovni amalga oshiring. Rahnamoga beriladigan asosiy savolingizni yozing.
-                </p>
+            <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
+                2
               </div>
+              <h3 className="font-serif font-bold text-lg text-amber-100">To'lov va ma'lumotlarni to'ldirish</h3>
+              <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                Payme, Click yoki Uzum Bank orqali xavfsiz to'lovni amalga oshiring. Rahnamoga beriladigan asosiy savolingizni yozing.
+              </p>
+            </div>
 
-              {/* Step 3 */}
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs hover:border-amber-400/40 transition-all group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center border border-amber-400/30 group-hover:scale-110 transition-transform">
-                    <Video className="w-6 h-6 text-amber-300" />
-                  </div>
-                  <span className="text-amber-400/60 font-mono font-bold text-xs">03 STEP</span>
-                </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">1-ga-1 Video muloqot</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  Chipta va Google Meet havolasi darhol elektron pochtangizga va Telegram hisobingizga yuboriladi. Belgilangan vaqtda suhbatni boshlang.
-                </p>
+            <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
+                3
               </div>
+              <h3 className="font-serif font-bold text-lg text-amber-100">1-ga-1 Video muloqot</h3>
+              <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                Chipta va Google Meet havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* FAQ Accordion Section (Smooth Animated Open/Close) */}
+        {/* FAQ Accordion Section (Interactive Expand/Collapse Accordion) */}
         <section className="max-w-3xl mx-auto my-16">
           <h2 className="font-serif font-bold text-2xl text-center text-amber-950 mb-6">
             Tez-tez beriladigan savollar
@@ -401,22 +369,34 @@ export default function Home() {
                 q: "Rahnamolar ro'yxatiga qanday qo'shilish mumkin?",
                 a: "Agar siz ham o'z sohangizda tajribali bo'lsangiz, menyudagi 'Rahnamo bo'lish' tugmasini bosib anketani to'ldirishingiz mumkin. 24 soat ichida profilingiz tasdiqlanadi.",
               },
-            ].map((faq, idx) => (
-              <div key={idx} className={`rounded-2xl border transition-all overflow-hidden ${openFaq === idx ? 'bg-amber-50/80 border-amber-800 shadow-xs' : 'bg-white/95 border-amber-900/15'}`}>
-                <button
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full p-4.5 text-left font-serif font-bold text-sm text-amber-950 flex items-center justify-between cursor-pointer"
+            ].map((faq, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div
+                  key={idx}
+                  className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+                    isOpen ? 'bg-amber-50/90 border-amber-800 shadow-sm ring-1 ring-amber-800/20' : 'bg-white/95 border-amber-900/15 hover:border-amber-900/30'
+                  }`}
                 >
-                  <span>{faq.q}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openFaq === idx ? 'rotate-180 text-amber-800' : 'text-stone-400'}`} />
-                </button>
-                {openFaq === idx && (
-                  <div className="px-4.5 pb-4.5 text-xs text-stone-700 leading-relaxed border-t border-amber-900/10 pt-3 animate-in fade-in duration-200">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(idx)}
+                    className="w-full p-5 text-left font-serif font-bold text-sm text-amber-950 flex items-center justify-between cursor-pointer gap-4"
+                  >
+                    <span>{faq.q}</span>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${isOpen ? 'bg-amber-900 text-amber-50 rotate-180' : 'bg-amber-100 text-amber-900'}`}>
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-5 pb-5 text-xs text-stone-700 leading-relaxed border-t border-amber-900/10 pt-3.5 animate-in fade-in duration-200">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       </main>
