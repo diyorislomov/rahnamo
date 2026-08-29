@@ -1,40 +1,39 @@
 'use client';
 
 import React from 'react';
-import { Compass, Star, ShieldCheck, Users, Sun } from 'lucide-react';
-import { CamelIcon } from '@/components/Icons';
+import { Compass, Star, ShieldCheck, Users } from 'lucide-react';
 
 export default function DesertCaravan() {
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl border border-amber-500/30 shadow-2xl my-6 text-amber-50 group selection:bg-amber-500/30 min-h-[480px] flex items-center">
+    <div className="relative w-full overflow-hidden rounded-3xl border border-amber-500/25 shadow-2xl my-6 text-amber-50 group selection:bg-amber-500/30 min-h-[460px] flex items-center">
       
-      {/* 🌅 Photo-Realistic Solar Ring Eclipse Desert Background */}
+      {/* 🌕 Photo-Realistic Giant Moon Desert Caravan Background Image */}
       <img
-        src="/desert-solar-ring-eclipse.jpg"
-        alt="Cinematic Solar Ring Eclipse Desert Caravan"
+        src="/giant-moon-desert-caravan.jpg"
+        alt="Photo-realistic Giant Moon Desert Caravan"
         className="absolute inset-0 w-full h-full object-cover object-center filter brightness-95 contrast-105 transform scale-105 group-hover:scale-110 transition-transform duration-1000"
       />
 
-      {/* Warm Golden Haze & Vignette Gradient Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#170E08]/95 via-[#23150B]/80 to-[#1A0E06]/40" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#140C06] via-transparent to-[#1E1107]/60" />
+      {/* Dark Moonlit Gradient Overlay on Left Side to Guarantee Zero Text Overlap */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#120B06]/95 via-[#1A1009]/80 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#120B06]/90 via-transparent to-[#120B06]/50" />
 
-      {/* 🌟 Pulsing Golden Solar Ring Eclipse Flare in Center-Right Sky */}
-      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-64 h-64 sm:w-96 sm:h-96 rounded-full bg-amber-400/20 blur-3xl pointer-events-none animate-pulse" />
+      {/* 🌟 Radiant Shining Moon Glow Halo over Giant Moon */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/4 -translate-y-1/2 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-amber-200/20 blur-3xl pointer-events-none animate-pulse" />
 
-      {/* ✨ Floating Golden Sandstorm Dust Particles Overlay */}
+      {/* ✨ Live Twinkling Stars Overlay Across Sky */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-85">
-        <div className="absolute top-12 left-1/4 w-2 h-2 rounded-full bg-amber-300 animate-twinkle-fast" />
-        <div className="absolute top-24 left-1/3 w-2.5 h-2.5 rounded-full bg-amber-200 animate-twinkle-slow" />
-        <div className="absolute top-16 right-1/3 w-2 h-2 rounded-full bg-amber-400 animate-twinkle-fast" />
-        <div className="absolute top-28 right-20 w-3 h-3 rounded-full bg-amber-300 animate-twinkle-slow" />
-        <div className="absolute bottom-24 right-1/4 w-2 h-2 rounded-full bg-amber-200 animate-twinkle-fast" />
+        <div className="absolute top-6 left-16 w-2 h-2 rounded-full bg-amber-200 animate-twinkle-fast" />
+        <div className="absolute top-16 left-1/3 w-2.5 h-2.5 rounded-full bg-amber-100 animate-twinkle-slow" />
+        <div className="absolute top-8 right-1/4 w-2 h-2 rounded-full bg-amber-300 animate-twinkle-fast" />
+        <div className="absolute top-20 right-16 w-3 h-3 rounded-full bg-amber-200 animate-twinkle-slow" />
+        <div className="absolute bottom-20 left-1/4 w-2 h-2 rounded-full bg-amber-100 animate-twinkle-fast" />
       </div>
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 py-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
-        {/* Left Column: Warm Dark Amber Glassmorphism Content Card */}
-        <div className="lg:col-span-7 bg-[#140D07]/80 backdrop-blur-xl border border-amber-500/25 p-6 sm:p-10 rounded-3xl shadow-2xl space-y-5 text-left">
+      {/* Hero Content (Non-Overlapping Glassmorphism Card) */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 py-10">
+        <div className="max-w-xl bg-[#140C07]/80 backdrop-blur-xl border border-amber-500/25 p-6 sm:p-10 rounded-3xl shadow-2xl space-y-5 text-left">
+          
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs font-extrabold backdrop-blur-md shadow-xs">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
             <Compass className="w-4 h-4 text-amber-300" />
@@ -64,25 +63,10 @@ export default function DesertCaravan() {
               <span>4.9 ★ Reyting</span>
             </div>
           </div>
-        </div>
 
-        {/* Right Column: Animated Horizon Journey Overlay */}
-        <div className="lg:col-span-5 flex items-end justify-center relative h-64 sm:h-80 pointer-events-none">
-          {/* Caravan Journey Motion Silhouette on Dunes */}
-          <div className="absolute bottom-6 right-6 sm:right-16 flex items-end gap-3 sm:gap-5 animate-caravan z-20">
-            <div className="flex flex-col items-center animate-camel-bob">
-              <CamelIcon className="w-9 h-9 sm:w-12 sm:h-12 text-amber-200 fill-current drop-shadow-[0_2px_10px_rgba(245,158,11,0.8)]" />
-            </div>
-            <div className="flex flex-col items-center animate-camel-bob [animation-delay:0.4s]">
-              <CamelIcon className="w-7 h-7 sm:w-10 sm:h-10 text-amber-300 fill-current opacity-90 drop-shadow-[0_2px_8px_rgba(245,158,11,0.6)]" />
-            </div>
-            <div className="flex flex-col items-center animate-camel-bob [animation-delay:0.8s]">
-              <CamelIcon className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 fill-current opacity-80 drop-shadow-[0_2px_6px_rgba(245,158,11,0.4)]" />
-            </div>
-          </div>
         </div>
-
       </div>
+
     </div>
   );
 }
