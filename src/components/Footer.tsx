@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
         {/* Col 1: Brand Info */}
         <div className="md:col-span-1 space-y-3">
-          <RahnamoLogo className="h-10" light={true} />
+          <RahnamoLogo className="h-12" light={true} />
           <p className="text-xs text-amber-200/70 leading-relaxed">
             Ipak Yo'li karyera konsultatsiyasi. Markaziy Osiyo yoshlarini tajribali mutaxassislar bilan bog'laydigan 1-ga-1 shaxsiy mentorlik platformasi.
           </p>

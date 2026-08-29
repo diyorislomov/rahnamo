@@ -18,8 +18,8 @@ export default function Navbar() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Official Startup Brand Logo */}
-        <Link href="/" className="group py-1">
-          <RahnamoLogo className="h-9" />
+        <Link href="/" className="group py-1 flex items-center">
+          <RahnamoLogo className="h-11 sm:h-12" />
         </Link>
 
         {/* Desktop Navigation Links */}
