@@ -95,7 +95,7 @@ export default function Home() {
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Banner Section */}
+        {/* Rahnamo Starry Night Hero Caravan */}
         <DesertCaravan />
 
         {/* MentorCruise Search & Distinct Multi-Colored Rounded-Full Category Filter Bar */}
