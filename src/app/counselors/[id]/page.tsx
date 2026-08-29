@@ -65,6 +65,8 @@ export default function CounselorPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
+  const [receiptRef, setReceiptRef] = useState('');
+  const [copiedCard, setCopiedCard] = useState(false);
   const [cardError, setCardError] = useState('');
 
   const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,6 +191,8 @@ export default function CounselorPage() {
       education: education,
       question: question,
       meetLink: meetLink,
+      paymentStatus: 'pending',
+      paymentReceipt: receiptRef.trim() || cardNumber.trim() || 'KARTA_OTKAZMASI',
       createdAt: new Date().toISOString(),
     };
 
@@ -800,10 +804,48 @@ export default function CounselorPage() {
               </div>
             </div>
 
+            {/* Central Platform Payment Box */}
+            <div className="my-4 p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
+              <span className="text-[10px] uppercase font-bold text-amber-900 block">Rahnamo Markaziy Platforma Kartasi (Uzcard / Humo)</span>
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-extrabold text-sm text-amber-950">8600 5555 4444 3333</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined') {
+                      navigator.clipboard.writeText('8600555544443333');
+                      setCopiedCard(true);
+                      setTimeout(() => setCopiedCard(false), 2000);
+                    }
+                  }}
+                  className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer"
+                >
+                  {copiedCard ? 'Nusxalandi! ✓' : 'Nusxalash'}
+                </button>
+              </div>
+              <span className="text-[10px] text-stone-600 block">Egasining ismi: Rahnamo Platform Inc.</span>
+            </div>
+
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-stone-700 block mb-1">
-                  Karta raqami (Uzcard / Humo / Visa)
+                  To'lov Cheki / Tranzaksiya Raqami (Chek ID)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Masalan: 89420194 yoki Karta oxirgi 4 raqami"
+                  value={receiptRef}
+                  onChange={(e) => setReceiptRef(e.target.value)}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
+                />
+                <span className="text-[10px] text-stone-500 block mt-1">
+                  Payme / Click chekidagi ID raqamini kiriting. Administratorimiz 5 daqiqada tasdiqlaydi.
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-stone-700 block mb-1">
+                  Sizning Karta Raqamingiz (Tekshirish uchun)
                 </label>
                 <div className="relative">
                   <CreditCard className="w-4 h-4 text-stone-400 absolute left-3 top-3" />

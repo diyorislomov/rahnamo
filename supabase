@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     education TEXT NOT NULL,
     question TEXT NOT NULL,
     meet_link TEXT,
+    payment_status TEXT NOT NULL DEFAULT 'pending',
+    payment_receipt TEXT,
     status TEXT NOT NULL DEFAULT 'confirmed',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

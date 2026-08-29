@@ -1,4 +1,5 @@
 export type Tier = 'standard' | 'premium';
+export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
 
 export interface Counselor {
   id: string;
@@ -35,5 +36,7 @@ export interface BookingTicketData {
   education: string;
   question: string;
   meetLink?: string;
+  paymentStatus?: PaymentStatus;
+  paymentReceipt?: string;
   createdAt?: string;
 }

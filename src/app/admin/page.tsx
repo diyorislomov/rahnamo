@@ -135,6 +135,26 @@ export default function AdminDashboardPage() {
     fetchAdminData();
   }, []);
 
+  const handleApprovePayment = (id: string) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b))
+    );
+
+    try {
+      const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
+      const updated = existing.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b));
+      localStorage.setItem('rahnamo_bookings', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+      Promise.resolve(supabase.from('bookings').update({ payment_status: 'confirmed' }).eq('id', id))
+        .catch((err) => console.warn('Supabase update error:', err));
+    }
+  };
+
   const handleApproveApplication = (id?: string) => {
     setApplications((prev) =>
       prev.map((app) => (app.id === id || app.email === id ? { ...app, status: 'approved' } : app))
@@ -265,10 +285,31 @@ export default function AdminDashboardPage() {
                             </span>
                           </td>
                           <td className="p-4">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                              <CheckCircle className="w-3 h-3 text-emerald-700" />
-                              <span>TO'LANGAN ({b.paymentMethod})</span>
-                            </span>
+                            {b.paymentStatus === 'confirmed' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                <CheckCircle className="w-3 h-3 text-emerald-700" />
+                                <span>TASDIQLANGAN ({b.paymentMethod})</span>
+                              </span>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                  <Clock className="w-3 h-3 text-amber-700 animate-spin" />
+                                  <span>TEKSHIRILMOQDA</span>
+                                </span>
+                                {b.paymentReceipt && (
+                                  <div className="text-[10px] font-mono text-stone-600">
+                                    Chek ID: <span className="font-bold text-amber-950">{b.paymentReceipt}</span>
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprovePayment(b.id)}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block"
+                                >
+                                  To'lovni Tasdiqlash ✓
+                                </button>
+                              </div>
+                            )}
                           </td>
                           <td className="p-4">
                             <a
