@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
+import { sendTelegramNotification } from '@/lib/telegram';
 import { CamelIcon } from '@/components/Icons';
 import { ArrowLeft, CheckCircle2, UserCheck, Send, Mail, Phone, Shield, Sparkles, DollarSign, Calendar, Globe, Award, TrendingUp } from 'lucide-react';
 
@@ -104,6 +105,23 @@ export default function BecomeCounselorPage() {
       Promise.resolve(supabase.from('counselor_applications').insert(applicationData))
         .catch((err) => console.warn('Supabase app insert:', err));
     }
+
+    // Send Telegram Notification to Admin
+    sendTelegramNotification({
+      id: `APP-${Math.floor(1000 + Math.random() * 9000)}`,
+      studentName: `${applicationData.full_name} (MENTOR ARIZASI)`,
+      counselorName: applicationData.specialties || 'Yangi Mentor',
+      tier: 'standard',
+      price: applicationData.expected_standard_price,
+      slot: 'Arizachi profilini ko\'rib chiqish',
+      paymentMethod: 'ARIZA',
+      phone: phone,
+      telegram: telegram,
+      email: email,
+      education: applicationData.headline,
+      question: `Bio: ${bio.slice(0, 120)}...`,
+      meetLink: 'https://rahnamo-one.vercel.app/admin',
+    }).catch((err) => console.warn('Telegram notify error:', err));
 
     setTimeout(() => {
       setIsSubmitting(false);

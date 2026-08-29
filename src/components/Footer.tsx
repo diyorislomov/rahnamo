@@ -46,6 +46,11 @@ export default function Footer() {
                 Rahnamo bo'lib qo'shilish
               </Link>
             </li>
+            <li>
+              <Link href="/admin" className="hover:text-amber-300 transition-colors text-amber-400 font-semibold">
+                Boshqaruv paneli (Admin)
+              </Link>
+            </li>
           </ul>
         </div>
 

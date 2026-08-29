@@ -17,3 +17,23 @@ export interface Counselor {
   companyBadge?: string;
   outcomes?: string[];
 }
+
+export interface BookingTicketData {
+  id: string;
+  counselorId: string;
+  counselorName: string;
+  counselorHeadline: string;
+  counselorAvatar: string;
+  tier: Tier;
+  price: number;
+  paymentMethod: string;
+  slot: string;
+  studentName: string;
+  email: string;
+  phone: string;
+  telegram: string;
+  education: string;
+  question: string;
+  meetLink?: string;
+  createdAt?: string;
+}
