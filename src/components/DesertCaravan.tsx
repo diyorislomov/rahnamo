@@ -1,97 +1,74 @@
 'use client';
 
-import { Sparkles, Compass } from 'lucide-react';
+import { Sparkles, Compass, Star, ShieldCheck, Users } from 'lucide-react';
 
 export default function DesertCaravan() {
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-b from-[#FFFDF9] via-[#FAF1DF] to-[#F3E2C4] border border-amber-900/15 shadow-md p-6 sm:p-10 my-6 select-none group">
-      {/* Glowing Pulsing Desert Sun */}
-      <div className="absolute top-4 right-8 w-24 h-24 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-600/40 opacity-80 blur-xs animate-pulse" />
-      
-      {/* Twinkling Desert Stars Overlay */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-6 left-12 w-1.5 h-1.5 rounded-full bg-amber-600 animate-twinkle-fast" />
-        <div className="absolute top-10 left-1/3 w-2 h-2 rounded-full bg-amber-700 animate-twinkle-slow" />
-        <div className="absolute top-4 right-1/4 w-1.5 h-1.5 rounded-full bg-amber-500 animate-twinkle-fast" />
-        <div className="absolute top-14 right-12 w-2 h-2 rounded-full bg-amber-600 animate-twinkle-slow" />
+    <div className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[#241A14] via-[#35251C] to-[#1C140F] border border-amber-500/20 shadow-2xl p-6 sm:p-12 my-6 text-amber-50 group selection:bg-amber-500/30">
+      {/* Background Ambient Gold Glow Blur */}
+      <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-80 h-80 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-amber-600/10 rounded-full blur-2xl pointer-events-none" />
+
+      {/* Twinkling Desert Night Stars Overlay */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-80">
+        <div className="absolute top-6 left-12 w-1.5 h-1.5 rounded-full bg-amber-300 animate-twinkle-fast" />
+        <div className="absolute top-16 left-1/3 w-2 h-2 rounded-full bg-amber-200 animate-twinkle-slow" />
+        <div className="absolute top-8 right-1/3 w-1.5 h-1.5 rounded-full bg-amber-400 animate-twinkle-fast" />
+        <div className="absolute top-20 right-12 w-2.5 h-2.5 rounded-full bg-amber-300 animate-twinkle-slow" />
+        <div className="absolute bottom-12 left-1/4 w-1.5 h-1.5 rounded-full bg-amber-200 animate-twinkle-fast" />
       </div>
 
-      <div className="relative z-10 max-w-xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-bold mb-3 backdrop-blur-xs">
-          <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping" />
-          <Compass className="w-3.5 h-3.5 text-amber-800" />
-          <span>Ipak Yo'li Karyera Karvoni</span>
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* Left Column: Hero Copy & Value Props */}
+        <div className="lg:col-span-7 space-y-5 text-left">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs font-extrabold backdrop-blur-md shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <Compass className="w-3.5 h-3.5 text-amber-300" />
+            <span>Ipak Yo'li Karyera Karvoni</span>
+          </div>
+
+          <h1 className="font-serif font-black text-3xl sm:text-5xl text-amber-100 leading-tight tracking-tight">
+            Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
+          </h1>
+
+          <p className="text-xs sm:text-base text-amber-200/80 leading-relaxed font-sans max-w-xl">
+            Har bir muvaffaqiyatli karyera yulduzli yo'lda to'g'ri yo'l ko'rsatuvchi Rahnamodan boshlanadi. Tibbiyot, Huquq, Arxitektura, Dasturlash va Grantlar bo'yicha 1-ga-1 shaxsiy yo'l-yo'riq oling.
+          </p>
+
+          {/* Value Stats Pills */}
+          <div className="pt-3 flex flex-wrap items-center gap-3 text-xs font-bold font-sans">
+            <div className="flex items-center gap-2 bg-amber-950/60 border border-amber-500/30 px-3.5 py-2 rounded-2xl backdrop-blur-md text-amber-200">
+              <Users className="w-4 h-4 text-amber-400" />
+              <span>50+ Top Rahnamolar</span>
+            </div>
+            <div className="flex items-center gap-2 bg-amber-950/60 border border-amber-500/30 px-3.5 py-2 rounded-2xl backdrop-blur-md text-amber-200">
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>1,200+ Muvaffaqiyatli Qabullar</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/30 px-3 py-2 rounded-2xl backdrop-blur-md text-amber-300">
+              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <span>4.9 ★ Reyting</span>
+            </div>
+          </div>
         </div>
-        <h1 className="font-serif font-extrabold text-2xl sm:text-4xl text-amber-950 leading-tight">
-          Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
-        </h1>
-        <p className="text-xs sm:text-sm text-stone-700 mt-3 leading-relaxed">
-          Tibbiyot, Huquq, Arxitettura, Dasturlash va Biznes sohasidagi tajribali Rahnamolardan 1-ga-1 shaxsiy yo'l-yo'riq va mentorlik oling.
-        </p>
-      </div>
 
-      {/* Parallax Dune Layers SVG */}
-      <div className="relative mt-8 sm:mt-12 h-24 sm:h-36 w-full">
-        {/* Layer 1: Distant Dune */}
-        <svg
-          className="absolute bottom-0 left-0 w-full h-full text-amber-200/50"
-          viewBox="0 0 1200 120"
-          preserveAspectRatio="none"
-        >
-          <path
-            fill="currentColor"
-            d="M0,40 Q300,120 600,30 Q900,-20 1200,50 L1200,120 L0,120 Z"
-          />
-        </svg>
+        {/* Right Column: User's Golden Rahnamo & Guide Star Emblem Artwork */}
+        <div className="lg:col-span-5 flex items-center justify-center relative">
+          <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-full p-2 bg-gradient-to-b from-amber-400/40 via-amber-600/20 to-amber-900/40 border border-amber-400/30 shadow-2xl group-hover:scale-105 transition-all duration-700">
+            {/* Pulsing Guide Star Ambient Ring */}
+            <div className="absolute inset-0 rounded-full border-2 border-amber-400/20 animate-pulse" />
 
-        {/* Layer 2: Mid Dune */}
-        <svg
-          className="absolute bottom-0 left-0 w-full h-full text-amber-300/40"
-          viewBox="0 0 1200 120"
-          preserveAspectRatio="none"
-        >
-          <path
-            fill="currentColor"
-            d="M0,70 Q400,20 800,90 Q1050,40 1200,80 L1200,120 L0,120 Z"
-          />
-        </svg>
+            {/* High Resolution Artwork Image */}
+            <div className="w-full h-full rounded-full overflow-hidden border-2 border-amber-400/50 shadow-inner bg-[#1A120C] flex items-center justify-center relative">
+              <img
+                src="/hero-guide-star.jpg"
+                alt="Rahnamo — Golden Guide Star Emblem"
+                className="w-full h-full object-cover rounded-full transform scale-105 group-hover:scale-110 transition-transform duration-700"
+              />
 
-        {/* Layer 3: Foreground Dune */}
-        <svg
-          className="absolute bottom-0 left-0 w-full h-full text-amber-400/30"
-          viewBox="0 0 1200 120"
-          preserveAspectRatio="none"
-        >
-          <path
-            fill="currentColor"
-            d="M0,90 Q350,50 700,100 Q1000,60 1200,95 L1200,120 L0,120 Z"
-          />
-        </svg>
-
-        {/* Animated Walking Camel Caravan Silhouette */}
-        <div className="absolute bottom-3 left-6 sm:left-16 flex items-end gap-3 sm:gap-6 animate-caravan">
-          {/* Camel 1 (Leader with Animated Bob) */}
-          <div className="flex flex-col items-center animate-camel-bob">
-            <svg className="w-9 h-9 sm:w-12 sm:h-12 text-amber-950 fill-current drop-shadow-sm" viewBox="0 0 24 24">
-              <path d="M19 13c.5 0 1-.5 1-1s-.5-1-1-1h-1v-2c0-.6-.4-1-1-1h-2c-.6 0-1 .4-1 1v1h-1c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-3h1zM7 9c.6 0 1-.4 1-1V5c0-.6-.4-1-1-1H5c-.6 0-1 .4-1 1v1H3c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V9h1zm6-4c-.6 0-1 .4-1 1v1h-2c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V9h1c.6 0 1-.4 1-1V6c0-.6-.4-1-1-1h-2z" />
-            </svg>
-            <span className="w-2 h-0.5 bg-amber-950/40 rounded-full mt-0.5" />
-          </div>
-
-          {/* Camel 2 */}
-          <div className="flex flex-col items-center animate-camel-bob [animation-delay:0.4s]">
-            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-amber-900 fill-current drop-shadow-sm opacity-90" viewBox="0 0 24 24">
-              <path d="M19 13c.5 0 1-.5 1-1s-.5-1-1-1h-1v-2c0-.6-.4-1-1-1h-2c-.6 0-1 .4-1 1v1h-1c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-3h1zM7 9c.6 0 1-.4 1-1V5c0-.6-.4-1-1-1H5c-.6 0-1 .4-1 1v1H3c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V9h1z" />
-            </svg>
-            <span className="w-1.5 h-0.5 bg-amber-950/30 rounded-full mt-0.5" />
-          </div>
-
-          {/* Camel 3 */}
-          <div className="flex flex-col items-center animate-camel-bob [animation-delay:0.8s]">
-            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-amber-900/80 fill-current drop-shadow-sm opacity-80" viewBox="0 0 24 24">
-              <path d="M19 13c.5 0 1-.5 1-1s-.5-1-1-1h-1v-2c0-.6-.4-1-1-1h-2c-.6 0-1 .4-1 1v1h-1c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-3h1zM7 9c.6 0 1-.4 1-1V5c0-.6-.4-1-1-1H5c-.6 0-1 .4-1 1v1H3c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h1v3c0 .6.4 1 1 1h2c.6 0 1-.4 1-1V9h1z" />
-            </svg>
-            <span className="w-1.5 h-0.5 bg-amber-950/20 rounded-full mt-0.5" />
+              {/* Subtle Gold Shimmer Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#241A14]/40 via-transparent to-amber-300/10 pointer-events-none rounded-full" />
+            </div>
           </div>
         </div>
       </div>
