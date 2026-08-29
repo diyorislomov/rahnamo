@@ -140,10 +140,9 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const savedToken = typeof window !== 'undefined' ? sessionStorage.getItem('rahnamo_admin_token') : null;
     const envKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
-    const validKeys = ['rahnamo2026', 'admin', 'rahnamo', 'admin123'];
-    if (envKey) validKeys.push(envKey);
+    const validKey = envKey || 'Goldenprof7!';
 
-    if (savedToken && validKeys.includes(savedToken)) {
+    if (savedToken && savedToken === validKey) {
       setIsAuthenticated(true);
       fetchAdminData();
     } else {
@@ -154,11 +153,10 @@ export default function AdminDashboardPage() {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const envKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
-    const validKeys = ['rahnamo2026', 'admin', 'rahnamo', 'admin123'];
-    if (envKey) validKeys.push(envKey);
+    const validKey = envKey || 'Goldenprof7!';
 
     const entered = adminPassword.trim();
-    if (validKeys.includes(entered)) {
+    if (entered === validKey) {
       setIsAuthenticated(true);
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('rahnamo_admin_token', entered);
@@ -166,7 +164,7 @@ export default function AdminDashboardPage() {
       setLoginError('');
       fetchAdminData();
     } else {
-      setLoginError("Administrator paroli noto'g'ri. Standard parol: rahnamo2026 yoki admin");
+      setLoginError("Administrator paroli noto'g'ri. Parolni qaytadan kiriting.");
     }
   };
 
