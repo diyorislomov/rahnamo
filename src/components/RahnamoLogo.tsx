@@ -8,79 +8,72 @@ interface RahnamoLogoProps {
   light?: boolean;
 }
 
-export function RahnamoMonogram({ className = "w-8 h-8", light = false }: { className?: string; light?: boolean }) {
+export function RahnamoMonogram({ className = "w-9 h-9", light = false }: { className?: string; light?: boolean }) {
   return (
     <svg
-      viewBox="0 0 100 100"
+      viewBox="0 0 120 120"
       className={className}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Background shape (optional app icon style) */}
-      <rect width="100" height="100" rx="22" fill={light ? "#FAF6EE" : "#2C241E"} />
+      {/* Background shape */}
+      <rect width="120" height="120" rx="26" fill={light ? "#FAF6EE" : "#2C241E"} />
       
-      {/* "R" Stem Left */}
+      {/* "R" Left Vertical Stem */}
       <path
-        d="M26 22 H42 V78 H26 V22 Z"
+        d="M30 25 H48 V95 H30 V25 Z"
         fill={light ? "#2C241E" : "#FAF6EE"}
       />
 
-      {/* "R" Loop Top */}
+      {/* "R" Top Loop */}
       <path
-        d="M42 22 H64 C73.5 22 80 27.5 80 37 C80 46.5 73.5 52 64 52 H42 V22 Z M42 34 V40 H60 C64 40 67 39 67 37 C67 35 64 34 60 34 H42 Z"
+        d="M48 25 H78 C90 25 98 32 98 44 C98 56 90 62 78 62 H48 V25 Z M48 38 V49 H75 C80 49 84 47 84 44 C84 41 80 38 75 38 H48 Z"
         fill={light ? "#2C241E" : "#FAF6EE"}
       />
 
-      {/* Ascending Silk Road Path Leg */}
+      {/* Ascending Golden Road (Leg of the R) */}
       <path
-        d="M42 52 C52 52 60 62 76 78 H60 C48 66 44 60 42 58 V52 Z"
+        d="M48 62 C62 62 72 74 95 95 H74 C58 80 52 72 48 69 V62 Z"
         fill="#D97706"
       />
       <path
-        d="M52 60 C60 66 68 73 84 78 H72 C59 73 53 67 46 62 V60 Z"
+        d="M58 71 C68 78 78 86 102 95 H85 C71 88 63 80 54 74 V71 Z"
         fill="#F59E0B"
       />
 
-      {/* Guide Star inside "R" Loop */}
+      {/* 4-Point Guide Star Inside Loop */}
       <path
-        d="M60 27 L61.5 32 L66.5 33.5 L61.5 35 L60 40 L58.5 35 L53.5 33.5 L58.5 32 Z"
+        d="M72 31 L74 38 L81 40 L74 42 L72 49 L70 42 L63 40 L70 38 Z"
         fill="#F59E0B"
       />
     </svg>
   );
 }
 
-export default function RahnamoLogo({ className = "h-9", variant = 'full', light = false }: RahnamoLogoProps) {
+export default function RahnamoLogo({ className = "h-10", variant = 'full', light = false }: RahnamoLogoProps) {
   if (variant === 'monogram') {
     return <RahnamoMonogram className={className} light={light} />;
   }
 
   return (
     <div className={`inline-flex items-center gap-3 select-none ${className}`}>
-      {/* Monogram */}
-      <svg
-        viewBox="0 0 100 100"
-        className="h-full w-auto aspect-square flex-shrink-0"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect width="100" height="100" rx="22" fill={light ? "#FAF6EE" : "#2C241E"} />
-        <path d="M26 22 H42 V78 H26 V22 Z" fill={light ? "#2C241E" : "#FAF6EE"} />
-        <path
-          d="M42 22 H64 C73.5 22 80 27.5 80 37 C80 46.5 73.5 52 64 52 H42 V22 Z M42 34 V40 H60 C64 40 67 39 67 37 C67 35 64 34 60 34 H42 Z"
-          fill={light ? "#2C241E" : "#FAF6EE"}
-        />
-        <path d="M42 52 C52 52 60 62 76 78 H60 C48 66 44 60 42 58 V52 Z" fill="#D97706" />
-        <path d="M52 60 C60 66 68 73 84 78 H72 C59 73 53 67 46 62 V60 Z" fill="#F59E0B" />
-        <path d="M60 27 L61.5 32 L66.5 33.5 L61.5 35 L60 40 L58.5 35 L53.5 33.5 L58.5 32 Z" fill="#F59E0B" />
-      </svg>
+      {/* Monogram Badge */}
+      <RahnamoMonogram className="h-full w-auto aspect-square flex-shrink-0" light={light} />
 
-      {/* Typography */}
+      {/* Typography & Official Tagline */}
       <div className="flex flex-col justify-center">
-        <span className={`font-serif font-extrabold tracking-wider leading-none text-xl sm:text-2xl ${light ? 'text-[#FAF6EE]' : 'text-[#2C241E]'}`}>
+        <span
+          className={`font-serif font-black tracking-wider leading-none text-xl sm:text-2xl ${
+            light ? 'text-[#FAF6EE]' : 'text-[#2C241E]'
+          }`}
+          style={{ letterSpacing: '0.08em' }}
+        >
           RAHNAMO
         </span>
-        <span className="text-[9px] sm:text-[10px] font-sans font-bold tracking-widest text-[#D97706] uppercase mt-0.5">
+        <span
+          className="text-[8px] sm:text-[9.5px] font-sans font-extrabold tracking-widest text-[#D97706] uppercase mt-1 leading-none"
+          style={{ letterSpacing: '0.18em' }}
+        >
           GUIDE. GROW. ACHIEVE.
         </span>
       </div>
