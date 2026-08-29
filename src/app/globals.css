@@ -22,16 +22,16 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom Silk Road Animations & Utilities */
+/* Custom Silk Road Animations */
 @keyframes caravanWalk {
   0% {
-    transform: translateX(-3%);
+    transform: translateX(-5%);
   }
   50% {
-    transform: translateX(4%);
+    transform: translateX(6%);
   }
   100% {
-    transform: translateX(-3%);
+    transform: translateX(-5%);
   }
 }
 
@@ -40,48 +40,87 @@ body {
     transform: translateY(0px) rotate(0deg);
   }
   25% {
-    transform: translateY(-3px) rotate(1deg);
+    transform: translateY(-4px) rotate(1.5deg);
+  }
+  50% {
+    transform: translateY(-1px) rotate(0deg);
   }
   75% {
-    transform: translateY(2px) rotate(-1deg);
+    transform: translateY(3px) rotate(-1.5deg);
+  }
+}
+
+@keyframes manWalk {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(-1deg);
+  }
+  75% {
+    transform: translateY(2px) rotate(1deg);
+  }
+}
+
+@keyframes guideStarShine {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 25px rgba(217, 119, 6, 0.7));
+  }
+  50% {
+    transform: scale(1.15) rotate(4deg);
+    filter: drop-shadow(0 0 22px rgba(251, 191, 36, 1)) drop-shadow(0 0 45px rgba(245, 158, 11, 0.9));
   }
 }
 
 @keyframes starTwinkle {
   0%, 100% {
     opacity: 0.2;
-    transform: scale(0.8);
+    transform: scale(0.7);
   }
   50% {
-    opacity: 0.9;
-    transform: scale(1.2);
+    opacity: 1;
+    transform: scale(1.3);
   }
 }
 
-@keyframes trailDash {
-  to {
-    stroke-dashoffset: -40;
+@keyframes rayPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.1);
   }
 }
 
 .animate-caravan {
-  animation: caravanWalk 20s ease-in-out infinite;
+  animation: caravanWalk 14s ease-in-out infinite;
 }
 
 .animate-camel-bob {
-  animation: camelBob 3s ease-in-out infinite;
+  animation: camelBob 2.5s ease-in-out infinite;
+}
+
+.animate-man-walk {
+  animation: manWalk 2.5s ease-in-out infinite;
+}
+
+.animate-guide-star {
+  animation: guideStarShine 3.5s ease-in-out infinite;
+}
+
+.animate-ray-pulse {
+  animation: rayPulse 4s ease-in-out infinite;
 }
 
 .animate-twinkle-fast {
-  animation: starTwinkle 2s ease-in-out infinite;
+  animation: starTwinkle 1.8s ease-in-out infinite;
 }
 
 .animate-twinkle-slow {
-  animation: starTwinkle 4s ease-in-out infinite;
-}
-
-.animate-trail-dash {
-  animation: trailDash 2s linear infinite;
+  animation: starTwinkle 3.2s ease-in-out infinite;
 }
 
 /* Silk Tapestry Pattern Background */
@@ -90,14 +129,6 @@ body {
   background-image: radial-gradient(#9C4221 0.75px, transparent 0.75px), radial-gradient(#D97706 0.75px, #FAF6EE 0.75px);
   background-size: 30px 30px;
   background-position: 0 0, 15px 15px;
-}
-
-.bg-desert-gradient {
-  background: linear-gradient(135deg, #FAF6EE 0%, #F5EBE0 40%, #EED9C4 100%);
-}
-
-.bg-silk-night-gradient {
-  background: linear-gradient(180deg, #1E1B4B 0%, #312E81 50%, #1E1B4B 100%);
 }
 
 /* Custom Scrollbar */
