@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Rahnamo <onboarding@resend.dev>',
+        from: process.env.RESEND_FROM_EMAIL || 'Rahnamo <onboarding@resend.dev>',
         to: [email],
         subject: `[Rahnamo] Qabul Tasdiqlandi — Chipta ${id}`,
         html: htmlContent,
@@ -58,6 +58,12 @@ export async function POST(request: Request) {
     });
 
     const data = await res.json();
+    
+    // If sending to external email fails because of onboarding@resend.dev domain restriction
+    if (!res.ok && data?.message?.includes('onboarding@resend.dev')) {
+      console.warn('[Resend Domain Warning]: onboarding@resend.dev can only send to your own registered email until custom domain (rahnamo.uz) is verified in Resend.');
+    }
+
     return NextResponse.json({ success: res.ok, data });
   } catch (error: any) {
     console.error('Email API Error:', error);
