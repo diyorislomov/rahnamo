@@ -25,31 +25,63 @@ body {
 /* Custom Silk Road Animations & Utilities */
 @keyframes caravanWalk {
   0% {
-    transform: translateX(-5%);
+    transform: translateX(-3%);
   }
   50% {
-    transform: translateX(5%);
+    transform: translateX(4%);
   }
   100% {
-    transform: translateX(-5%);
+    transform: translateX(-3%);
   }
 }
 
-@keyframes floatDune {
+@keyframes camelBob {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(1deg);
+  }
+  75% {
+    transform: translateY(2px) rotate(-1deg);
+  }
+}
+
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
   }
   50% {
-    transform: translateY(-6px);
+    opacity: 0.9;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes trailDash {
+  to {
+    stroke-dashoffset: -40;
   }
 }
 
 .animate-caravan {
-  animation: caravanWalk 24s ease-in-out infinite;
+  animation: caravanWalk 20s ease-in-out infinite;
 }
 
-.animate-float-dune {
-  animation: floatDune 6s ease-in-out infinite;
+.animate-camel-bob {
+  animation: camelBob 3s ease-in-out infinite;
+}
+
+.animate-twinkle-fast {
+  animation: starTwinkle 2s ease-in-out infinite;
+}
+
+.animate-twinkle-slow {
+  animation: starTwinkle 4s ease-in-out infinite;
+}
+
+.animate-trail-dash {
+  animation: trailDash 2s linear infinite;
 }
 
 /* Silk Tapestry Pattern Background */
