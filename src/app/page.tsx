@@ -1,212 +1,307 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { CaravanHeroIllustration, GuidingStarIcon } from '@/components/Icons';
-import { Star, ShieldCheck, Search } from 'lucide-react';
+import DesertCaravan from '@/components/DesertCaravan';
+import CounselorCard from '@/components/CounselorCard';
+import { INITIAL_COUNSELORS } from '@/lib/mockData';
+import { Search, ChevronDown, Sparkles } from 'lucide-react';
 
-export default function HomePage() {
-  const [search, setSearch] = useState('');
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+const SPECIALTY_CONFIG: { [key: string]: { label: string; activeClass: string; inactiveClass: string; icon: string } } = {
+  All: {
+    label: 'Barcha sohalar',
+    activeClass: 'bg-amber-900 text-amber-50 border-amber-950 shadow-md ring-2 ring-amber-900/30 scale-105',
+    inactiveClass: 'bg-amber-100/90 text-amber-950 border-amber-300 hover:bg-amber-200/80',
+    icon: '✨',
+  },
+  'Medicine & Healthcare': {
+    label: 'Tibbiyot & Salomatlik',
+    activeClass: 'bg-emerald-700 text-emerald-50 border-emerald-800 shadow-md ring-2 ring-emerald-600/30 scale-105',
+    inactiveClass: 'bg-emerald-100/90 text-emerald-950 border-emerald-300/80 hover:bg-emerald-200/80',
+    icon: '🩺',
+  },
+  'Architecture & Design': {
+    label: 'Arxitektura & Dizayn',
+    activeClass: 'bg-rose-700 text-rose-50 border-rose-800 shadow-md ring-2 ring-rose-600/30 scale-105',
+    inactiveClass: 'bg-rose-100/90 text-rose-950 border-rose-300/80 hover:bg-rose-200/80',
+    icon: '🏛️',
+  },
+  'Law & Legal Practice': {
+    label: 'Huquq & Korporativ',
+    activeClass: 'bg-indigo-800 text-indigo-50 border-indigo-900 shadow-md ring-2 ring-indigo-600/30 scale-105',
+    inactiveClass: 'bg-indigo-100/90 text-indigo-950 border-indigo-300/80 hover:bg-indigo-200/80',
+    icon: '⚖️',
+  },
+  'Study Abroad': {
+    label: 'Xalqaro Grantlar',
+    activeClass: 'bg-purple-800 text-purple-50 border-purple-900 shadow-md ring-2 ring-purple-600/30 scale-105',
+    inactiveClass: 'bg-purple-100/90 text-purple-950 border-purple-300/80 hover:bg-purple-200/80',
+    icon: '🎓',
+  },
+  'Agriculture & Trade': {
+    label: 'Qishloq xo\'jaligi & Eksport',
+    activeClass: 'bg-amber-800 text-amber-50 border-amber-900 shadow-md ring-2 ring-amber-600/30 scale-105',
+    inactiveClass: 'bg-amber-100/90 text-amber-950 border-amber-300/80 hover:bg-amber-200/80',
+    icon: '🌾',
+  },
+  'Engineering & Tech': {
+    label: 'Dasturlash & IT',
+    activeClass: 'bg-sky-700 text-sky-50 border-sky-800 shadow-md ring-2 ring-sky-600/30 scale-105',
+    inactiveClass: 'bg-sky-100/90 text-sky-950 border-sky-300/80 hover:bg-sky-200/80',
+    icon: '💻',
+  },
+};
 
-  const tags = [
-    'All',
-    'Medicine & Healthcare',
-    'Architecture & Design',
-    'Law & Legal Practice',
-    'Study Abroad',
-    'Agriculture & Trade',
-    'Engineering & Tech',
-  ];
+type SortOption = 'rating' | 'popular' | 'price-low' | 'price-high';
 
-  const filteredCounselors = INITIAL_COUNSELORS.filter((c) => {
+export default function Home() {
+  const [selectedTag, setSelectedTag] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<SortOption>('rating');
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  // Filter & Search logic
+  const filteredCounselors = INITIAL_COUNSELORS.filter((counselor) => {
+    const matchesTag =
+      selectedTag === 'All' || counselor.specialties.includes(selectedTag);
+
     const matchesSearch =
-      c.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      c.headline.toLowerCase().includes(search.toLowerCase()) ||
-      c.specialties.some((s) => s.toLowerCase().includes(search.toLowerCase()));
+      searchQuery.trim() === '' ||
+      counselor.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      counselor.headline.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      counselor.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      counselor.specialties.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesTag = !selectedTag || selectedTag === 'All' || c.specialties.includes(selectedTag);
-    return matchesSearch && matchesTag;
+    return matchesTag && matchesSearch;
   });
 
+  // Sort logic
+  const sortedCounselors = [...filteredCounselors].sort((a, b) => {
+    if (sortBy === 'rating') return b.rating - a.rating;
+    if (sortBy === 'popular') return b.reviewsCount - a.reviewsCount;
+    if (sortBy === 'price-low') return a.standardPrice - b.standardPrice;
+    if (sortBy === 'price-high') return b.standardPrice - a.standardPrice;
+    return 0;
+  });
+
+  const toggleFaq = (index: number) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
+
   return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200 selection:text-amber-900">
+    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200">
       <Navbar />
 
-      {/* Hero Section with Vector Illustration */}
-      <section className="relative overflow-hidden pt-10 pb-6 px-6 text-center bg-gradient-to-b from-[#F3EAD8] via-[#FAF6EE] to-[#FAF6EE] border-b border-amber-900/5">
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-900/5 border border-amber-900/10 text-amber-900 text-xs font-semibold mb-6">
-            <GuidingStarIcon className="w-3.5 h-3.5 text-amber-700" />
-            <span>Yo'lingizni o'z sohasining yetuk ustozlari bilan toping</span>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Rahnamo Starry Night Hero Caravan */}
+        <DesertCaravan />
 
-          <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-amber-950 leading-[1.15]">
-            Kasb ummonida adashmang. <br />
-            <span className="bg-gradient-to-r from-amber-800 via-orange-800 to-amber-900 bg-clip-text text-transparent">
-              Rahnamoyingizni tanlang.
-            </span>
-          </h1>
-
-          <p className="mt-5 text-stone-700 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
-            Tibbiyot, Huquq, Muhandislik, San'at, Biznes yoki Xorijda Ta'lim — tajribali mutaxassislar bilan 1-ga-1 yo'naltiruvchi maslahat sessiyalari.
-          </p>
-
-          {/* Search Bar */}
-          <div className="mt-8 max-w-xl mx-auto">
-            <div className="relative shadow-sm rounded-2xl">
-              <Search className="absolute left-4 top-3.5 h-5 w-5 text-amber-800/60" />
+        {/* MentorCruise Search & Distinct Multi-Colored Rounded-Full Category Filter Bar */}
+        <section className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm my-8 space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-stone-400 absolute left-4 top-3.5" />
               <input
                 type="text"
-                aria-label="Rahnamolarni qidirish"
-                placeholder="Qidiruv: shifokor, arxitektor, huquqshunos, stipendiyalar..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-white/90 backdrop-blur-sm rounded-2xl border border-amber-900/15 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-700 text-sm text-amber-950 placeholder:text-stone-400 transition-all"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rahnamolar ismi, soha yoki kalit so'z bo'yicha qidirish (masalan: Ordinatura, Fulbright, Legal)..."
+                className="w-full pl-11 pr-4 py-3 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs sm:text-sm text-stone-800 outline-none focus:ring-2 focus:ring-amber-700 transition-all placeholder:text-stone-400"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-3.5 text-xs text-stone-400 hover:text-stone-600 font-bold cursor-pointer"
+                >
+                  ✕ Clear
+                </button>
+              )}
             </div>
 
-            {/* Field Tags */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-              {tags.map((tag) => (
+            {/* Sort Selector */}
+            <div className="flex items-center gap-2 self-end md:self-auto text-xs font-semibold">
+              <span className="text-stone-500 whitespace-nowrap">Saralash:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="bg-amber-50/80 border border-amber-900/15 text-amber-950 font-bold py-3 px-3.5 rounded-2xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
+              >
+                <option value="rating">Eng yuqori baholangan</option>
+                <option value="popular">Eng ko'p sessiya o'tkazgan</option>
+                <option value="price-low">Narx: Arzonroq</option>
+                <option value="price-high">Narx: Qimmatroq</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Category Filter Pills (Distinct Accent Colors & Rounded-Full Pills) */}
+          <div className="flex flex-wrap gap-2.5 pt-3 border-t border-amber-900/10">
+            {Object.keys(SPECIALTY_CONFIG).map((key) => {
+              const cfg = SPECIALTY_CONFIG[key];
+              const isSelected = selectedTag === key;
+              return (
                 <button
-                  key={tag}
-                  onClick={() => setSelectedTag(tag)}
-                  className={`text-xs px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
-                    (selectedTag === tag || (!selectedTag && tag === 'All'))
-                      ? 'bg-amber-900 text-amber-50 shadow-sm font-medium'
-                      : 'bg-white/80 text-stone-700 border border-amber-900/10 hover:bg-amber-100/60'
+                  key={key}
+                  onClick={() => setSelectedTag(key)}
+                  className={`px-4.5 py-2.5 rounded-full text-xs font-bold transition-all duration-200 border flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                    isSelected ? cfg.activeClass : cfg.inactiveClass
                   }`}
                 >
-                  {tag}
+                  <span>{cfg.icon}</span>
+                  <span>{cfg.label}</span>
                 </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Mentor Cards Grid (Lively Micro-Interactions & Hover Glow) */}
+        <section className="mb-16">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-serif font-bold text-xl sm:text-2xl text-amber-950 flex items-center gap-2">
+                <span>Saralangan Rahnamolar</span>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 font-mono">
+                  {sortedCounselors.length}
+                </span>
+              </h2>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Markaziy Osiyoning yetakchi mutaxassislaridan 1-ga-1 konsultatsiya qabullari
+              </p>
+            </div>
+          </div>
+
+          {sortedCounselors.length === 0 ? (
+            <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 my-6 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center mx-auto mb-3">
+                <Search className="w-8 h-8 text-amber-800" />
+              </div>
+              <h4 className="font-serif font-bold text-lg text-amber-950">Hech qanday Rahnamo topilmadi</h4>
+              <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+                Qidiruv so'zini o'zgartiring yoki boshqa sohani tanlab ko'ring.
+              </p>
+              <button
+                onClick={() => {
+                  setSelectedTag('All');
+                  setSearchQuery('');
+                }}
+                className="mt-4 bg-amber-900 text-amber-50 font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-amber-800 transition-all cursor-pointer"
+              >
+                Barcha Rahnamolarni ko'rsatish
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortedCounselors.map((counselor) => (
+                <CounselorCard key={counselor.id} counselor={counselor} />
               ))}
             </div>
-          </div>
-        </div>
+          )}
+        </section>
 
-        {/* Crisp Vector Hero Illustration */}
-        <div className="mt-6">
-          <CaravanHeroIllustration />
-        </div>
-      </section>
 
-      {/* Counselors Grid */}
-      <main className="max-w-6xl mx-auto px-6 py-12 pb-16">
-        <div className="flex items-center justify-between mb-8 border-b border-amber-900/10 pb-4">
-          <div>
-            <h2 className="font-serif font-bold text-2xl text-amber-950">Tajribali Rahnamolar</h2>
-            <p className="text-xs text-stone-600 mt-0.5">O'z sohangizdagi yo'l ko'rsatuvchi ustozni tanlang</p>
-          </div>
-          <span className="text-xs font-semibold text-amber-900 bg-amber-100 px-3 py-1 rounded-lg border border-amber-300/60">
-            {filteredCounselors.length} ta mutaxassis
-          </span>
-        </div>
+        {/* How Rahnamo Works Section (Desert Oasis Theme) */}
+        <section id="how-it-works" className="bg-gradient-to-b from-[#1E1B4B] via-[#2A265F] to-[#1E1B4B] text-amber-50 rounded-3xl p-8 sm:p-12 my-16 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCounselors.map((c) => (
-            <div
-              key={c.id}
-              className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 border border-amber-900/10 shadow-sm hover:shadow-md hover:border-amber-700/30 transition-all flex flex-col justify-between group"
-            >
-              <div>
-                <div className="flex items-center gap-4">
-                  <img
-                    src={c.avatarUrl}
-                    alt={c.fullName}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-200/80 shadow-xs"
-                  />
-                  <div>
-                    <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-1.5">
-                      {c.fullName}
-                      <ShieldCheck className="w-4 h-4 text-amber-700 fill-amber-100" />
-                    </h3>
-                    <p className="text-xs text-stone-600 line-clamp-1">{c.headline}</p>
-                    <div className="flex items-center gap-1 mt-1 text-xs font-semibold text-amber-800">
-                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                      <span>{c.rating}</span>
-                      <span className="text-stone-400 font-normal">({c.reviewsCount} ta baho)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                  {c.specialties.map((spec) => (
-                    <span
-                      key={spec}
-                      className="bg-amber-50 text-amber-900 border border-amber-200/60 text-[11px] font-medium px-2.5 py-0.5 rounded-lg"
-                    >
-                      {spec}
-                    </span>
-                  ))}
-                </div>
-
-                <p className="text-stone-600 text-xs mt-3 line-clamp-3 leading-relaxed">
-                  {c.bio}
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-amber-900/10 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-amber-800/70 tracking-wider">Sessiya narxi</span>
-                  <p className="text-sm font-black text-amber-950 font-serif">
-                    {c.standardPrice.toLocaleString()} <span className="text-xs font-normal text-stone-500 font-sans">so'm</span>
-                  </p>
-                </div>
-                <Link
-                  href={`/counselors/${c.id}`}
-                  className="bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-amber-950/10"
-                >
-                  Suhbatga yozilish
-                </Link>
-              </div>
+          <div className="text-center max-w-2xl mx-auto mb-12 relative z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-semibold mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>3 ta oddiy qadam</span>
             </div>
-          ))}
-        </div>
-      </main>
+            <h2 className="font-serif font-bold text-2xl sm:text-4xl text-amber-100">
+              Rahnamo platformasi qanday ishlaydi?
+            </h2>
+            <p className="text-xs sm:text-sm text-amber-200/70 mt-2">
+              Markaziy Osiyoning eng yaxshi ekspertlaridan 1-ga-1 konsultatsiya olish tartibi
+            </p>
+          </div>
 
-      {/* How It Works Section */}
-      <section id="how-it-works" className="bg-[#F3EAD8]/70 border-t border-amber-900/10 py-16 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-serif font-bold text-3xl text-amber-950">Qanday ishlaydi?</h2>
-          <p className="text-xs text-stone-600 mt-2">Karvon yo'lida 3 ta oddiy qadam</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
-            <div className="bg-white/80 p-6 rounded-3xl border border-amber-900/10 text-center">
-              <div className="w-12 h-12 bg-amber-100 text-amber-900 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold font-serif">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+            <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
                 1
               </div>
-              <h3 className="font-serif font-bold text-base text-amber-950 mt-4">Rahnamoni tanlang</h3>
-              <p className="text-xs text-stone-600 mt-2">
-                O'zingiz qiziqqan kasb, soha yoki chet elda o'qish bo'yicha mutaxassis profilini ko'ring.
+              <h3 className="font-serif font-bold text-lg text-amber-100">Rahnamoni va vaqtni tanlang</h3>
+              <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                Katalogdan o'zingizga ma'qul bo'lgan mutaxassisni tanlang, Standart yoki Premium paketni ko'rsatib, mos keladigan vaqtni belgilang.
               </p>
             </div>
 
-            <div className="bg-white/80 p-6 rounded-3xl border border-amber-900/10 text-center">
-              <div className="w-12 h-12 bg-amber-100 text-amber-900 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold font-serif">
+            <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
                 2
               </div>
-              <h3 className="font-serif font-bold text-base text-amber-950 mt-4">Vaqt & To'lov</h3>
-              <p className="text-xs text-stone-600 mt-2">
-                Qulay vaqtni tanlang, savollaringizni yozing va Payme yoki Click orqali tasdiqlang.
+              <h3 className="font-serif font-bold text-lg text-amber-100">To'lov va ma'lumotlarni to'ldirish</h3>
+              <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                Payme, Click yoki Uzum Bank orqali xavfsiz to'lovni amalga oshiring. Rahnamoga beriladigan asosiy savolingizni yozing.
               </p>
             </div>
 
-            <div className="bg-white/80 p-6 rounded-3xl border border-amber-900/10 text-center">
-              <div className="w-12 h-12 bg-amber-100 text-amber-900 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold font-serif">
+            <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
                 3
               </div>
-              <h3 className="font-serif font-bold text-base text-amber-950 mt-4">1-ga-1 Jonli Suhbat</h3>
-              <p className="text-xs text-stone-600 mt-2">
-                Google Meet orqali jonli muloqot qilib, aniq yo'l xaritasiga ega bo'ling.
+              <h3 className="font-serif font-bold text-lg text-amber-100">1-ga-1 Video muloqot</h3>
+              <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                Chipta va Google Meet havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang.
               </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* FAQ Accordion Section (Interactive Expand/Collapse Accordion) */}
+        <section className="max-w-3xl mx-auto my-16">
+          <h2 className="font-serif font-bold text-2xl text-center text-amber-950 mb-6">
+            Tez-tez beriladigan savollar
+          </h2>
+          <div className="space-y-3">
+            {[
+              {
+                q: "Konsultatsiya bekor qilinsa yoki vaqt ko'chirilsa nima bo'ladi?",
+                a: "Suhbat boshlanishidan 12 soat oldin administratorimizga murojaat qilsangiz, to'lov 100% qaytariladi yoki uchrashuv vaqti sizga qulay boshqa vaqtga ko'chiriladi.",
+              },
+              {
+                q: "Suhbat qaysi dastur orqali o'tkaziladi?",
+                a: "Barcha 1-ga-1 konsultatsiyalar Google Meet video havolasi orqali o'tkaziladi. Sizga xonaga ulanish havolasi elektron pochta va Telegram orqali yuboriladi.",
+              },
+              {
+                q: "Rahnamolar ro'yxatiga qanday qo'shilish mumkin?",
+                a: "Agar siz ham o'z sohangizda tajribali bo'lsangiz, menyudagi 'Rahnamo bo'lish' tugmasini bosib anketani to'ldirishingiz mumkin. 24 soat ichida profilingiz tasdiqlanadi.",
+              },
+            ].map((faq, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div
+                  key={idx}
+                  className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+                    isOpen ? 'bg-amber-50/90 border-amber-800 shadow-sm ring-1 ring-amber-800/20' : 'bg-white/95 border-amber-900/15 hover:border-amber-900/30'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(idx)}
+                    className="w-full p-5 text-left font-serif font-bold text-sm text-amber-950 flex items-center justify-between cursor-pointer gap-4"
+                  >
+                    <span>{faq.q}</span>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${isOpen ? 'bg-amber-900 text-amber-50 rotate-180' : 'bg-amber-100 text-amber-900'}`}>
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-5 pb-5 text-xs text-stone-700 leading-relaxed border-t border-amber-900/10 pt-3.5 animate-in fade-in duration-200">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>

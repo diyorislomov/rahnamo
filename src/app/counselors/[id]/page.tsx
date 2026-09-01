@@ -1,16 +1,19 @@
 'use client';
-import { supabase } from '@/lib/supabase';
-import { getDeviceId } from '@/lib/deviceId';
+
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
+import { Tier } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { getDeviceId } from '@/lib/deviceId';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-
-type Tier = 'standard' | 'premium';
-import { CamelIcon, GuidingStarIcon, PaymeBadge, ClickBadge, UzumBadge } from '@/components/Icons';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock } from 'lucide-react';
+import { CamelIcon } from '@/components/Icons';
+import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X } from 'lucide-react';
 import Link from 'next/link';
+
+import { generateMeetLink } from '@/lib/meeting';
+import { sendTelegramNotification } from '@/lib/telegram';
 
 type PaymentMethod = 'payme' | 'click' | 'uzum';
 
@@ -30,16 +33,21 @@ interface BookingTicketData {
   telegram: string;
   education: string;
   question: string;
+  meetLink?: string;
+  paymentStatus?: 'pending' | 'confirmed' | 'rejected';
+  paymentReceipt?: string;
   createdAt: string;
 }
 
 export default function CounselorPage() {
   const params = useParams();
   const router = useRouter();
-  const counselor = INITIAL_COUNSELORS.find((c) => c.id === params.id);
+  
+  const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const counselor = INITIAL_COUNSELORS.find((c) => c.id === rawId);
 
   const [selectedTier, setSelectedTier] = useState<Tier>('standard');
-  const [selectedSlot, setSelectedSlot] = useState<string>('');
+  const [selectedSlot, setSelectedSlot] = useState<string>(counselor?.availableSlots?.[0] || '');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
 
   // Form State
@@ -54,8 +62,21 @@ export default function CounselorPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [bookingTicket, setBookingTicket] = useState<BookingTicketData | null>(null);
   const [copied, setCopied] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [cardNumber, setCardNumber] = useState('');
+  const [receiptRef, setReceiptRef] = useState('');
+  const [copiedCard, setCopiedCard] = useState(false);
+  const [cardError, setCardError] = useState('');
+
+  const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawDigits = e.target.value.replace(/\D/g, '').slice(0, 16);
+    const formatted = rawDigits.replace(/(\d{4})(?=\d)/g, '$1 ');
+    setCardNumber(formatted);
+    if (cardError) setCardError('');
+  };
 
   if (!counselor) {
     return (
@@ -68,7 +89,6 @@ export default function CounselorPage() {
     );
   }
 
-  // Strict Validation Logic
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
@@ -80,31 +100,34 @@ export default function CounselorPage() {
       newErrors.fullName = "Ism va familiyangizni to'liq kiriting (kamida 3 ta belgi).";
     }
 
-    // Strict Email Regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
       newErrors.email = "To'g'ri elektron pochta manzilini kiriting (masalan: ism@domain.com).";
     }
 
-    // Telegram handle validation
-    if (!telegram.trim()) {
+    let cleanedTelegram = telegram.trim().replace(/^https?:\/\/t\.me\//, '');
+    if (!cleanedTelegram) {
       newErrors.telegram = "Telegram foydalanuvchi nomingizni kiriting.";
-    } else if (!telegram.startsWith('@') || telegram.length < 4) {
-      newErrors.telegram = "Telegram username '@' bilan boshlanishi kerak (masalan: @jasur_dev).";
+    } else {
+      if (!cleanedTelegram.startsWith('@')) {
+        cleanedTelegram = '@' + cleanedTelegram;
+      }
+      if (cleanedTelegram.length < 3) {
+        newErrors.telegram = "Telegram username to'g'ri kiritilishi kerak (masalan: @username).";
+      }
     }
 
-    // Phone validation (+998...)
-    const phoneDigits = phone.replace(/\D/g, '');
-    if (phoneDigits.length < 12) {
-      newErrors.phone = "O'zbekiston telefon raqamini to'liq kiriting (+998 90 123 45 67).";
+    const phoneDigits = phone.replace(/\D/g, '').replace(/^998/, '');
+    if (phoneDigits.length !== 9) {
+      newErrors.phone = "O'zbekiston telefon raqamini to'liq 9 xonali formatda kiriting (+998 90 123 45 67).";
     }
 
     if (!education.trim()) {
       newErrors.education = "Hozirgi kasbingiz yoki ta'lim bosqichingizni kiriting.";
     }
 
-    if (!question.trim() || question.trim().length < 10) {
-      newErrors.question = "Savolingizni biroz batafsilroq yozing (kamida 10 ta belgi).";
+    if (!question.trim() || question.trim().length < 5) {
+      newErrors.question = "Savolingizni biroz batafsilroq yozing.";
     }
 
     setErrors(newErrors);
@@ -112,79 +135,178 @@ export default function CounselorPage() {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value;
-    if (!val.startsWith('+998')) {
-      val = '+998 ';
-    }
-    setPhone(val);
+    let input = e.target.value;
+    const digits = input.replace(/\D/g, '');
+    let phoneDigits = digits.startsWith('998') ? digits.slice(3) : digits;
+    phoneDigits = phoneDigits.slice(0, 9);
+
+    let formatted = '+998';
+    if (phoneDigits.length > 0) formatted += ' ' + phoneDigits.slice(0, 2);
+    if (phoneDigits.length > 2) formatted += ' ' + phoneDigits.slice(2, 5);
+    if (phoneDigits.length > 5) formatted += ' ' + phoneDigits.slice(5, 7);
+    if (phoneDigits.length > 7) formatted += ' ' + phoneDigits.slice(7, 9);
+
+    setPhone(formatted);
     if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!validateForm()) {
-    return;
-  }
-
-  setSubmitError('');
-  setIsSubmitting(true);
-
-  const bookingId = `RNM-${Math.floor(1000 + Math.random() * 9000)}`;
-  const price = selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice;
-
-  const newBooking: BookingTicketData = {
-    id: bookingId,
-    counselorId: counselor.id,
-    counselorName: counselor.fullName,
-    counselorHeadline: counselor.headline,
-    counselorAvatar: counselor.avatarUrl,
-    tier: selectedTier,
-    price: price,
-    paymentMethod: paymentMethod,
-    slot: selectedSlot,
-    studentName: fullName,
-    email: email,
-    phone: phone,
-    telegram: telegram,
-    education: education,
-    question: question,
-    createdAt: new Date().toISOString(),
+  const handleInitiatePayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
+    setShowPaymentModal(true);
   };
 
-  const { error } = await supabase.from('bookings').insert({
-    id: newBooking.id,
-    device_id: getDeviceId(),
-    counselor_id: newBooking.counselorId,
-    counselor_name: newBooking.counselorName,
-    counselor_headline: newBooking.counselorHeadline,
-    counselor_avatar: newBooking.counselorAvatar,
-    tier: newBooking.tier,
-    price: newBooking.price,
-    slot: newBooking.slot,
-    student_name: newBooking.studentName,
-    email: newBooking.email,
-    phone: newBooking.phone,
-    telegram: newBooking.telegram,
-    education: newBooking.education,
-    question: newBooking.question,
-  });
+  const handleConfirmPayment = () => {
+    const rawCardDigits = cardNumber.replace(/\D/g, '');
+    if (rawCardDigits.length !== 16) {
+      setCardError("Karta raqami to'liq 16 xonali bo'lishi kerak (Uzcard / Humo / Visa).");
+      return;
+    }
 
-  setIsSubmitting(false);
+    setIsProcessingPayment(true);
 
-  if (error) {
-    console.error(error);
-    setSubmitError("Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.");
-    return;
-  }
+    let cleanedTelegram = telegram.trim().replace(/^https?:\/\/t\.me\//, '');
+    if (!cleanedTelegram.startsWith('@')) {
+      cleanedTelegram = '@' + cleanedTelegram;
+    }
 
-  setBookingTicket(newBooking);
-};
+    const bookingId = `RNM-${Math.floor(1000 + Math.random() * 9000)}`;
+    const price = selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice;
+    const meetLink = generateMeetLink(bookingId);
+
+    const newBooking: BookingTicketData = {
+      id: bookingId,
+      counselorId: counselor.id,
+      counselorName: counselor.fullName,
+      counselorHeadline: counselor.headline,
+      counselorAvatar: counselor.avatarUrl,
+      tier: selectedTier,
+      price: price,
+      paymentMethod: paymentMethod,
+      slot: selectedSlot,
+      studentName: fullName,
+      email: email,
+      phone: phone,
+      telegram: cleanedTelegram,
+      education: education,
+      question: question,
+      meetLink: meetLink,
+      paymentStatus: 'pending',
+      paymentReceipt: receiptRef.trim() || cardNumber.trim() || 'KARTA_OTKAZMASI',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Save to LocalStorage immediately
+    try {
+      const existing = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
+      localStorage.setItem('rahnamo_bookings', JSON.stringify([newBooking, ...existing]));
+    } catch (err) {
+      console.error('LocalStorage save error:', err);
+    }
+
+    // Send Telegram Notification (non-blocking)
+    sendTelegramNotification({
+      id: newBooking.id,
+      studentName: newBooking.studentName,
+      counselorName: newBooking.counselorName,
+      tier: newBooking.tier,
+      price: newBooking.price,
+      slot: newBooking.slot,
+      paymentMethod: newBooking.paymentMethod,
+      phone: newBooking.phone,
+      telegram: newBooking.telegram,
+      email: newBooking.email,
+      education: newBooking.education,
+      question: newBooking.question,
+      meetLink: newBooking.meetLink || meetLink,
+    }).catch((err) => console.warn('Telegram notify error:', err));
+
+    // Send Email Receipt (non-blocking)
+    fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newBooking.id,
+        studentName: newBooking.studentName,
+        counselorName: newBooking.counselorName,
+        tier: newBooking.tier,
+        price: newBooking.price,
+        slot: newBooking.slot,
+        paymentMethod: newBooking.paymentMethod,
+        email: newBooking.email,
+        telegram: newBooking.telegram,
+        question: newBooking.question,
+        meetLink: newBooking.meetLink || meetLink,
+      }),
+    }).catch((err) => console.warn('Email receipt error:', err));
+
+    // Non-blocking sync to Supabase (if configured)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+      Promise.resolve(
+        supabase.from('bookings').insert({
+          id: newBooking.id,
+          device_id: getDeviceId(),
+          counselor_id: newBooking.counselorId,
+          counselor_name: newBooking.counselorName,
+          counselor_headline: newBooking.counselorHeadline,
+          counselor_avatar: newBooking.counselorAvatar,
+          tier: newBooking.tier,
+          price: newBooking.price,
+          slot: newBooking.slot,
+          student_name: newBooking.studentName,
+          email: newBooking.email,
+          phone: newBooking.phone,
+          telegram: newBooking.telegram,
+          education: newBooking.education,
+          question: newBooking.question,
+          meet_link: newBooking.meetLink,
+        })
+      )
+        .then((res: any) => {
+          if (res?.error) console.warn('Supabase sync warning:', res.error);
+        })
+        .catch((err: any) => console.warn('Supabase sync error:', err));
+    }
+
+    setTimeout(() => {
+      setIsProcessingPayment(false);
+      setShowPaymentModal(false);
+      setBookingTicket(newBooking);
+    }, 1000);
+  };
 
   const copyBookingId = () => {
     if (bookingTicket) {
-      navigator.clipboard.writeText(bookingTicket.id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(bookingTicket.id);
+        } else {
+          const textArea = document.createElement('textarea');
+          textArea.value = bookingTicket.id;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    }
+  };
+
+  const getProviderName = () => {
+    switch (paymentMethod) {
+      case 'payme':
+        return 'Payme';
+      case 'click':
+        return 'Click';
+      case 'uzum':
+        return 'Uzum Bank';
     }
   };
 
@@ -222,10 +344,41 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-amber-900/10">
+          {/* Mentor Cruise Key Stats */}
+          <div className="mt-4 pt-4 border-t border-amber-900/10 grid grid-cols-2 gap-2 text-[11px] font-semibold text-amber-950">
+            {counselor.responseTime && (
+              <div className="bg-emerald-50/80 p-2 rounded-xl border border-emerald-200 text-emerald-900 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
+                <span>{counselor.responseTime} javob</span>
+              </div>
+            )}
+            {counselor.totalSessions && (
+              <div className="bg-amber-50/80 p-2 rounded-xl border border-amber-200 text-amber-900 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                <span>{counselor.totalSessions} ta qabul</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-amber-900/10">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Rahnamo haqida</h4>
             <p className="text-xs text-stone-600 mt-2 leading-relaxed">{counselor.bio}</p>
           </div>
+
+          {/* Student Outcomes */}
+          {counselor.outcomes && counselor.outcomes.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-amber-900/10">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Natijalar & Yutuqlar</h4>
+              <div className="space-y-1.5 mt-2">
+                {counselor.outcomes.map((out) => (
+                  <div key={out} className="flex items-center gap-1.5 text-[11px] font-medium text-amber-950 bg-amber-50 p-2 rounded-xl border border-amber-200/60">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                    <span>{out}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 pt-4 border-t border-amber-900/10">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Yo'nalishlar</h4>
@@ -287,17 +440,30 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               </div>
 
-              <div className="space-y-2 bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
-                <div className="flex items-center gap-2 font-bold text-emerald-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                  Keyingi qadamlar:
+              <div className="space-y-3 bg-emerald-50/80 p-5 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
+                <div className="flex items-center gap-2 font-bold text-emerald-900 text-sm">
+                  <CheckCircle2 className="w-4.5 h-4.5 text-emerald-700" />
+                  Qabul chiptangiz tayyor!
                 </div>
-                <p>
-                  1. To'lov tasdig'i <span className="font-bold">{bookingTicket.email}</span> va Telegram <span className="font-bold">{bookingTicket.telegram}</span> hisobingizga yuborildi.
+                <p className="leading-relaxed">
+                  Elektron pochtangizga (<span className="font-bold">{bookingTicket.email}</span>) va tizimimizga uchrashuv ma'lumotlari kiritildi.
                 </p>
-                <p>
-                  2. Google Meet video havolasi suhbat boshlanishidan 1 soat oldin yetkaziladi.
-                </p>
+                <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap gap-2">
+                  <a
+                    href={`https://t.me/rahnamo_admin?start=${bookingTicket.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
+                  >
+                    <span>💬 Telegram'da chipta bildirishnomasini olish</span>
+                  </a>
+                  <Link
+                    href="/my-bookings"
+                    className="inline-flex items-center gap-1 bg-emerald-800 hover:bg-emerald-900 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
+                  >
+                    <span>Mening Qabullarim sahifasiga o'tish</span>
+                  </Link>
+                </div>
               </div>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -316,40 +482,58 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-6">
+            <form onSubmit={handleInitiatePayment} className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-6">
               {/* 1. Tier Selection */}
               <div>
                 <h3 className="font-serif text-lg font-bold text-amber-950">1. Qabul turini tanlang</h3>
                 <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div
-                    onClick={() => setSelectedTier('standard')}
-                    className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+                  <label
+                    className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
                       selectedTier === 'standard'
                         ? 'border-amber-800 bg-amber-50/70 ring-2 ring-amber-800/20'
                         : 'border-amber-900/10 hover:bg-amber-50/30'
                     }`}
                   >
-                    <span className="text-xs font-bold text-amber-900 uppercase tracking-wider">Standart</span>
-                    <div className="text-lg font-serif font-extrabold text-amber-950 mt-1">{counselor.standardPrice.toLocaleString()} UZS</div>
-                    <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-amber-700" /> 20-30 daqiqa yo'l-yo'riq
-                    </p>
-                  </div>
+                    <input
+                      type="radio"
+                      name="tier"
+                      value="standard"
+                      checked={selectedTier === 'standard'}
+                      onChange={() => setSelectedTier('standard')}
+                      className="mt-1 accent-amber-800 cursor-pointer"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block">Standart</span>
+                      <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{counselor.standardPrice.toLocaleString()} UZS</div>
+                      <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-700" /> 20-30 daqiqa yo'l-yo'riq
+                      </p>
+                    </div>
+                  </label>
 
-                  <div
-                    onClick={() => setSelectedTier('premium')}
-                    className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+                  <label
+                    className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
                       selectedTier === 'premium'
                         ? 'border-amber-800 bg-amber-50/70 ring-2 ring-amber-800/20'
                         : 'border-amber-900/10 hover:bg-amber-50/30'
                     }`}
                   >
-                    <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Premium</span>
-                    <div className="text-lg font-serif font-extrabold text-amber-950 mt-1">{counselor.premiumPrice.toLocaleString()} UZS</div>
-                    <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-amber-700" /> 45-60 daqiqa chuqur tahlil
-                    </p>
-                  </div>
+                    <input
+                      type="radio"
+                      name="tier"
+                      value="premium"
+                      checked={selectedTier === 'premium'}
+                      onChange={() => setSelectedTier('premium')}
+                      className="mt-1 accent-amber-800 cursor-pointer"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">Premium</span>
+                      <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{counselor.premiumPrice.toLocaleString()} UZS</div>
+                      <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-700" /> 45-60 daqiqa chuqur tahlil
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -365,26 +549,32 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
                   {counselor.availableSlots.map((slot) => (
-                    <button
-                      type="button"
+                    <label
                       key={slot}
-                      onClick={() => {
-                        setSelectedSlot(slot);
-                        if (errors.slot) setErrors((prev) => ({ ...prev, slot: '' }));
-                      }}
-                      className={`text-left p-3 rounded-xl text-xs font-medium border transition-all ${
+                      className={`cursor-pointer p-3 rounded-xl text-xs font-medium border transition-all flex items-center gap-2.5 ${
                         selectedSlot === slot
                           ? 'bg-amber-900 text-amber-50 border-amber-900 shadow-xs'
                           : 'bg-white text-stone-700 border-amber-900/15 hover:bg-amber-50/50'
                       }`}
                     >
-                      {slot}
-                    </button>
+                      <input
+                        type="radio"
+                        name="slot"
+                        value={slot}
+                        checked={selectedSlot === slot}
+                        onChange={() => {
+                          setSelectedSlot(slot);
+                          if (errors.slot) setErrors((prev) => ({ ...prev, slot: '' }));
+                        }}
+                        className="accent-amber-500 cursor-pointer"
+                      />
+                      <span>{slot}</span>
+                    </label>
                   ))}
                 </div>
               </div>
 
-              {/* 3. Validated Intake Questions (Accessible with htmlFor and id) */}
+              {/* 3. Validated Intake Questions */}
               <div className="space-y-4 pt-4 border-t border-amber-900/10">
                 <h3 className="font-serif text-lg font-bold text-amber-950">3. Ma'lumotlaringizni to'ldiring</h3>
 
@@ -522,60 +712,194 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
-                  <div
-                    onClick={() => setPaymentMethod('payme')}
-                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all ${
+                  <label
+                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
                       paymentMethod === 'payme'
                         ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
                         : 'border-amber-900/10 hover:bg-amber-50/30'
                     }`}
                   >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="payme"
+                      checked={paymentMethod === 'payme'}
+                      onChange={() => setPaymentMethod('payme')}
+                      className="sr-only"
+                    />
                     <span className="font-bold text-xs text-amber-950 block">Payme</span>
                     <span className="text-[10px] text-stone-500">Uzcard / Humo</span>
-                  </div>
+                  </label>
 
-                  <div
-                    onClick={() => setPaymentMethod('click')}
-                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all ${
+                  <label
+                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
                       paymentMethod === 'click'
                         ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
                         : 'border-amber-900/10 hover:bg-amber-50/30'
                     }`}
                   >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="click"
+                      checked={paymentMethod === 'click'}
+                      onChange={() => setPaymentMethod('click')}
+                      className="sr-only"
+                    />
                     <span className="font-bold text-xs text-amber-950 block">Click</span>
                     <span className="text-[10px] text-stone-500">Click Up / Karta</span>
-                  </div>
+                  </label>
 
-                  <div
-                    onClick={() => setPaymentMethod('uzum')}
-                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all ${
+                  <label
+                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
                       paymentMethod === 'uzum'
                         ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
                         : 'border-amber-900/10 hover:bg-amber-50/30'
                     }`}
                   >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="uzum"
+                      checked={paymentMethod === 'uzum'}
+                      onChange={() => setPaymentMethod('uzum')}
+                      className="sr-only"
+                    />
                     <span className="font-bold text-xs text-amber-950 block">Uzum Bank</span>
                     <span className="text-[10px] text-stone-500">Uzum kartasi</span>
-                  </div>
+                  </label>
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
               >
-                {isSubmitting
-                  ? 'Yuborilmoqda...'
-                  : `To'lovni amalga oshirish (${(selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString()} UZS)`}
+                To'lovni amalga oshirish ({selectedTier === 'standard' ? counselor.standardPrice.toLocaleString() : counselor.premiumPrice.toLocaleString()} UZS)
               </button>
-              {submitError && (
-                <p className="text-xs text-red-600 mt-2 text-center">{submitError}</p>
-              )}
             </form>
           )}
         </div>
       </div>
+
+      {/* Simulated Interactive Payment Processing Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-900/10 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              disabled={isProcessingPayment}
+              className="absolute right-4 top-4 text-stone-400 hover:text-stone-700 p-1 rounded-full hover:bg-stone-100 disabled:opacity-50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-amber-900/10 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-sm font-serif">
+                {getProviderName()[0]}
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-base text-amber-950">{getProviderName()} to'lov tizimi</h3>
+                <p className="text-xs text-stone-500">Xavfsiz to'lov shlyuziga ulanish</p>
+              </div>
+            </div>
+
+            <div className="my-5 p-4 bg-amber-50/70 rounded-2xl border border-amber-900/10 space-y-1.5 text-xs">
+              <div className="flex justify-between text-stone-600">
+                <span>Xizmat:</span>
+                <span className="font-semibold text-stone-900">{counselor.fullName} (1-ga-1 sessiya)</span>
+              </div>
+              <div className="flex justify-between text-stone-600">
+                <span>Vaqt:</span>
+                <span className="font-semibold text-stone-900">{selectedSlot}</span>
+              </div>
+              <div className="flex justify-between text-amber-950 font-bold text-sm pt-2 border-t border-amber-900/10">
+                <span>Jami to'lov:</span>
+                <span>{(selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString()} UZS</span>
+              </div>
+            </div>
+
+            {/* Central Platform Payment Box */}
+            <div className="my-4 p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
+              <span className="text-[10px] uppercase font-bold text-amber-900 block">Rahnamo Markaziy Platforma Kartasi (Uzcard / Humo)</span>
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-extrabold text-sm text-amber-950">8600 5555 4444 3333</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined') {
+                      navigator.clipboard.writeText('8600555544443333');
+                      setCopiedCard(true);
+                      setTimeout(() => setCopiedCard(false), 2000);
+                    }
+                  }}
+                  className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer"
+                >
+                  {copiedCard ? 'Nusxalandi! ✓' : 'Nusxalash'}
+                </button>
+              </div>
+              <span className="text-[10px] text-stone-600 block">Egasining ismi: Rahnamo Platform Inc.</span>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-stone-700 block mb-1">
+                  To'lov Cheki / Tranzaksiya Raqami (Chek ID)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Masalan: 89420194 yoki Karta oxirgi 4 raqami"
+                  value={receiptRef}
+                  onChange={(e) => setReceiptRef(e.target.value)}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
+                />
+                <span className="text-[10px] text-stone-500 block mt-1">
+                  Payme / Click chekidagi ID raqamini kiriting. Administratorimiz 5 daqiqada tasdiqlaydi.
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-stone-700 block mb-1">
+                  Sizning Karta Raqamingiz (Tekshirish uchun)
+                </label>
+                <div className="relative">
+                  <CreditCard className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    maxLength={19}
+                    placeholder="8600 0000 0000 0000"
+                    value={cardNumber}
+                    onChange={handleCardChange}
+                    className={`w-full pl-9 pr-3 py-2.5 bg-stone-50 border rounded-xl text-xs outline-none transition-all ${
+                      cardError ? 'border-red-500 bg-red-50/20' : 'border-stone-300 focus:ring-2 focus:ring-amber-700'
+                    }`}
+                  />
+                </div>
+                {cardError && <p className="text-[11px] text-red-600 mt-1">{cardError}</p>}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleConfirmPayment}
+                disabled={isProcessingPayment}
+                className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+              >
+                {isProcessingPayment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-200" />
+                    <span>To'lov amalga oshirilmoqda...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>To'lovni tasdiqlash</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
