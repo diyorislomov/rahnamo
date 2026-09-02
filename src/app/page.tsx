@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
-import CinematicHero from '@/components/CinematicHero';
+import DesertCaravan from '@/components/DesertCaravan';
 import CounselorCard from '@/components/CounselorCard';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { Search, ChevronDown, Sparkles } from 'lucide-react';
@@ -95,9 +95,9 @@ export default function Home() {
       <SmoothScroll>
         <Navbar />
 
-        <CinematicHero />
-
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Single Unified Silk Road Hero Section */}
+          <DesertCaravan />
           {/* MentorCruise Search & Distinct Multi-Colored Rounded-Full Category Filter Bar */}
           <section id="rahnamolar" className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm my-8 space-y-5 scroll-mt-24">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
