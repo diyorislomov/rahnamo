@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Anton } from 'next/font/google';
 import {
@@ -9,8 +9,9 @@ import {
   useReducedMotion,
   useScroll,
   useTransform,
+  type MotionValue,
 } from 'framer-motion';
-import { ChevronDown, Star } from 'lucide-react';
+import { ChevronDown, Star, VolumeX } from 'lucide-react';
 
 const anton = Anton({ subsets: ['latin', 'latin-ext'], weight: '400', display: 'swap' });
 
@@ -21,41 +22,83 @@ const SECTION_COUNT = 4;
 const GRAIN_URL =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>";
 
+const SectionProgressContext = createContext<MotionValue<number> | null>(null);
+
+function useSectionProgress() {
+  const ctx = useContext(SectionProgressContext);
+  if (!ctx) throw new Error('Must be used inside a CinematicSection');
+  return ctx;
+}
+
 /**
- * Fade-up reveal, shared by the on-load hero text and the scroll-triggered
- * copy in sections 2-4. Under prefers-reduced-motion this renders straight at
- * its final state — not just an instant transition, since a whileInView
- * reveal would otherwise still stay invisible until scrolled into view, which
- * is motion-gated visibility, not truly static.
+ * Continuously scroll-scrubbed reveal — opacity/y are `useTransform` outputs
+ * of the section's own scroll progress, not a triggered-once animation. This
+ * is what makes the hero read as one continuous take instead of a slideshow:
+ * scrolling back up reverses the fade exactly as it happened going down.
  */
-function Reveal({
+function ScrollReveal({
+  children,
+  className,
+  range = [0, 0.3],
+}: {
+  children: React.ReactNode;
+  className?: string;
+  range?: [number, number];
+}) {
+  const progress = useSectionProgress();
+  const shouldReduceMotion = useReducedMotion();
+  const opacity = useTransform(progress, range, [0, 1]);
+  const y = useTransform(progress, range, [60, 0]);
+
+  return (
+    <motion.div className={className} style={{ opacity: shouldReduceMotion ? 1 : opacity, y: shouldReduceMotion ? 0 : y }}>
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Mount-once entrance, used only by section 1: it's already in view at
+ * scroll position 0, so there's no "entering" scroll phase to scrub against
+ * (its scrollYProgress starts partway through the range, not at 0).
+ */
+function OnLoadReveal({
   children,
   className,
   delay = 0,
-  onLoad = false,
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
-  onLoad?: boolean;
 }) {
   const shouldReduceMotion = useReducedMotion();
-
-  if (shouldReduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
-
-  const trigger = onLoad
-    ? { animate: { opacity: 1, y: 0 } }
-    : { whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.5 } };
-
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      transition={{ duration: 0.7, delay, ease: [0.25, 0.1, 0.25, 1] }}
       className={className}
-      {...trigger}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay, ease: [0.25, 0.1, 0.25, 1] }}
     >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Every section's content fades/slides out as it's scrolled past — applied
+ * uniformly by CinematicSection so individual sections don't need to remember
+ * it. Combined with ScrollReveal/OnLoadReveal (a second, nested motion.div)
+ * for the entrance, since mixing an `animate`-driven and a `style`-driven
+ * MotionValue on the same opacity would fight each other.
+ */
+function ExitFade({ children, className }: { children: React.ReactNode; className?: string }) {
+  const progress = useSectionProgress();
+  const shouldReduceMotion = useReducedMotion();
+  const opacity = useTransform(progress, [0.7, 0.92], [1, 0]);
+  const y = useTransform(progress, [0.7, 0.92], [0, -50]);
+
+  return (
+    <motion.div className={className} style={{ opacity: shouldReduceMotion ? 1 : opacity, y: shouldReduceMotion ? 0 : y }}>
       {children}
     </motion.div>
   );
@@ -106,14 +149,15 @@ function CinematicSection({
     target: sectionRef,
     offset: ['start end', 'end start'],
   });
-  // Subtle parallax: the background drifts a few percent slower than the
-  // scroll, which reads as depth without the fragility of a pinned crossfade.
-  const parallaxY = useTransform(scrollYProgress, [0, 1], ['-4%', '4%']);
+  // Parallax: the background drifts noticeably slower/faster than the
+  // scroll — reads as camera depth without the fragility of a pinned
+  // crossfade between sections.
+  const parallaxY = useTransform(scrollYProgress, [0, 1], ['-10%', '10%']);
 
   return (
     <section ref={sectionRef} className="relative h-dvh w-full overflow-hidden" style={style}>
       <motion.div
-        className="absolute inset-0 scale-105"
+        className="absolute inset-0 scale-110"
         style={{ y: shouldReduceMotion ? '0%' : parallaxY }}
       >
         <Image src={src} alt={alt} fill priority={priority} sizes="100vw" className="object-cover" />
@@ -128,16 +172,23 @@ function CinematicSection({
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#FAF6EE]" />
       )}
 
-      <div className="relative z-10 h-full w-full flex items-center">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 w-full">{children}</div>
-      </div>
+      <SectionProgressContext.Provider value={scrollYProgress}>
+        <div className="relative z-10 h-full w-full flex items-center">
+          <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 w-full">
+            <ExitFade>{children}</ExitFade>
+          </div>
+        </div>
+      </SectionProgressContext.Provider>
     </section>
   );
 }
 
 /**
  * Editorial pill CTA — small and understated ("READ ARTICLE"-style), not a
- * big button. Both hero CTAs point at the same catalog anchor.
+ * big button. Both hero CTAs point at the same catalog anchor. Lenis
+ * (mounted in page.tsx, options.anchors: true) intercepts the click and
+ * smooth-scrolls there; a plain hash-anchor jump is the fallback if it isn't
+ * mounted (reduced motion) or JS hasn't loaded yet.
  */
 function PillLink({ children }: { children: React.ReactNode }) {
   return (
@@ -151,9 +202,27 @@ function PillLink({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * Visual-only for now: no <audio> element exists yet, so the button is
+ * disabled rather than pretending to control sound that isn't there. Swap in
+ * a real <audio> + enable this once there's a licensed ambient track.
+ */
+function SoundToggle() {
+  return (
+    <button
+      type="button"
+      disabled
+      aria-label="Ovoz (tez orada)"
+      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/10 border border-white/20 backdrop-blur-xs text-amber-100/50 cursor-not-allowed"
+    >
+      <VolumeX className="w-3.5 h-3.5" />
+    </button>
+  );
+}
+
+/**
  * The section-progress chrome (top-right counter, left-edge ticks) tracks
  * scroll across the whole 4-section hero, separate from each section's own
- * local parallax useScroll. sticky (not fixed) so it's pinned only while the
+ * local scroll progress. sticky (not fixed) so it's pinned only while the
  * hero itself is in view, and disappears naturally once scrolled past.
  */
 function useHeroProgress(heroRef: React.RefObject<HTMLDivElement | null>) {
@@ -176,9 +245,10 @@ export default function CinematicHero() {
 
   return (
     <div ref={heroRef} className="relative w-full bg-[#0d0a06]">
-      {/* Top-right section counter */}
+      {/* Top-right section counter + sound toggle */}
       <div className="sticky top-6 z-30 pointer-events-none">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 flex justify-end">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 flex justify-end items-center gap-2 pointer-events-auto">
+          <SoundToggle />
           <span className="inline-flex items-center rounded-full bg-white/10 border border-white/20 backdrop-blur-xs px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-amber-100">
             {String(activeIndex + 1).padStart(2, '0')} — {String(SECTION_COUNT).padStart(2, '0')}
           </span>
@@ -207,13 +277,13 @@ export default function CinematicHero() {
         style={headerHeight ? { height: `calc(100dvh - ${headerHeight}px)` } : undefined}
       >
         <div className="flex flex-col items-center text-center gap-6">
-          <Reveal onLoad className="flex flex-col items-center gap-5">
+          <OnLoadReveal className="flex flex-col items-center gap-5">
             <p className="font-serif italic text-sm sm:text-base text-amber-200/80 tracking-wide">
               Ipak yo&apos;li karyera platformasi
             </p>
 
             <h1
-              className={`${anton.className} uppercase text-4xl sm:text-6xl lg:text-7xl text-amber-50 leading-[1.05] tracking-tight max-w-4xl`}
+              className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 leading-[0.95] tracking-tight max-w-5xl`}
             >
               Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
             </h1>
@@ -221,10 +291,9 @@ export default function CinematicHero() {
             <PillLink>
               Rahnamolarni ko&apos;rish <span aria-hidden>↓</span>
             </PillLink>
-          </Reveal>
+          </OnLoadReveal>
 
-          <Reveal
-            onLoad
+          <OnLoadReveal
             delay={0.35}
             className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold text-amber-100/70"
           >
@@ -236,7 +305,7 @@ export default function CinematicHero() {
               <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
               4.9 Reyting
             </span>
-          </Reveal>
+          </OnLoadReveal>
         </div>
 
         {!shouldReduceMotion && (
@@ -248,8 +317,8 @@ export default function CinematicHero() {
       </CinematicSection>
 
       <CinematicSection src="/desert-solar-ring-eclipse.jpg" alt="Sahroda quyosh halqasi tutilishi">
-        <Reveal className="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
-          <h2 className={`${anton.className} uppercase text-4xl sm:text-6xl text-amber-50 tracking-tight`}>
+        <ScrollReveal className="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
+          <h2 className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight`}>
             To&apos;g&apos;ri yo&apos;l
           </h2>
           <p className="font-serif italic text-lg sm:text-2xl text-amber-100/90 leading-snug">
@@ -257,20 +326,20 @@ export default function CinematicHero() {
             Rahnamodan boshlanadi. Tibbiyot, Huquq, Arxitektura, Dasturlash va Grantlar bo&apos;yicha 1-ga-1
             shaxsiy mentorlik oling.
           </p>
-        </Reveal>
+        </ScrollReveal>
       </CinematicSection>
 
       <CinematicSection src="/desert-night-full-moon.jpg" alt="To&apos;lin oy ostida tungi sahro">
-        <Reveal className="max-w-xl mx-auto text-center flex flex-col items-center gap-4">
+        <ScrollReveal className="max-w-xl mx-auto text-center flex flex-col items-center gap-4">
           <h2
-            className={`${anton.className} uppercase text-4xl sm:text-6xl text-amber-50 tracking-tight leading-[1.05]`}
+            className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight leading-[0.95]`}
           >
             Tunda ham yo&apos;lingizni yo&apos;qotmang
           </h2>
           <p className="font-serif italic text-lg sm:text-2xl text-amber-200/90">
             Rahnamongiz doim yoningizda.
           </p>
-        </Reveal>
+        </ScrollReveal>
       </CinematicSection>
 
       <CinematicSection
@@ -279,9 +348,9 @@ export default function CinematicHero() {
         overlayClassName="bg-gradient-to-b from-black/40 via-black/50 to-black/60"
         fadeToCream
       >
-        <Reveal className="max-w-xl mx-auto text-center flex flex-col items-center gap-5">
+        <ScrollReveal className="max-w-xl mx-auto text-center flex flex-col items-center gap-5">
           <div className="space-y-2">
-            <h2 className={`${anton.className} uppercase text-4xl sm:text-6xl text-amber-50 tracking-tight`}>
+            <h2 className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight`}>
               Endi navbat sizniki
             </h2>
             <p className="font-serif italic text-lg sm:text-2xl text-amber-200/90">
@@ -292,7 +361,7 @@ export default function CinematicHero() {
           <PillLink>
             Rahnamolarni ko&apos;rish <span aria-hidden>→</span>
           </PillLink>
-        </Reveal>
+        </ScrollReveal>
       </CinematicSection>
     </div>
   );
