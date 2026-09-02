@@ -105,12 +105,14 @@ function ExitFade({ children, className }: { children: React.ReactNode; classNam
 }
 
 /**
- * The sticky <header> sits in normal document flow above the hero (it isn't
- * overlaid), so section 1 needs to fill the viewport *minus* the header's
- * real height, not a flat 100dvh — otherwise its bottom edge (and the
- * scroll-down cue anchored to it) renders below the fold on load. Measured
- * rather than hardcoded since the header's height varies (mobile nav, and
- * the top banner text can wrap on narrow viewports).
+ * <header> is `position: sticky`, which still reserves its own space in
+ * normal flow — making it transparent only reveals the page's own
+ * background behind it, not this hero, since the hero starts as a separate
+ * sibling below that reserved space rather than underneath it. Pulling the
+ * whole hero up by the header's real height corrects that, letting section 1
+ * extend to the true top of the viewport with the header floating over it.
+ * Measured rather than hardcoded since the header's height varies (mobile
+ * nav, and the top banner text can wrap on narrow viewports).
  */
 function useHeaderHeight() {
   const [height, setHeight] = useState(0);
@@ -132,7 +134,6 @@ function CinematicSection({
   priority = false,
   overlayClassName = 'bg-gradient-to-b from-amber-950/35 via-amber-950/45 to-black/70',
   fadeToCream = false,
-  style,
   children,
 }: {
   src: string;
@@ -140,7 +141,6 @@ function CinematicSection({
   priority?: boolean;
   overlayClassName?: string;
   fadeToCream?: boolean;
-  style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -155,7 +155,7 @@ function CinematicSection({
   const parallaxY = useTransform(scrollYProgress, [0, 1], ['-10%', '10%']);
 
   return (
-    <section ref={sectionRef} className="relative h-dvh w-full overflow-hidden" style={style}>
+    <section ref={sectionRef} className="relative h-dvh w-full overflow-hidden">
       <motion.div
         className="absolute inset-0 scale-110"
         style={{ y: shouldReduceMotion ? '0%' : parallaxY }}
@@ -244,7 +244,11 @@ export default function CinematicHero() {
   const tickTransition = shouldReduceMotion ? '' : 'transition-all duration-300';
 
   return (
-    <div ref={heroRef} className="relative w-full bg-[#0d0a06]">
+    <div
+      ref={heroRef}
+      className="relative w-full bg-[#0d0a06]"
+      style={headerHeight ? { marginTop: -headerHeight } : undefined}
+    >
       {/* Top-right section counter + sound toggle */}
       <div className="sticky top-6 z-30 pointer-events-none">
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 flex justify-end items-center gap-2 pointer-events-auto">
@@ -270,43 +274,18 @@ export default function CinematicHero() {
         </div>
       </div>
 
-      <CinematicSection
-        src="/giant-moon-desert-caravan.jpg"
-        alt="Karvon sahroda, ulkan oy ostida"
-        priority
-        style={headerHeight ? { height: `calc(100dvh - ${headerHeight}px)` } : undefined}
-      >
-        <div className="flex flex-col items-center text-center gap-8">
-          <OnLoadReveal className="flex flex-col items-center gap-8">
-            <div className="flex flex-col items-center gap-4">
-              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-200/70">
-                Ipak yo&apos;li karyera platformasi
-              </p>
+      <CinematicSection src="/giant-moon-desert-caravan.jpg" alt="Karvon sahroda, ulkan oy ostida" priority>
+        <div className="flex flex-col items-center text-center">
+          <OnLoadReveal className="flex flex-col items-center gap-6">
+            <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-200/70">
+              Ipak yo&apos;li karyera platformasi
+            </p>
 
-              <h1
-                className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 leading-[0.9] tracking-tight max-w-5xl`}
-              >
-                Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
-              </h1>
-            </div>
-
-            <PillLink>
-              Rahnamolarni ko&apos;rish <span aria-hidden>↓</span>
-            </PillLink>
-          </OnLoadReveal>
-
-          <OnLoadReveal
-            delay={0.35}
-            className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold text-amber-100/70"
-          >
-            <span>50+ Top Rahnamolar</span>
-            <span className="opacity-40">•</span>
-            <span>1,200+ Muvaffaqiyatli Qabullar</span>
-            <span className="opacity-40">•</span>
-            <span className="inline-flex items-center gap-1">
-              <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
-              4.9 Reyting
-            </span>
+            <h1
+              className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 leading-[0.9] tracking-tight max-w-5xl`}
+            >
+              Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
+            </h1>
           </OnLoadReveal>
         </div>
 
@@ -367,8 +346,23 @@ export default function CinematicHero() {
           <PillLink>
             Rahnamolarni ko&apos;rish <span aria-hidden>→</span>
           </PillLink>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold text-amber-100/70">
+            <span>50+ Top Rahnamolar</span>
+            <span className="opacity-40">•</span>
+            <span>1,200+ Muvaffaqiyatli Qabullar</span>
+            <span className="opacity-40">•</span>
+            <span className="inline-flex items-center gap-1">
+              <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
+              4.9 Reyting
+            </span>
+          </div>
         </ScrollReveal>
       </CinematicSection>
+
+      {/* Marks the end of the cinematic sequence, watched by Navbar
+          (transparentOverHero) to know when to switch to its solid state. */}
+      <div data-hero-end aria-hidden className="h-px w-full" />
     </div>
   );
 }

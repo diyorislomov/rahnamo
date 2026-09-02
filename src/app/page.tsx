@@ -93,7 +93,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200">
       <SmoothScroll>
-        <Navbar />
+        <Navbar transparentOverHero />
 
         <CinematicHero />
 
