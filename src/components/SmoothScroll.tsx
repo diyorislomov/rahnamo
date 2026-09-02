@@ -10,8 +10,8 @@ import { ReactLenis } from 'lenis/react';
  * `respectReducedMotion` is Lenis's own built-in handling: under
  * prefers-reduced-motion it forces 1:1 tracking (no smoothing) and makes
  * programmatic scrolls instant, so there's no need to duplicate that check
- * here. `anchors: true` makes the hero's existing `<a href="#rahnamolar">`
- * CTAs scroll smoothly with zero extra wiring in CinematicHero.
+ * here. `anchors: true` means any future `<a href="#...">` in-page link
+ * scrolls smoothly with zero extra wiring, wherever it's added.
  */
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   return (
