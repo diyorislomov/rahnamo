@@ -5,8 +5,10 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
-import { BookingTicketData } from '@/types';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, Phone, ExternalLink, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw, ArrowLeft, Lock, LogOut, KeyRound } from 'lucide-react';
+import { BookingTicketData, ForumQuestion, ForumAnswer } from '@/types';
+import { INITIAL_COUNSELORS } from '@/lib/mockData';
+import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
+import { ShieldCheck, UserCheck, Calendar, Video, Mail, Phone, ExternalLink, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw, ArrowLeft, Lock, LogOut, KeyRound, MessageCircleQuestion } from 'lucide-react';
 import { CamelIcon } from '@/components/Icons';
 
 interface CounselorApp {
@@ -30,9 +32,11 @@ export default function AdminDashboardPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum'>('bookings');
   const [bookings, setBookings] = useState<BookingTicketData[]>([]);
   const [applications, setApplications] = useState<CounselorApp[]>([]);
+  const [forumQuestions, setForumQuestions] = useState<ForumQuestion[]>([]);
+  const [forumAnswers, setForumAnswers] = useState<ForumAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -123,15 +127,31 @@ export default function AdminDashboardPage() {
           const localApps = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
           setApplications(localApps.length > 0 ? localApps : INITIAL_APPS);
         }
+
+        // 3. Fetch Forum questions & answers (moderation view — read-only)
+        const [{ data: supaQuestions }, { data: supaAnswers }] = await Promise.all([
+          supabase.from('forum_questions').select('*').order('created_at', { ascending: false }),
+          supabase.from('forum_answers').select('*'),
+        ]);
+        setForumQuestions(
+          supaQuestions && supaQuestions.length > 0 ? supaQuestions.map(mapForumQuestion) : loadLocalForumQuestions()
+        );
+        setForumAnswers(
+          supaAnswers && supaAnswers.length > 0 ? supaAnswers.map(mapForumAnswer) : loadLocalForumAnswers()
+        );
       } catch (err) {
         console.warn('Supabase fetch error:', err);
         setBookings(localBookings);
         setApplications(INITIAL_APPS);
+        setForumQuestions(loadLocalForumQuestions());
+        setForumAnswers(loadLocalForumAnswers());
       }
     } else {
       setBookings(localBookings);
       const localApps = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
       setApplications(localApps.length > 0 ? localApps : INITIAL_APPS);
+      setForumQuestions(loadLocalForumQuestions());
+      setForumAnswers(loadLocalForumAnswers());
     }
 
     setLoading(false);
@@ -340,6 +360,18 @@ export default function AdminDashboardPage() {
             <UserCheck className="w-4 h-4" />
             <span>Rahnamolik Arizalari ({applications.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('forum')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'forum'
+                ? 'bg-amber-900 text-amber-50 shadow-sm'
+                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
+            }`}
+          >
+            <MessageCircleQuestion className="w-4 h-4" />
+            <span>Forum ({forumQuestions.length})</span>
+          </button>
         </div>
 
         {/* Tab 1: Bookings Management */}
@@ -514,6 +546,62 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Forum Moderation (read-only for this pass) */}
+        {activeTab === 'forum' && (
+          <div className="space-y-6">
+            {forumQuestions.length === 0 ? (
+              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
+                <MessageCircleQuestion className="w-12 h-12 text-stone-400 mx-auto mb-3" />
+                <h4 className="font-serif font-bold text-base text-amber-950">Hali forum postlari yo'q</h4>
+                <p className="text-xs text-stone-500 mt-1">Talabalar savol berganda shu yerda ko'rinadi.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {[...forumQuestions]
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map((q) => {
+                    const qAnswers = forumAnswers.filter((a) => a.questionId === q.id);
+                    return (
+                      <div key={q.id} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-3">
+                        <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">{q.category}</span>
+                            <h3 className="font-serif font-bold text-base text-amber-950">{q.title}</h3>
+                            <p className="text-xs text-stone-600 mt-1">{q.body}</p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 whitespace-nowrap">
+                            {qAnswers.length} javob
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs text-stone-600 font-mono">
+                          <div>👤 {q.studentNameOrAnonymous}</div>
+                          <div className="flex items-center gap-1">
+                            <Mail className="w-3.5 h-3.5 text-stone-400" /> {q.email}
+                          </div>
+                        </div>
+
+                        {qAnswers.length > 0 && (
+                          <div className="pt-2 space-y-2">
+                            {qAnswers.map((a) => {
+                              const responder = INITIAL_COUNSELORS.find((c) => c.id === a.counselorId);
+                              return (
+                                <div key={a.id} className="bg-amber-50/60 border border-amber-900/10 rounded-xl p-3 text-xs">
+                                  <span className="font-bold text-amber-950">{responder?.fullName || a.counselorId}: </span>
+                                  <span className="text-stone-700">{a.body}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>

@@ -87,6 +87,14 @@ export default function Navbar({ transparentOverHero = false }: { transparentOve
             Qanday ishlaydi?
           </Link>
           <Link
+            href="/forum"
+            className={`transition-colors py-1 px-2.5 rounded-lg ${
+              transparent ? 'hover:text-amber-50 hover:bg-white/10' : 'hover:text-amber-900 hover:bg-amber-100/60'
+            }`}
+          >
+            Forum
+          </Link>
+          <Link
             href="/my-bookings"
             className={`flex items-center gap-1.5 transition-all py-1 px-2.5 rounded-lg ${
               transparent
@@ -138,6 +146,13 @@ export default function Navbar({ transparentOverHero = false }: { transparentOve
             className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
           >
             Qanday ishlaydi?
+          </Link>
+          <Link
+            href="/forum"
+            onClick={() => setIsOpen(false)}
+            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
+          >
+            Forum
           </Link>
           <Link
             href="/my-bookings"

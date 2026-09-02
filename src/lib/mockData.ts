@@ -14,7 +14,7 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     reviewsCount: 38,
     responseTime: '< 1 soat',
     totalSessions: 142,
-    companyBadge: 'Ex-Ankara Hospital',
+    company: 'Ex-Ankara Hospital',
     outcomes: ['Germany Residency Licensing Pass', 'Turkey TUS Exam Strategy'],
     availableSlots: [
       'Saturday, 15:00 - 15:30',
@@ -35,7 +35,7 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     reviewsCount: 29,
     responseTime: '< 2 soat',
     totalSessions: 98,
-    companyBadge: 'Shodieva Design Studio',
+    company: 'Shodieva Design Studio',
     outcomes: ['International Studio Placement', 'First 3 Freelance Clients'],
     availableSlots: [
       'Friday, 18:00 - 18:30',
@@ -56,7 +56,7 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     reviewsCount: 22,
     responseTime: '< 3 soat',
     totalSessions: 76,
-    companyBadge: 'LL.M. Leiden Alumnus',
+    company: 'LL.M. Leiden Alumnus',
     outcomes: ['Top Tashkent Law Firm Hire', 'Leiden LL.M. Admission'],
     availableSlots: [
       'Saturday, 10:00 - 10:30',
@@ -76,7 +76,7 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     reviewsCount: 45,
     responseTime: '< 30 daqiqa',
     totalSessions: 185,
-    companyBadge: 'Fulbright Scholar',
+    company: 'Fulbright Scholar',
     outcomes: ['Fulbright 2024 Awardee', '100% Scholarship Winner'],
     availableSlots: [
       'Monday, 19:00 - 19:30',
@@ -97,7 +97,7 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     reviewsCount: 16,
     responseTime: '< 2 soat',
     totalSessions: 54,
-    companyBadge: 'Central Asia Agribiz',
+    company: 'Central Asia Agribiz',
     outcomes: ['First Agri-Export Contract', 'Cold Chain Supply Plan'],
     availableSlots: [
       'Saturday, 13:00 - 13:30',
@@ -117,7 +117,7 @@ export const INITIAL_COUNSELORS: Counselor[] = [
     reviewsCount: 52,
     responseTime: '< 15 daqiqa',
     totalSessions: 210,
-    companyBadge: 'Ex-Senior Architect',
+    company: 'Ex-Senior Architect',
     outcomes: ['FAANG/Global Tech Offer', 'System Design Mastery'],
     availableSlots: [
       'Saturday, 16:00 - 16:30',

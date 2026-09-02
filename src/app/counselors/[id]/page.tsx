@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { Tier } from '@/types';
+import { Tier, Review } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { getDeviceId } from '@/lib/deviceId';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X } from 'lucide-react';
+import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X, MessageCircleHeart } from 'lucide-react';
 import Link from 'next/link';
 
 import { generateMeetLink } from '@/lib/meeting';
@@ -39,12 +39,59 @@ interface BookingTicketData {
   createdAt: string;
 }
 
+interface ReviewRow {
+  id: string;
+  booking_id: string;
+  counselor_id: string;
+  student_first_name: string;
+  rating: number;
+  review_text: string;
+  created_at: string;
+}
+
 export default function CounselorPage() {
   const params = useParams();
   const router = useRouter();
   
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const counselor = INITIAL_COUNSELORS.find((c) => c.id === rawId);
+
+  // Reviews — read-only for now, no submission flow exists yet. Empty by
+  // default; only ever populated by real Supabase rows, never fabricated.
+  // `reviewsLoading` starts true only if a fetch will actually happen, so the
+  // effect never needs to flip it synchronously — only from inside the async
+  // `.then` callback below.
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return !!url && !url.includes('placeholder');
+  });
+
+  useEffect(() => {
+    if (!counselor || !reviewsLoading) return;
+
+    supabase
+      .from('reviews')
+      .select('*')
+      .eq('counselor_id', counselor.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setReviews(
+            (data as ReviewRow[]).map((r) => ({
+              id: r.id,
+              bookingId: r.booking_id,
+              counselorId: r.counselor_id,
+              studentFirstName: r.student_first_name,
+              rating: r.rating,
+              reviewText: r.review_text,
+              createdAt: r.created_at,
+            }))
+          );
+        }
+        setReviewsLoading(false);
+      });
+  }, [counselor, reviewsLoading]);
 
   const [selectedTier, setSelectedTier] = useState<Tier>('standard');
   const [selectedSlot, setSelectedSlot] = useState<string>(counselor?.availableSlots?.[0] || '');
@@ -389,6 +436,55 @@ export default function CounselorPage() {
                 </span>
               ))}
             </div>
+          </div>
+
+          {/* Why work with me — only shown once a counselor has actually written one */}
+          {counselor.whyWorkWithMe && (
+            <div className="mt-4 pt-4 border-t border-amber-900/10">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">
+                Nima uchun men bilan ishlashingiz kerak
+              </h4>
+              <p className="text-xs text-stone-600 mt-2 leading-relaxed">{counselor.whyWorkWithMe}</p>
+            </div>
+          )}
+
+          {/* Reviews — real data only. No submitted reviews exist yet, so this is
+              an honest empty state, not a placeholder testimonial. */}
+          <div className="mt-4 pt-4 border-t border-amber-900/10">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70 flex items-center gap-1.5">
+              <MessageCircleHeart className="w-3.5 h-3.5 text-amber-700" />
+              Talabalar sharhlari
+            </h4>
+
+            {reviewsLoading ? (
+              <p className="text-[11px] text-stone-400 mt-2">Yuklanmoqda...</p>
+            ) : reviews.length === 0 ? (
+              <div className="mt-2 bg-amber-50/60 border border-amber-900/10 rounded-xl p-3 text-center">
+                <p className="text-[11px] font-semibold text-stone-500">Hozircha sharhlar yo'q.</p>
+                <p className="text-[10px] text-stone-400 mt-0.5">
+                  Birinchi bo'lib qabul o'tkazing va fikringizni bildiring!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 mt-2">
+                {reviews.map((r) => (
+                  <div key={r.id} className="bg-amber-50/60 border border-amber-900/10 rounded-xl p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-amber-950">{r.studentFirstName}</span>
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-3 h-3 ${i < r.rating ? 'fill-amber-500 text-amber-500' : 'text-stone-300'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-stone-600 mt-1 leading-relaxed">{r.reviewText}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

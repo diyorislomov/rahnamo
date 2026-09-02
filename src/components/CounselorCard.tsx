@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Star, ShieldCheck, ArrowRight, CheckCircle2, Zap } from 'lucide-react';
+import { Star, ShieldCheck, ArrowRight, CheckCircle2, Zap, Building2 } from 'lucide-react';
 import { Counselor } from '@/types';
 import { useTilt } from '@/hooks/useTilt';
 
@@ -47,6 +47,13 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
             <p className="text-xs text-stone-600 mt-0.5 line-clamp-2 leading-relaxed">
               {counselor.headline}
             </p>
+
+            {counselor.company && (
+              <p className="flex items-center gap-1 text-[10px] font-semibold text-amber-800/80 mt-1 truncate">
+                <Building2 className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{counselor.company}</span>
+              </p>
+            )}
 
             {/* Rating & Total Sessions */}
             <div className="flex items-center gap-2 mt-2 text-xs font-bold text-amber-900">

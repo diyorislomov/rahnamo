@@ -15,8 +15,37 @@ export interface Counselor {
   availableSlots: string[];
   responseTime?: string;
   totalSessions?: number;
-  companyBadge?: string;
+  company?: string;
   outcomes?: string[];
+  whyWorkWithMe?: string;
+}
+
+export interface Review {
+  id: string;
+  bookingId: string;
+  counselorId: string;
+  studentFirstName: string;
+  rating: number;
+  reviewText: string;
+  createdAt: string;
+}
+
+export interface ForumQuestion {
+  id: string;
+  studentNameOrAnonymous: string;
+  email: string;
+  category: string;
+  title: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface ForumAnswer {
+  id: string;
+  questionId: string;
+  counselorId: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface BookingTicketData {
