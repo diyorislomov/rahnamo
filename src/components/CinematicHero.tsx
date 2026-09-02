@@ -130,7 +130,7 @@ function CinematicSection({
   src,
   alt,
   priority = false,
-  overlayClassName = 'bg-gradient-to-b from-black/35 via-black/45 to-black/70',
+  overlayClassName = 'bg-gradient-to-b from-amber-950/35 via-amber-950/45 to-black/70',
   fadeToCream = false,
   style,
   children,
@@ -276,17 +276,19 @@ export default function CinematicHero() {
         priority
         style={headerHeight ? { height: `calc(100dvh - ${headerHeight}px)` } : undefined}
       >
-        <div className="flex flex-col items-center text-center gap-6">
-          <OnLoadReveal className="flex flex-col items-center gap-5">
-            <p className="font-serif italic text-sm sm:text-base text-amber-200/80 tracking-wide">
-              Ipak yo&apos;li karyera platformasi
-            </p>
+        <div className="flex flex-col items-center text-center gap-8">
+          <OnLoadReveal className="flex flex-col items-center gap-8">
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-200/70">
+                Ipak yo&apos;li karyera platformasi
+              </p>
 
-            <h1
-              className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 leading-[0.95] tracking-tight max-w-5xl`}
-            >
-              Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
-            </h1>
+              <h1
+                className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 leading-[0.9] tracking-tight max-w-5xl`}
+              >
+                Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
+              </h1>
+            </div>
 
             <PillLink>
               Rahnamolarni ko&apos;rish <span aria-hidden>↓</span>
@@ -311,14 +313,16 @@ export default function CinematicHero() {
         {!shouldReduceMotion && (
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-amber-100/70">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Pastga aylantiring</span>
-            <ChevronDown className="w-4 h-4 animate-bounce" />
+            <ChevronDown className="w-4 h-4" />
           </div>
         )}
       </CinematicSection>
 
       <CinematicSection src="/desert-solar-ring-eclipse.jpg" alt="Sahroda quyosh halqasi tutilishi">
         <ScrollReveal className="max-w-2xl mx-auto text-center flex flex-col items-center gap-4">
-          <h2 className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight`}>
+          <h2
+            className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight leading-[0.9]`}
+          >
             To&apos;g&apos;ri yo&apos;l
           </h2>
           <p className="font-serif italic text-lg sm:text-2xl text-amber-100/90 leading-snug">
@@ -332,11 +336,11 @@ export default function CinematicHero() {
       <CinematicSection src="/desert-night-full-moon.jpg" alt="To&apos;lin oy ostida tungi sahro">
         <ScrollReveal className="max-w-xl mx-auto text-center flex flex-col items-center gap-4">
           <h2
-            className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight leading-[0.95]`}
+            className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight leading-[0.9]`}
           >
             Tunda ham yo&apos;lingizni yo&apos;qotmang
           </h2>
-          <p className="font-serif italic text-lg sm:text-2xl text-amber-200/90">
+          <p className="font-serif italic text-lg sm:text-2xl text-amber-200/90 leading-snug">
             Rahnamongiz doim yoningizda.
           </p>
         </ScrollReveal>
@@ -345,15 +349,17 @@ export default function CinematicHero() {
       <CinematicSection
         src="/desert-sand-ripples.jpg"
         alt="Sahro qumidagi to'lqinsimon izlar"
-        overlayClassName="bg-gradient-to-b from-black/40 via-black/50 to-black/60"
+        overlayClassName="bg-gradient-to-b from-amber-950/40 via-amber-950/50 to-black/60"
         fadeToCream
       >
-        <ScrollReveal className="max-w-xl mx-auto text-center flex flex-col items-center gap-5">
+        <ScrollReveal className="max-w-xl mx-auto text-center flex flex-col items-center gap-8">
           <div className="space-y-2">
-            <h2 className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight`}>
+            <h2
+              className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 tracking-tight leading-[0.9]`}
+            >
               Endi navbat sizniki
             </h2>
-            <p className="font-serif italic text-lg sm:text-2xl text-amber-200/90">
+            <p className="font-serif italic text-lg sm:text-2xl text-amber-200/90 leading-snug">
               O&apos;z Rahnamongizni tanlang.
             </p>
           </div>
