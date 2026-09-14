@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
@@ -8,25 +8,58 @@ import CinematicHero from '@/components/CinematicHero';
 import CounselorCard from '@/components/CounselorCard';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
+import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
+import { supabase } from '@/lib/supabase';
+import { Counselor } from '@/types';
 import { Search, ChevronDown, Sparkles } from 'lucide-react';
 
 type SortOption = 'rating' | 'popular' | 'price-low' | 'price-high';
 
 const ALL_COMPANIES = 'All';
-const COMPANIES = [
-  ALL_COMPANIES,
-  ...Array.from(new Set(INITIAL_COUNSELORS.map((c) => c.company).filter((c): c is string => Boolean(c)))),
-];
+
+// Merge live Supabase rows onto the mock list by id: a matching id keeps the
+// mock's decorative-only fields (responseTime/totalSessions/outcomes -- not
+// real DB columns) while taking everything else from the live row; an id
+// that only exists in Supabase (a newly approved counselor) is appended.
+function mergeCounselors(mock: Counselor[], live: Counselor[]): Counselor[] {
+  const byId = new Map(mock.map((c) => [c.id, c]));
+  for (const liveC of live) {
+    const existing = byId.get(liveC.id);
+    byId.set(liveC.id, existing ? { ...existing, ...liveC } : liveC);
+  }
+  return Array.from(byId.values());
+}
 
 export default function Home() {
+  const [counselors, setCounselors] = useState<Counselor[]>(INITIAL_COUNSELORS);
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [selectedCompany, setSelectedCompany] = useState<string>(ALL_COMPANIES);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('rating');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    Promise.resolve(supabase.from('counselors').select('*'))
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) {
+          setCounselors(mergeCounselors(INITIAL_COUNSELORS, data.map(mapCounselorRow)));
+        }
+      })
+      .catch((err: unknown) => console.warn('Counselors fetch error, using mock catalog:', err));
+  }, []);
+
+  const COMPANIES = useMemo(
+    () => [
+      ALL_COMPANIES,
+      ...Array.from(new Set(counselors.map((c) => c.company).filter((c): c is string => Boolean(c)))),
+    ],
+    [counselors]
+  );
+
   // Filter & Search logic — category and company combine (AND), not replace
-  const filteredCounselors = INITIAL_COUNSELORS.filter((counselor) => {
+  const filteredCounselors = counselors.filter((counselor) => {
     const matchesTag =
       selectedTag === 'All' || counselor.specialties.includes(selectedTag);
 

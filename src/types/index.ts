@@ -67,5 +67,6 @@ export interface BookingTicketData {
   meetLink?: string;
   paymentStatus?: PaymentStatus;
   paymentReceipt?: string;
+  status?: 'confirmed' | 'completed';
   createdAt?: string;
 }

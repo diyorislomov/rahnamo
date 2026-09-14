@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { Tier, Review } from '@/types';
+import { Tier, Review, Counselor } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
 import { getDeviceId } from '@/lib/deviceId';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -54,7 +55,27 @@ export default function CounselorPage() {
   const router = useRouter();
   
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
-  const counselor = INITIAL_COUNSELORS.find((c) => c.id === rawId);
+
+  // Seed from the mock list (instant, no flash), then let a real Supabase
+  // row -- covering a newly approved counselor who was never in the mock
+  // list at all -- override it once the fetch resolves.
+  const [counselor, setCounselor] = useState<Counselor | undefined>(() =>
+    INITIAL_COUNSELORS.find((c) => c.id === rawId)
+  );
+  const [counselorLoading, setCounselorLoading] = useState(() => isSupabaseConfigured());
+
+  useEffect(() => {
+    if (!rawId || !isSupabaseConfigured()) return;
+
+    Promise.resolve(supabase.from('counselors').select('*').eq('id', rawId).maybeSingle())
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setCounselor((prev) => (prev ? { ...prev, ...mapCounselorRow(data) } : mapCounselorRow(data)));
+        }
+        setCounselorLoading(false);
+      })
+      .catch(() => setCounselorLoading(false));
+  }, [rawId]);
 
   // Reviews — read-only for now, no submission flow exists yet. Empty by
   // default; only ever populated by real Supabase rows, never fabricated.
@@ -94,7 +115,11 @@ export default function CounselorPage() {
   }, [counselor, reviewsLoading]);
 
   const [selectedTier, setSelectedTier] = useState<Tier>('standard');
-  const [selectedSlot, setSelectedSlot] = useState<string>(counselor?.availableSlots?.[0] || '');
+  // Derived, not stateful -- so it stays correct if the live Supabase fetch
+  // above changes counselor.availableSlots after this component already
+  // mounted (e.g. the mock had no match but the live row does).
+  const [selectedSlotOverride, setSelectedSlot] = useState<string>('');
+  const selectedSlot = selectedSlotOverride || counselor?.availableSlots?.[0] || '';
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
 
   // Form State
@@ -126,6 +151,9 @@ export default function CounselorPage() {
   };
 
   if (!counselor) {
+    if (counselorLoading) {
+      return <div className="min-h-screen bg-[#FAF6EE]" />;
+    }
     return (
       <div className="min-h-screen bg-[#FAF6EE] p-12 text-center text-amber-950 font-serif">
         <p className="text-xl font-bold">Rahnamo topilmadi.</p>

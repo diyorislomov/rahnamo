@@ -60,6 +60,17 @@ CREATE TABLE IF NOT EXISTS public.counselor_applications (
 ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS company TEXT;
 ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS why_work_with_me TEXT;
 
+-- 4b. Defensive backfill for the `bookings` table: the CREATE TABLE above is
+-- a no-op if the table already existed from an earlier deploy that predates
+-- these columns (confirmed live: an already-provisioned project was missing
+-- all four, causing every booking insert to fail with PGRST204). Safe to
+-- run even when the table is brand new -- IF NOT EXISTS makes each line a
+-- no-op in that case.
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS meet_link TEXT;
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS payment_receipt TEXT;
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'confirmed';
+
 -- 5. Reviews Table (linked to a real completed booking, never fabricated)
 CREATE TABLE IF NOT EXISTS public.reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,11 +113,16 @@ ALTER TABLE public.forum_answers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read counselors" ON public.counselors FOR SELECT USING (true);
 CREATE POLICY "Allow public read bookings" ON public.bookings FOR SELECT USING (true);
 CREATE POLICY "Allow public insert bookings" ON public.bookings FOR INSERT WITH CHECK (true);
+-- No UPDATE policy existed until now, so admin's "confirm payment" button was
+-- silently failing against Supabase the whole time (RLS default-denies).
+-- Needed now for both that button and marking a session "completed".
+CREATE POLICY "Allow public update bookings" ON public.bookings FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public update applications" ON public.counselor_applications FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public insert counselors" ON public.counselors FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public insert applications" ON public.counselor_applications FOR INSERT WITH CHECK (true);
 
--- Reviews: read-only for now — no submission UI exists yet in this pass,
--- so there is deliberately no public INSERT policy here.
 CREATE POLICY "Allow public read reviews" ON public.reviews FOR SELECT USING (true);
+CREATE POLICY "Allow public insert reviews" ON public.reviews FOR INSERT WITH CHECK (true);
 
 -- Forum: fully public read + write (no counselor auth yet — answering is
 -- just a name picked from a dropdown, so this INSERT policy is what makes

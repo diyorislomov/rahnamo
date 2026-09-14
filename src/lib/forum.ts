@@ -1,9 +1,6 @@
 import { ForumQuestion, ForumAnswer } from '@/types';
 
-export function isSupabaseConfigured() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return !!url && !url.includes('placeholder');
-}
+export { isSupabaseConfigured } from './supabase';
 
 interface ForumQuestionRow {
   id: string;

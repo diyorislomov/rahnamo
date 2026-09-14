@@ -15,13 +15,19 @@ interface CounselorApp {
   id?: string;
   full_name: string;
   headline: string;
-  category: string;
+  // `category` and `company` only exist on the hardcoded mock fallback rows
+  // below -- the real `counselor_applications` table (and the live
+  // /become-counselor form) has neither column, only `specialties` (a plain
+  // comma-separated string). Both must stay optional or every real
+  // application renders "undefined" in this tab.
+  category?: string;
+  specialties?: string;
   bio: string;
-  company: string;
+  company?: string;
   email: string;
   phone: string;
   telegram: string;
-  linkedin: string;
+  linkedin?: string;
   expected_standard_price: number;
   expected_premium_price: number;
   status?: 'pending' | 'approved' | 'rejected';
@@ -109,6 +115,7 @@ export default function AdminDashboardPage() {
             meetLink: b.meet_link,
             paymentStatus: b.payment_status || 'pending',
             paymentReceipt: b.payment_receipt || '',
+            status: b.status || 'confirmed',
             createdAt: b.created_at,
           }));
 
@@ -215,15 +222,85 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleApproveApplication = (id?: string) => {
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id || app.email === id ? { ...app, status: 'approved' } : app))
-    );
+  const handleCompleteBooking = (id: string) => {
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'completed' } : b)));
+
+    try {
+      const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
+      const updated = existing.map((b) => (b.id === id ? { ...b, status: 'completed' as const } : b));
+      localStorage.setItem('rahnamo_bookings', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+      Promise.resolve(supabase.from('bookings').update({ status: 'completed' }).eq('id', id))
+        .catch((err) => console.warn('Supabase update error:', err));
+    }
   };
 
-  const handleRejectApplication = (id?: string) => {
+  const handleApproveApplication = (app: CounselorApp) => {
+    const appKey = app.id || app.email;
     setApplications((prev) =>
-      prev.map((app) => (app.id === id || app.email === id ? { ...app, status: 'rejected' } : app))
+      prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
+    );
+
+    const newCounselorId = `c-${(app.full_name || 'mentor')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')}-${Date.now().toString(36)}`;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || supabaseUrl.includes('placeholder')) return;
+
+    Promise.resolve(
+      supabase.from('counselors').insert({
+        id: newCounselorId,
+        full_name: app.full_name,
+        headline: app.headline,
+        avatar_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
+        specialties: app.specialties
+          ? app.specialties.split(',').map((s) => s.trim()).filter(Boolean)
+          : [app.category || 'Umumiy'],
+        bio: app.bio,
+        standard_price: app.expected_standard_price || 45000,
+        premium_price: app.expected_premium_price || 130000,
+        rating: 5.0,
+        reviews_count: 0,
+        // Placeholder starting slots -- there's no counselor-facing
+        // schedule editor yet, so leaving this empty would make a newly
+        // approved counselor permanently unbookable. Real slot management
+        // is a follow-up feature, not this one.
+        available_slots: ['Dushanba, 19:00 - 19:30', 'Chorshanba, 19:00 - 19:30', 'Shanba, 12:00 - 12:30'],
+        company: app.company || null,
+      })
+    )
+      .then(({ error }) => {
+        if (error) {
+          console.warn('Counselor insert error:', error);
+          return;
+        }
+        if (app.id) {
+          return Promise.resolve(
+            supabase.from('counselor_applications').update({ status: 'approved' }).eq('id', app.id)
+          );
+        }
+      })
+      .catch((err) => console.warn('Application approve error:', err));
+  };
+
+  const handleRejectApplication = (app: CounselorApp) => {
+    const appKey = app.id || app.email;
+    setApplications((prev) =>
+      prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
+    );
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !app.id) return;
+
+    Promise.resolve(supabase.from('counselor_applications').update({ status: 'rejected' }).eq('id', app.id)).catch(
+      (err) => console.warn('Application reject error:', err)
     );
   };
 
@@ -406,6 +483,7 @@ export default function AdminDashboardPage() {
                         <th className="p-4">Rahnamo</th>
                         <th className="p-4">Vaqt & Paket</th>
                         <th className="p-4">To'lov Status</th>
+                        <th className="p-4">Sessiya Holati</th>
                         <th className="p-4">Google Meet</th>
                       </tr>
                     </thead>
@@ -456,6 +534,21 @@ export default function AdminDashboardPage() {
                             )}
                           </td>
                           <td className="p-4">
+                            {b.status === 'completed' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-200 text-stone-700 border border-stone-300">
+                                <CheckCircle className="w-3 h-3" /> YAKUNLANGAN
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleCompleteBooking(b.id)}
+                                className="px-2.5 py-1 rounded-lg bg-stone-700 hover:bg-stone-800 text-stone-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer"
+                              >
+                                Yakunlash
+                              </button>
+                            )}
+                          </td>
+                          <td className="p-4">
                             <a
                               href={b.meetLink}
                               target="_blank"
@@ -492,9 +585,11 @@ export default function AdminDashboardPage() {
                   <div key={app.id || idx} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-4">
                     <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">{app.category}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                          {app.category || app.specialties || 'Umumiy'}
+                        </span>
                         <h3 className="font-serif font-bold text-base text-amber-950">{app.full_name}</h3>
-                        <p className="text-xs text-stone-600">{app.headline} ({app.company})</p>
+                        <p className="text-xs text-stone-600">{app.headline}{app.company ? ` (${app.company})` : ''}</p>
                       </div>
 
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
@@ -517,9 +612,13 @@ export default function AdminDashboardPage() {
                       <div>📞 {app.phone}</div>
                       <div>💬 {app.telegram}</div>
                       <div>
-                        <a href={app.linkedin} target="_blank" rel="noreferrer" className="text-amber-800 underline">
-                          LinkedIn profil
-                        </a>
+                        {app.linkedin ? (
+                          <a href={app.linkedin} target="_blank" rel="noreferrer" className="text-amber-800 underline">
+                            LinkedIn profil
+                          </a>
+                        ) : (
+                          <span className="text-stone-400">LinkedIn ko&apos;rsatilmagan</span>
+                        )}
                       </div>
                     </div>
 
@@ -531,14 +630,16 @@ export default function AdminDashboardPage() {
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleRejectApplication(app.id || app.email)}
-                          className="px-3.5 py-1.5 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer"
+                          onClick={() => handleRejectApplication(app)}
+                          disabled={app.status === 'approved' || app.status === 'rejected'}
+                          className="px-3.5 py-1.5 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Rad etish
                         </button>
                         <button
-                          onClick={() => handleApproveApplication(app.id || app.email)}
-                          className="px-3.5 py-1.5 rounded-xl bg-amber-900 text-amber-50 text-xs font-bold hover:bg-amber-800 transition-colors cursor-pointer shadow-xs"
+                          onClick={() => handleApproveApplication(app)}
+                          disabled={app.status === 'approved' || app.status === 'rejected'}
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-900 text-amber-50 text-xs font-bold hover:bg-amber-800 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Tasdiqlash (Katalogga qo'shish)
                         </button>

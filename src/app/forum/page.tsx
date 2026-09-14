@@ -43,8 +43,15 @@ export default function ForumPage() {
 
   // Inline "answer this" mini-forms, keyed by question id
   const [answeringId, setAnsweringId] = useState<string | null>(null);
-  const [answerDrafts, setAnswerDrafts] = useState<{ [questionId: string]: { counselorId: string; body: string } }>({});
+  const [answerDrafts, setAnswerDrafts] = useState<{ [questionId: string]: { counselorId: string; body: string; passcode: string } }>({});
   const [answerErrors, setAnswerErrors] = useState<{ [questionId: string]: string }>({});
+
+  // Shared secret, not per-counselor identity — same tradeoff the admin
+  // panel's single password gate already accepts. It stops a random visitor
+  // hitting the public INSERT policy directly; it does not stop one
+  // counselor answering under another counselor's name, since there's still
+  // no real per-counselor auth in this pass.
+  const COUNSELOR_PASSCODE = process.env.NEXT_PUBLIC_COUNSELOR_KEY || 'RahnamoMentor2026';
 
   // Pure .then()/.catch() chains, not async/await — every branch's setState
   // calls need to sit inside a Promise callback, not just after an await
@@ -154,6 +161,13 @@ export default function ForumPage() {
       }));
       return;
     }
+    if (draft.passcode?.trim() !== COUNSELOR_PASSCODE) {
+      setAnswerErrors((prev) => ({
+        ...prev,
+        [questionId]: "Rahnamo kodi noto'g'ri. Kodni Rahnamo hamkorlik shartnomasidan tekshiring.",
+      }));
+      return;
+    }
 
     const newAnswer: ForumAnswer = {
       id: crypto.randomUUID(),
@@ -181,7 +195,7 @@ export default function ForumPage() {
     }
 
     setAnswers((prev) => [...prev, newAnswer]);
-    setAnswerDrafts((prev) => ({ ...prev, [questionId]: { counselorId: '', body: '' } }));
+    setAnswerDrafts((prev) => ({ ...prev, [questionId]: { counselorId: '', body: '', passcode: '' } }));
     setAnswerErrors((prev) => ({ ...prev, [questionId]: '' }));
     setAnsweringId(null);
   };
@@ -374,7 +388,7 @@ export default function ForumPage() {
               const questionAnswers = answers.filter((a) => a.questionId === q.id);
               const cfg = SPECIALTY_CONFIG[q.category];
               const isAnswering = answeringId === q.id;
-              const draft = answerDrafts[q.id] || { counselorId: '', body: '' };
+              const draft = answerDrafts[q.id] || { counselorId: '', body: '', passcode: '' };
 
               return (
                 <div key={q.id} className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm p-6">
@@ -436,6 +450,15 @@ export default function ForumPage() {
                             setAnswerDrafts((prev) => ({ ...prev, [q.id]: { ...draft, body: e.target.value } }))
                           }
                           placeholder="Javobingizni yozing..."
+                          className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                        />
+                        <input
+                          type="password"
+                          value={draft.passcode}
+                          onChange={(e) =>
+                            setAnswerDrafts((prev) => ({ ...prev, [q.id]: { ...draft, passcode: e.target.value } }))
+                          }
+                          placeholder="Rahnamo maxfiy kodi"
                           className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
                         />
                         {answerErrors[q.id] && (
