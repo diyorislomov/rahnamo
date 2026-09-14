@@ -35,6 +35,18 @@ body {
   }
 }
 
+/* Continuous one-directional crossing, distinct from caravanWalk's in-place
+   shuffle -- used by the hero's dune scene so the caravan reads as actually
+   traveling the horizon rather than pacing on the spot. */
+@keyframes caravanCross {
+  0% {
+    transform: translateX(-18%);
+  }
+  100% {
+    transform: translateX(118%);
+  }
+}
+
 @keyframes camelBob {
   0%, 100% {
     transform: translateY(0px) rotate(0deg);
@@ -144,6 +156,10 @@ body {
 
 .animate-caravan {
   animation: caravanWalk 14s ease-in-out infinite;
+}
+
+.animate-caravan-cross {
+  animation: caravanCross 42s linear infinite;
 }
 
 .animate-camel-bob {
@@ -263,6 +279,7 @@ body {
    my-bookings screens keep their own transition behaviour untouched. */
 @media (prefers-reduced-motion: reduce) {
   .animate-caravan,
+  .animate-caravan-cross,
   .animate-camel-bob,
   .animate-man-walk,
   .animate-leg-pair-a,

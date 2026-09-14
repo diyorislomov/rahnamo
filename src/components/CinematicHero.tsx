@@ -1,19 +1,16 @@
 'use client';
 
-// TODO: Hero background is a static image; swap for a short looping video
-// clip (6-10s, muted, autoplay) when available — see prior Seedance/
-// Higgsfield prompt in project notes.
-
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import { Anton } from 'next/font/google';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { motion, useReducedMotion, useScroll } from 'framer-motion';
 import { ChevronDown, VolumeX } from 'lucide-react';
+import Starfield from './Starfield';
+import DuneParallax from './DuneParallax';
 
 const anton = Anton({ subsets: ['latin', 'latin-ext'], weight: '400', display: 'swap' });
 
-// Static SVG-noise data URI: masks the softness of the (currently ~736px)
-// source photography when it's stretched full-bleed, at zero network cost.
+// Static SVG-noise data URI: adds a touch of film grain over the flat
+// illustrated sky/dune scene, at zero network cost.
 const GRAIN_URL =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>";
 
@@ -68,32 +65,23 @@ export default function CinematicHero() {
     target: sectionRef,
     offset: ['start start', 'end start'],
   });
-  // Slow continuous zoom + drift while the hero is in view — one cinematic
-  // camera move rather than the old cross-fade between separate scenes.
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '8%']);
 
   return (
     <div style={headerHeight ? { marginTop: -headerHeight } : undefined}>
       <section ref={sectionRef} className="relative h-dvh w-full overflow-hidden bg-[#0d0a06]">
-        <motion.div
+        <Starfield />
+        <DuneParallax scrollYProgress={scrollYProgress} shouldReduceMotion={shouldReduceMotion} />
+
+        {/* Darkens the sky for text legibility, then eases off well before the
+            dune band -- the old to-black/70 stop was tuned for a bright photo
+            and was crushing the illustrated dunes to near-invisibility. */}
+        <div
           className="absolute inset-0"
           style={{
-            scale: shouldReduceMotion ? 1 : scale,
-            y: shouldReduceMotion ? '0%' : y,
+            backgroundImage:
+              'linear-gradient(to bottom, rgba(69,26,3,0.35) 0%, rgba(69,26,3,0.5) 45%, rgba(20,13,6,0.4) 60%, rgba(20,13,6,0.1) 100%)',
           }}
-        >
-          <Image
-            src="/desert-solar-ring-eclipse.jpg"
-            alt="Sahroda quyosh halqasi tutilishi, karvon"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-        </motion.div>
-
-        <div className="absolute inset-0 bg-gradient-to-b from-amber-950/35 via-amber-950/45 to-black/70" />
+        />
         <div
           className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
           style={{ backgroundImage: `url("${GRAIN_URL}")` }}
