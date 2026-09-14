@@ -484,7 +484,7 @@ export default function AdminDashboardPage() {
                         <th className="p-4">Vaqt & Paket</th>
                         <th className="p-4">To'lov Status</th>
                         <th className="p-4">Sessiya Holati</th>
-                        <th className="p-4">Google Meet</th>
+                        <th className="p-4">Video Xona</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-amber-900/10">

@@ -1,9 +1,18 @@
-export function generateMeetLink(bookingId: string): string {
-  // Generate deterministic room code based on bookingId or random slug
-  const hash = bookingId.replace(/\D/g, '') || Math.floor(1000 + Math.random() * 9000).toString();
-  const p1 = (parseInt(hash, 10) % 899 + 100).toString(36).padStart(3, 'a');
-  const p2 = ((parseInt(hash, 10) * 7) % 8999 + 1000).toString(36).padStart(4, 'b');
-  const p3 = ((parseInt(hash, 10) * 13) % 899 + 100).toString(36).padStart(3, 'c');
+// Jitsi rooms are created on first visit -- no registration, no API key.
+// Anyone who knows the room name can join, so the name itself has to be
+// hard to guess, not just unique.
+function randomSuffix(length = 10): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const values = new Uint32Array(length);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(values);
+  } else {
+    for (let i = 0; i < length; i++) values[i] = Math.floor(Math.random() * 4294967296);
+  }
+  return Array.from(values, (v) => chars[v % chars.length]).join('');
+}
 
-  return `https://meet.google.com/rnm-${p1}-${p2}`;
+export function generateMeetLink(bookingId: string): string {
+  const safeId = bookingId.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  return `https://meet.jit.si/rahnamo-${safeId}-${randomSuffix()}`;
 }

@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         <div style="background-color: #d1fae5; border-radius: 12px; padding: 16px; color: #065f46; font-size: 13px;">
           <p style="margin: 0 0 8px 0;"><strong>🔗 Video Uchrashuv Havolasi:</strong></p>
           <a href="${meetLink}" target="_blank" style="display: inline-block; background-color: #047857; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 13px;">
-            Google Meet Xonasiga Kirish
+            Video Xonasiga Kirish
           </a>
         </div>
 

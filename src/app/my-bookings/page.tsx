@@ -254,7 +254,7 @@ export default function MyBookingsPage() {
                 const name = b.counselorName || b.counselor_name || 'Rahnamo';
                 const headline = b.counselorHeadline || b.counselor_headline || '';
                 const avatar = b.counselorAvatar || b.counselor_avatar || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400';
-                const meetUrl = b.meetLink || (b as any).meet_link || 'https://meet.google.com';
+                const meetUrl = b.meetLink || (b as any).meet_link || 'https://meet.jit.si';
                 const isCompleted = b.status === 'completed';
                 const alreadyReviewed = reviewedBookingIds.has(b.id);
                 const isReviewing = reviewingId === b.id;
@@ -303,7 +303,7 @@ export default function MyBookingsPage() {
                         rel="noreferrer"
                         className="mt-2 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all"
                       >
-                        Google Meet <ExternalLink className="w-3 h-3" />
+                        Video xonaga kirish <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   </div>

@@ -272,7 +272,7 @@ export default function Home() {
                 </div>
                 <h3 className="font-serif font-bold text-lg text-amber-100">1-ga-1 Video muloqot</h3>
                 <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  Chipta va Google Meet havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang.
+                  Chipta va video uchrashuv havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang.
                 </p>
               </div>
             </div>
@@ -291,7 +291,7 @@ export default function Home() {
                 },
                 {
                   q: "Suhbat qaysi dastur orqali o'tkaziladi?",
-                  a: "Barcha 1-ga-1 konsultatsiyalar Google Meet video havolasi orqali o'tkaziladi. Sizga xonaga ulanish havolasi elektron pochta va Telegram orqali yuboriladi.",
+                  a: "Barcha 1-ga-1 konsultatsiyalar video havola orqali o'tkaziladi (ro'yxatdan o'tish talab qilinmaydi). Sizga xonaga ulanish havolasi elektron pochta va Telegram orqali yuboriladi.",
                 },
                 {
                   q: "Rahnamolar ro'yxatiga qanday qo'shilish mumkin?",

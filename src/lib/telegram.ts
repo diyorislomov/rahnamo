@@ -40,7 +40,7 @@ export async function sendTelegramNotification(payload: NotificationBookingPaylo
 ❓ *Asosiy savol:*
 "${payload.question}"
 
-🔗 *Google Meet havolasi:*
+🔗 *Video uchrashuv havolasi:*
 ${payload.meetLink}
   `.trim();
 

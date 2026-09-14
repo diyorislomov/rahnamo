@@ -222,7 +222,7 @@ export default function BecomeCounselorPage() {
                 </div>
                 <h4 className="font-serif font-bold text-base text-amber-950">Masofaviy Muloqot</h4>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  Dunyoning qaysi nuqtasida bo'lishingizdan qat'i nazar, Google Meet video havolasi orqali 1-ga-1 suhbat o'tkazing.
+                  Dunyoning qaysi nuqtasida bo'lishingizdan qat'i nazar, video havola orqali 1-ga-1 suhbat o'tkazing.
                 </p>
               </div>
 
