@@ -47,6 +47,26 @@ body {
   }
 }
 
+/* Used for the real camel-caravan.svg illustration: a single static image
+   has no leg-swing frames, so translateX alone reads as sliding on ice.
+   Layering a small up/down bob (timed with ease-in-out, not linear, so it
+   settles rather than ticking metronomically) on top of the horizontal
+   drift fakes a walking rhythm well enough at this scale.
+   Uses vw, not %, for the horizontal drift -- % here would resolve against
+   the caravan's own (small) width, not the viewport, and only shuffle it
+   within a sliver near the left edge instead of actually crossing the hero. */
+@keyframes caravanGlide {
+  0% { transform: translateX(-20vw) translateY(0); }
+  12.5% { transform: translateX(-4vw) translateY(-4px); }
+  25% { transform: translateX(12vw) translateY(0); }
+  37.5% { transform: translateX(28vw) translateY(-4px); }
+  50% { transform: translateX(44vw) translateY(0); }
+  62.5% { transform: translateX(60vw) translateY(-4px); }
+  75% { transform: translateX(76vw) translateY(0); }
+  87.5% { transform: translateX(92vw) translateY(-4px); }
+  100% { transform: translateX(110vw) translateY(0); }
+}
+
 @keyframes camelBob {
   0%, 100% {
     transform: translateY(0px) rotate(0deg);
@@ -160,6 +180,10 @@ body {
 
 .animate-caravan-cross {
   animation: caravanCross 42s linear infinite;
+}
+
+.animate-caravan-glide {
+  animation: caravanGlide 42s ease-in-out infinite;
 }
 
 .animate-camel-bob {
@@ -280,6 +304,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-caravan,
   .animate-caravan-cross,
+  .animate-caravan-glide,
   .animate-camel-bob,
   .animate-man-walk,
   .animate-leg-pair-a,
