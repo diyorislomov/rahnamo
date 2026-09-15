@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Anton } from 'next/font/google';
 import { motion, useReducedMotion, useScroll } from 'framer-motion';
-import { ChevronDown, VolumeX } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import Starfield from './Starfield';
 import DuneParallax from './DuneParallax';
 
@@ -38,24 +38,6 @@ function useHeaderHeight() {
   return height;
 }
 
-/**
- * Visual-only for now: no <audio> element exists yet, so the button is
- * disabled rather than pretending to control sound that isn't there. Swap in
- * a real <audio> + enable this once there's a licensed ambient track.
- */
-function SoundToggle() {
-  return (
-    <button
-      type="button"
-      disabled
-      aria-label="Ovoz (tez orada)"
-      className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/10 border border-white/20 backdrop-blur-xs text-amber-100/50 cursor-not-allowed"
-    >
-      <VolumeX className="w-3.5 h-3.5" />
-    </button>
-  );
-}
-
 export default function CinematicHero() {
   const shouldReduceMotion = useReducedMotion();
   const headerHeight = useHeaderHeight();
@@ -86,10 +68,6 @@ export default function CinematicHero() {
           className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
           style={{ backgroundImage: `url("${GRAIN_URL}")` }}
         />
-
-        <div className="absolute top-6 right-6 sm:right-10 lg:right-16 z-30">
-          <SoundToggle />
-        </div>
 
         <div className="relative z-10 h-full w-full flex items-center">
           <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 w-full flex flex-col items-center text-center">
