@@ -5,10 +5,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
 import CinematicHero from '@/components/CinematicHero';
-import StatsBand from '@/components/StatsBand';
+import CatalogIntro from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
 import { supabase } from '@/lib/supabase';
 import { Counselor } from '@/types';
@@ -97,66 +96,32 @@ export default function Home() {
 
         <CinematicHero />
 
+        <CatalogIntro
+          counselors={counselors}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedTag={selectedTag}
+          setSelectedTag={setSelectedTag}
+        />
+
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <StatsBand counselors={counselors} />
-
-          {/* MentorCruise Search & Distinct Multi-Colored Rounded-Full Category Filter Bar */}
+          {/* Sort + company refinement for the results below — search and the
+              primary category picker now live upstream in CatalogIntro, so
+              this card only holds what actually refines what you're already
+              looking at. */}
           <section id="rahnamolar" className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm my-8 space-y-5 scroll-mt-24">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              {/* Search Input */}
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-stone-400 absolute left-4 top-3.5" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rahnamolar ismi, soha yoki kalit so'z bo'yicha qidirish (masalan: Ordinatura, Fulbright, Legal)..."
-                  className="w-full pl-11 pr-4 py-3 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs sm:text-sm text-stone-800 outline-none focus:ring-2 focus:ring-amber-700 transition-all placeholder:text-stone-400"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-3.5 text-xs text-stone-400 hover:text-stone-600 font-bold cursor-pointer"
-                  >
-                    ✕ Clear
-                  </button>
-                )}
-              </div>
-
-              {/* Sort Selector */}
-              <div className="flex items-center gap-2 self-end md:self-auto text-xs font-semibold">
-                <span className="text-stone-500 whitespace-nowrap">Saralash:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="bg-amber-50/80 border border-amber-900/15 text-amber-950 font-bold py-3 px-3.5 rounded-2xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
-                >
-                  <option value="rating">Eng yuqori baholangan</option>
-                  <option value="popular">Eng ko'p sessiya o'tkazgan</option>
-                  <option value="price-low">Narx: Arzonroq</option>
-                  <option value="price-high">Narx: Qimmatroq</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Category Filter Pills (Distinct Accent Colors & Rounded-Full Pills) */}
-            <div className="flex flex-wrap gap-2.5 pt-3 border-t border-amber-900/10">
-              {Object.keys(SPECIALTY_CONFIG).map((key) => {
-                const cfg = SPECIALTY_CONFIG[key];
-                const isSelected = selectedTag === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setSelectedTag(key)}
-                    className={`px-4.5 py-2.5 rounded-full text-xs font-bold transition-all duration-200 border flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                      isSelected ? cfg.activeClass : cfg.inactiveClass
-                    }`}
-                  >
-                    <span>{cfg.icon}</span>
-                    <span>{cfg.label}</span>
-                  </button>
-                );
-              })}
+            <div className="flex items-center justify-end gap-2 text-xs font-semibold">
+              <span className="text-stone-500 whitespace-nowrap">Saralash:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="bg-amber-50/80 border border-amber-900/15 text-amber-950 font-bold py-3 px-3.5 rounded-2xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
+              >
+                <option value="rating">Eng yuqori baholangan</option>
+                <option value="popular">Eng ko'p sessiya o'tkazgan</option>
+                <option value="price-low">Narx: Arzonroq</option>
+                <option value="price-high">Narx: Qimmatroq</option>
+              </select>
             </div>
 
             {/* Company / Institution Filter Pills — combines with category above (AND) */}
