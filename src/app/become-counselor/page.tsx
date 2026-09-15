@@ -8,6 +8,9 @@ import { supabase } from '@/lib/supabase';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { CamelIcon } from '@/components/Icons';
 import { ArrowLeft, CheckCircle2, UserCheck, Send, Mail, Phone, Shield, Sparkles, DollarSign, Calendar, Globe, Award, TrendingUp } from 'lucide-react';
+import { SPECIALTY_CONFIG } from '@/lib/specialties';
+
+const CATEGORY_KEYS = Object.keys(SPECIALTY_CONFIG).filter((k) => k !== 'All');
 
 export default function BecomeCounselorPage() {
   // Earnings Calculator State
@@ -17,6 +20,13 @@ export default function BecomeCounselorPage() {
   // Form State
   const [fullName, setFullName] = useState('');
   const [headline, setHeadline] = useState('');
+  // The homepage's filter pills compare a counselor's specialties array
+  // against these exact English SPECIALTY_CONFIG keys -- previously this
+  // page only collected free-text Uzbek specialties, so an approved
+  // counselor could never match any category pill except "All". `category`
+  // stores the real key; `specialties` stays free-text for the finer,
+  // display-only sub-specialties shown on the counselor's card/profile.
+  const [category, setCategory] = useState(CATEGORY_KEYS[0]);
   const [specialties, setSpecialties] = useState('');
   const [bio, setBio] = useState('');
   const [telegram, setTelegram] = useState('');
@@ -44,7 +54,7 @@ export default function BecomeCounselorPage() {
     }
 
     if (!specialties.trim()) {
-      newErrors.specialties = "Yo'nalishlaringizni vergul bilan kiriting.";
+      newErrors.specialties = "Tor ixtisosliklaringizni vergul bilan kiriting.";
     }
 
     if (!bio.trim() || bio.trim().length < 20) {
@@ -79,10 +89,17 @@ export default function BecomeCounselorPage() {
       cleanedTelegram = '@' + cleanedTelegram;
     }
 
+    // `category` (a real SPECIALTY_CONFIG key) leads the comma list so it
+    // survives admin's approve-time split into the counselor's specialties
+    // array and actually matches the homepage's filter pills.
+    const combinedSpecialties = [category, ...specialties.split(',').map((s) => s.trim()).filter(Boolean)].join(
+      ', '
+    );
+
     const applicationData = {
       full_name: fullName,
       headline,
-      specialties,
+      specialties: combinedSpecialties,
       bio,
       telegram: cleanedTelegram,
       email,
@@ -298,12 +315,30 @@ export default function BecomeCounselorPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">Asosiy yo'nalishlaringiz (vergul bilan) *</label>
+                <label className="text-xs font-semibold text-stone-700 block">Asosiy yo&apos;nalishingiz *</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
+                >
+                  {CATEGORY_KEYS.map((key) => (
+                    <option key={key} value={key}>
+                      {SPECIALTY_CONFIG[key].icon} {SPECIALTY_CONFIG[key].label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-stone-400 mt-1">
+                  Talabalar sizni katalogda shu yo&apos;nalish bo&apos;yicha filtrlashda topadi.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-stone-700 block">Tor ixtisosliklaringiz (vergul bilan) *</label>
                 <input
                   type="text"
                   value={specialties}
                   onChange={(e) => setSpecialties(e.target.value)}
-                  placeholder="Tibbiyot, Germaniyada ordinatura, Klinik tajriba"
+                  placeholder="Germaniyada ordinatura, Klinik tajriba"
                   className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
                 />
                 {errors.specialties && <p className="text-[11px] text-red-600 mt-1">{errors.specialties}</p>}
