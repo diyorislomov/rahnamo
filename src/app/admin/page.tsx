@@ -164,42 +164,51 @@ export default function AdminDashboardPage() {
     setLoading(false);
   };
 
+  // The real password never reaches this bundle -- every NEXT_PUBLIC_ var is
+  // inlined into client JS at build time regardless of how it's referenced,
+  // so the check has to happen server-side. /api/admin/check reads a signed,
+  // httpOnly session cookie that only /api/admin/login can issue.
   useEffect(() => {
-    const savedToken = typeof window !== 'undefined' ? sessionStorage.getItem('rahnamo_admin_token') : null;
-    const envKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
-    const validKey = envKey || 'Goldenprof7!';
-
-    if (savedToken && savedToken === validKey) {
-      setIsAuthenticated(true);
-      fetchAdminData();
-    } else {
-      setLoading(false);
-    }
+    fetch('/api/admin/check')
+      .then((res) => res.json())
+      .then(({ authenticated }) => {
+        if (authenticated) {
+          setIsAuthenticated(true);
+          fetchAdminData();
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const envKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
-    const validKey = envKey || 'Goldenprof7!';
-
     const entered = adminPassword.trim();
-    if (entered === validKey) {
-      setIsAuthenticated(true);
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('rahnamo_admin_token', entered);
-      }
-      setLoginError('');
-      fetchAdminData();
-    } else {
-      setLoginError("Administrator paroli noto'g'ri. Parolni qaytadan kiriting.");
-    }
+
+    fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: entered }),
+    })
+      .then((res) => res.json())
+      .then(({ success }) => {
+        if (success) {
+          setIsAuthenticated(true);
+          setLoginError('');
+          fetchAdminData();
+        } else {
+          setLoginError("Administrator paroli noto'g'ri. Parolni qaytadan kiriting.");
+        }
+      })
+      .catch(() => setLoginError("Tekshirishda xatolik yuz berdi. Qayta urinib ko'ring."));
   };
 
   const handleAdminLogout = () => {
     setIsAuthenticated(false);
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('rahnamo_admin_token');
-    }
+    Promise.resolve(fetch('/api/admin/logout', { method: 'POST' })).catch((err) =>
+      console.warn('Admin logout error:', err)
+    );
   };
 
   const handleApprovePayment = (id: string) => {

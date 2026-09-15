@@ -50,8 +50,8 @@ export default function ForumPage() {
   // panel's single password gate already accepts. It stops a random visitor
   // hitting the public INSERT policy directly; it does not stop one
   // counselor answering under another counselor's name, since there's still
-  // no real per-counselor auth in this pass.
-  const COUNSELOR_PASSCODE = process.env.NEXT_PUBLIC_COUNSELOR_KEY || 'RahnamoMentor2026';
+  // no real per-counselor auth in this pass. Verified server-side in
+  // /api/forum/answer -- the real value never ships in client JS.
 
   // Pure .then()/.catch() chains, not async/await — every branch's setState
   // calls need to sit inside a Promise callback, not just after an await
@@ -161,37 +161,39 @@ export default function ForumPage() {
       }));
       return;
     }
-    if (draft.passcode?.trim() !== COUNSELOR_PASSCODE) {
+
+    const res = await fetch('/api/forum/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionId,
+        counselorId: draft.counselorId,
+        body: draft.body.trim(),
+        passcode: draft.passcode?.trim() || '',
+      }),
+    });
+    const result = await res.json();
+
+    if (!result.success) {
       setAnswerErrors((prev) => ({
         ...prev,
-        [questionId]: "Rahnamo kodi noto'g'ri. Kodni Rahnamo hamkorlik shartnomasidan tekshiring.",
+        [questionId]:
+          result.error === 'invalid_passcode'
+            ? "Rahnamo kodi noto'g'ri. Kodni Rahnamo hamkorlik shartnomasidan tekshiring."
+            : "Javobni saqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
       }));
       return;
     }
 
-    const newAnswer: ForumAnswer = {
-      id: crypto.randomUUID(),
-      questionId,
-      counselorId: draft.counselorId,
-      body: draft.body.trim(),
-      createdAt: new Date().toISOString(),
-    };
+    const newAnswer: ForumAnswer = result.answer;
 
-    if (isSupabaseConfigured()) {
-      const { error } = await supabase.from('forum_answers').insert({
-        id: newAnswer.id,
-        question_id: newAnswer.questionId,
-        counselor_id: newAnswer.counselorId,
-        body: newAnswer.body,
-      });
-      if (error) console.warn('Forum answer insert error:', error);
-    }
-
-    try {
-      const existing = loadLocalForumAnswers();
-      localStorage.setItem('rahnamo_forum_answers', JSON.stringify([...existing, newAnswer]));
-    } catch (err) {
-      console.error(err);
+    if (!result.persisted) {
+      try {
+        const existing = loadLocalForumAnswers();
+        localStorage.setItem('rahnamo_forum_answers', JSON.stringify([...existing, newAnswer]));
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     setAnswers((prev) => [...prev, newAnswer]);
