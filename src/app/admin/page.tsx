@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
@@ -9,8 +8,7 @@ import { BookingTicketData, ForumQuestion, ForumAnswer } from '@/types';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, Phone, ExternalLink, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw, ArrowLeft, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2 } from 'lucide-react';
-import { CamelIcon } from '@/components/Icons';
+import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2 } from 'lucide-react';
 
 interface CounselorApp {
   id?: string;
