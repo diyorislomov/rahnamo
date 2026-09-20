@@ -77,9 +77,17 @@ export default function MyBookingsPage() {
           const res: any = await Promise.race([fetchPromise, timeoutPromise]);
 
           if (res?.data && res.data.length > 0) {
+            // Local goes in FIRST so it only ever fills gaps (a booking made
+            // while Supabase was unreachable) -- Supabase's row must win for
+            // any id both sources have, or a stale local copy permanently
+            // overwrites a real status change made from another device
+            // (e.g. admin confirming payment), no matter how many times the
+            // page is refreshed. That was a real, reproduced bug: this
+            // device's own cached copy stayed 'pending' forever while the
+            // database had already moved to 'confirmed'.
             const mergedMap = new Map<string, SavedBooking>();
-            res.data.forEach((b: SavedBooking) => mergedMap.set(b.id, b));
             localBookings.forEach((b: SavedBooking) => mergedMap.set(b.id, b));
+            res.data.forEach((b: SavedBooking) => mergedMap.set(b.id, b));
 
             const combined = Array.from(mergedMap.values()).sort((a, b) => {
               const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
