@@ -212,9 +212,19 @@ export default function AdminDashboardPage() {
     // no way to know the student is still locked out.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      const { error } = await supabase.from('bookings').update({ payment_status: 'confirmed' }).eq('id', id);
-      if (error) {
-        console.error('[PAYMENT_CONFIRM_FAILED]', id, error);
+      // .select() after .update() is deliberate, not decorative: RLS can
+      // silently affect zero rows with error === null (a real, reproduced
+      // case this exact session hit -- an UPDATE that "succeeds" with a
+      // clean 204 while the row never actually changes). Only a non-empty
+      // returned row proves the write really happened.
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ payment_status: 'confirmed' })
+        .eq('id', id)
+        .select('id, payment_status');
+
+      if (error || !data || data.length === 0) {
+        console.error('[PAYMENT_CONFIRM_FAILED]', id, { error, rowsAffected: data?.length ?? 0 });
         setBookingActionId(null);
         setBookingActionErrors((prev) => ({
           ...prev,
@@ -283,9 +293,16 @@ export default function AdminDashboardPage() {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      const { error } = await supabase.from('bookings').update({ status: 'completed' }).eq('id', id);
-      if (error) {
-        console.error('[COMPLETE_BOOKING_FAILED]', id, error);
+      // Same reasoning as handleApprovePayment above: a clean "no error"
+      // response is not proof anything actually changed under RLS.
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ status: 'completed' })
+        .eq('id', id)
+        .select('id');
+
+      if (error || !data || data.length === 0) {
+        console.error('[COMPLETE_BOOKING_FAILED]', id, { error, rowsAffected: data?.length ?? 0 });
         setBookingActionId(null);
         setBookingActionErrors((prev) => ({
           ...prev,

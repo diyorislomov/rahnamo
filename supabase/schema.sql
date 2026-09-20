@@ -121,10 +121,22 @@ ALTER TABLE public.forum_answers ENABLE ROW LEVEL SECURITY;
 -- Public RLS Policies
 CREATE POLICY "Allow public read counselors" ON public.counselors FOR SELECT USING (true);
 CREATE POLICY "Allow public read bookings" ON public.bookings FOR SELECT USING (true);
+-- NOTE: the live database's actual INSERT policy on bookings is currently
+-- named "Anyone can create a booking", not this name -- discovered via
+-- `SELECT policyname, cmd FROM pg_policies WHERE tablename = 'bookings'`
+-- when this file's documented names no longer matched reality (most likely
+-- from a manual edit made directly in the Supabase dashboard at some point).
+-- Same INSERT WITH CHECK (true) semantics either way; this file is only out
+-- of sync on the name. Kept here unchanged for a fresh install.
 CREATE POLICY "Allow public insert bookings" ON public.bookings FOR INSERT WITH CHECK (true);
 -- No UPDATE policy existed until now, so admin's "confirm payment" button was
 -- silently failing against Supabase the whole time (RLS default-denies).
--- Needed now for both that button and marking a session "completed".
+-- Needed now for both that button and marking a session "completed". This
+-- one was ALSO found dropped from the live DB partway through a later
+-- session (a batch of unrelated DROP POLICY statements had a name typo on
+-- an adjacent line that silently skipped past without rolling back the
+-- rest) -- confirmed with a real insert+update+read-back showing
+-- payment_status silently staying 'pending' with no error, then restored.
 CREATE POLICY "Allow public update bookings" ON public.bookings FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public update applications" ON public.counselor_applications FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public insert counselors" ON public.counselors FOR INSERT WITH CHECK (true);
