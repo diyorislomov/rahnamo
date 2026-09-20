@@ -64,8 +64,12 @@ export default function CinematicHero() {
               'linear-gradient(to bottom, rgba(69,26,3,0.35) 0%, rgba(69,26,3,0.5) 45%, rgba(20,13,6,0.4) 60%, rgba(20,13,6,0.1) 100%)',
           }}
         />
+        {/* Shared grain across sky AND illustration -- bumped from an
+            earlier 0.06 that was too faint to register on the flat SVG
+            fills, which was exactly why the dune read as crisp/flat next to
+            the softer-looking starfield. */}
         <div
-          className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          className="absolute inset-0 opacity-[0.1] mix-blend-overlay"
           style={{ backgroundImage: `url("${GRAIN_URL}")` }}
         />
 
