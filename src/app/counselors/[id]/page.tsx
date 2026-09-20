@@ -303,6 +303,7 @@ export default function CounselorPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        kind: 'booking_created',
         id: newBooking.id,
         studentName: newBooking.studentName,
         counselorName: newBooking.counselorName,
@@ -330,6 +331,7 @@ export default function CounselorPage() {
           counselor_avatar: newBooking.counselorAvatar,
           tier: newBooking.tier,
           price: newBooking.price,
+          payment_method: newBooking.paymentMethod,
           slot: newBooking.slot,
           student_name: newBooking.studentName,
           email: newBooking.email,
@@ -600,6 +602,15 @@ export default function CounselorPage() {
                     </button>
                     {copied && <span className="ml-2 text-[11px] text-emerald-600 font-semibold">Nusxalandi!</span>}
                   </p>
+                </div>
+
+                {/* Video link is deliberately withheld until an admin has
+                    actually verified the payment proof above -- it never
+                    ships in the booking-created email either, so this is
+                    the honest state right now, not a placeholder. */}
+                <div className="flex items-center gap-2 text-stone-600 bg-white/70 border border-stone-200 rounded-xl p-3">
+                  <Lock className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
+                  <span>Video havola to&apos;lov tasdiqlangandan so&apos;ng shu yerda va emailingizda ko&apos;rinadi.</span>
                 </div>
 
                 <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap gap-2">

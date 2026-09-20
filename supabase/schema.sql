@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     counselor_avatar TEXT NOT NULL,
     tier TEXT NOT NULL CHECK (tier IN ('standard', 'premium')),
     price INTEGER NOT NULL,
+    -- Previously only ever lived in the browser's own localStorage copy of
+    -- the booking -- blank for any booking viewed from a different device,
+    -- same class of gap as counselor_applications' missing SELECT policy.
+    payment_method TEXT NOT NULL DEFAULT 'payme' CHECK (payment_method IN ('payme', 'click', 'uzum')),
     slot TEXT NOT NULL,
     student_name TEXT NOT NULL,
     email TEXT NOT NULL,
@@ -100,6 +104,11 @@ CREATE TABLE IF NOT EXISTS public.forum_answers (
     body TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Migration for a database created before payment_method existed -- adds
+-- the column to an already-live bookings table (CREATE TABLE above only
+-- affects a fresh install). Safe to run repeatedly (IF NOT EXISTS).
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'payme' CHECK (payment_method IN ('payme', 'click', 'uzum'));
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.counselors ENABLE ROW LEVEL SECURITY;

@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getDeviceId } from '@/lib/deviceId';
 import { supabase } from '@/lib/supabase';
-import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Filter, Star, MessageSquareText } from 'lucide-react';
+import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Filter, Star, MessageSquareText, Lock } from 'lucide-react';
 
 interface SavedBooking {
   id: string;
@@ -31,6 +31,8 @@ interface SavedBooking {
   meetLink?: string;
   meet_link?: string;
   status?: string;
+  paymentStatus?: string;
+  payment_status?: string;
 }
 
 type TabFilter = 'all' | 'upcoming' | 'completed';
@@ -254,7 +256,9 @@ export default function MyBookingsPage() {
                 const name = b.counselorName || b.counselor_name || 'Rahnamo';
                 const headline = b.counselorHeadline || b.counselor_headline || '';
                 const avatar = b.counselorAvatar || b.counselor_avatar || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400';
-                const meetUrl = b.meetLink || (b as any).meet_link || 'https://meet.jit.si';
+                const meetUrl = b.meetLink || b.meet_link || 'https://meet.jit.si';
+                const paymentStatus = b.paymentStatus || b.payment_status || 'pending';
+                const isPaymentConfirmed = paymentStatus === 'confirmed';
                 const isCompleted = b.status === 'completed';
                 const alreadyReviewed = reviewedBookingIds.has(b.id);
                 const isReviewing = reviewingId === b.id;
@@ -277,9 +281,15 @@ export default function MyBookingsPage() {
                           <span className="text-[10px] font-bold px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-md uppercase font-mono">
                             {b.id}
                           </span>
-                          <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
-                            <CheckCircle className="w-3.5 h-3.5" /> To'langan & Tasdiqlangan
-                          </span>
+                          {isPaymentConfirmed ? (
+                            <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5" /> To'langan & Tasdiqlangan
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 animate-spin" /> To&apos;lov tekshirilmoqda
+                            </span>
+                          )}
                         </div>
                         <h3 className="font-serif font-bold text-lg text-amber-950 mt-1">{name}</h3>
                         <p className="text-xs text-stone-500">{headline}</p>
@@ -297,14 +307,21 @@ export default function MyBookingsPage() {
 
                     <div className="border-t md:border-t-0 md:border-l border-amber-900/10 pt-4 md:pt-0 md:pl-6 flex flex-col justify-center min-w-[180px]">
                       <span className="text-[11px] text-stone-500">Bog'lanish: {b.telegram}</span>
-                      <a
-                        href={meetUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all"
-                      >
-                        Video xonaga kirish <ExternalLink className="w-3 h-3" />
-                      </a>
+                      {isPaymentConfirmed ? (
+                        <a
+                          href={meetUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all"
+                        >
+                          Video xonaga kirish <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : (
+                        <div className="mt-2 flex items-center gap-1.5 bg-stone-100 text-stone-500 text-[11px] font-semibold px-3 py-2.5 rounded-xl text-center">
+                          <Lock className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>Video havola to&apos;lov tasdiqlangandan so&apos;ng ko&apos;rinadi</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

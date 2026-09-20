@@ -227,7 +227,8 @@ export default function AdminDashboardPage() {
     );
   };
 
-  const handleApprovePayment = (id: string) => {
+  const handleApprovePayment = (booking: BookingTicketData) => {
+    const id = booking.id;
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b))
     );
@@ -245,6 +246,27 @@ export default function AdminDashboardPage() {
       Promise.resolve(supabase.from('bookings').update({ payment_status: 'confirmed' }).eq('id', id))
         .catch((err) => console.warn('Supabase update error:', err));
     }
+
+    // Tells the student directly -- this is the only place the real meet
+    // link is ever sent to them. Reuses the same /api/send-email route the
+    // booking-created flow already calls, just with kind: 'payment_confirmed'
+    // selecting the other template (see that route for both).
+    fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'payment_confirmed',
+        id: booking.id,
+        studentName: booking.studentName,
+        counselorName: booking.counselorName,
+        tier: booking.tier,
+        price: booking.price,
+        slot: booking.slot,
+        paymentMethod: booking.paymentMethod,
+        email: booking.email,
+        meetLink: booking.meetLink,
+      }),
+    }).catch((err) => console.warn('Payment-confirmed email error:', err));
   };
 
   const handleCompleteBooking = (id: string) => {
@@ -574,7 +596,7 @@ export default function AdminDashboardPage() {
                                 )}
                                 <button
                                   type="button"
-                                  onClick={() => handleApprovePayment(b.id)}
+                                  onClick={() => handleApprovePayment(b)}
                                   className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block"
                                 >
                                   To'lovni Tasdiqlash ✓
