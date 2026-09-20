@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
-import CinematicHero from '@/components/CinematicHero';
+import CleanHero from '@/components/CleanHero';
 import CatalogIntro from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
@@ -92,9 +92,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200">
       <SmoothScroll>
-        <Navbar transparentOverHero />
+        <Navbar />
 
-        <CinematicHero />
+        <CleanHero counselors={counselors} />
 
         <CatalogIntro
           counselors={counselors}
