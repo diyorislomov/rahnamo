@@ -15,6 +15,7 @@ import Link from 'next/link';
 
 import { generateMeetLink } from '@/lib/meeting';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
 
 type PaymentMethod = 'payme' | 'click' | 'uzum';
 
@@ -242,6 +243,21 @@ export default function CounselorPage() {
 
     setIsProcessingPayment(true);
     setCardError('');
+
+    // A tab open since before a deploy runs its old JS forever -- ordinary
+    // navigation never reloads it. That's the exact class of bug that
+    // produced a real "successful" ticket for a booking that was never
+    // written anywhere: the stale code's env check silently skipped the
+    // whole Supabase branch. Checked here, first, before anything else in
+    // this function touches state or storage.
+    if (await isRunningStaleBuild()) {
+      announceStaleBuild();
+      setIsProcessingPayment(false);
+      setCardError(
+        "Sahifa eski versiyada ishlamoqda. Iltimos, sahifani yangilang (F5) va qaytadan urinib ko'ring."
+      );
+      return;
+    }
 
     let cleanedTelegram = telegram.trim().replace(/^https?:\/\/t\.me\//, '');
     if (!cleanedTelegram.startsWith('@')) {

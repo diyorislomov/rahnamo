@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { BookingTicketData, ForumQuestion, ForumAnswer } from '@/types';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
+import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
 import { ShieldCheck, UserCheck, Calendar, Video, Mail, Phone, ExternalLink, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw, ArrowLeft, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2 } from 'lucide-react';
 import { CamelIcon } from '@/components/Icons';
 
@@ -218,6 +219,20 @@ export default function AdminDashboardPage() {
     setBookingActionId(id);
     setBookingActionErrors((prev) => ({ ...prev, [id]: '' }));
     setBookingActionWarnings((prev) => ({ ...prev, [id]: '' }));
+
+    // Same reasoning as the booking-submission check: a tab open since
+    // before a deploy runs its old JS forever, and old code silently
+    // skipping the whole Supabase branch is exactly how an admin could
+    // believe a payment was confirmed when it never actually wrote.
+    if (await isRunningStaleBuild()) {
+      announceStaleBuild();
+      setBookingActionId(null);
+      setBookingActionErrors((prev) => ({
+        ...prev,
+        [id]: 'Sahifa eski versiyada ishlamoqda. Sahifani yangilang (F5) va qaytadan urinib ko\'ring.',
+      }));
+      return;
+    }
 
     // The DB write is the actual source of truth here -- awaited on purpose.
     // The UI must not flip to "confirmed" (which also unlocks the real meet
