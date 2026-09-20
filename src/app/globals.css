@@ -152,6 +152,17 @@ body {
   }
 }
 
+/* Hero horizon's traced "guiding path" (HeroHorizon.tsx) -- slow dash
+   drift so the arc reads as a path being traveled, not a static decal. */
+@keyframes pathDrift {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -18;
+  }
+}
+
 @keyframes starTwinkle {
   0%, 100% {
     opacity: 0.2;
@@ -172,6 +183,10 @@ body {
     opacity: 0.75;
     transform: scale(1.1);
   }
+}
+
+.animate-path-drift {
+  animation: pathDrift 6s linear infinite;
 }
 
 .animate-caravan {
@@ -315,7 +330,8 @@ body {
   .animate-guide-star,
   .animate-ray-pulse,
   .animate-twinkle-fast,
-  .animate-twinkle-slow {
+  .animate-twinkle-slow,
+  .animate-path-drift {
     animation: none !important;
   }
 

@@ -37,22 +37,22 @@ export default function StatsBand({ counselors }: StatsBandProps) {
   if (stats.length === 0) return null;
 
   return (
-    <section className="mb-10">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+    <section className="mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="relative overflow-hidden rounded-3xl bg-white/95 border border-amber-900/15 shadow-sm px-6 py-8 sm:py-10 text-center"
+            className="relative overflow-hidden rounded-2xl bg-white/95 border border-amber-900/15 shadow-sm px-5 py-4 sm:py-5 text-center"
           >
             <span
               aria-hidden
-              className="absolute inset-0 flex items-center justify-center font-serif font-black text-amber-950/[0.06] text-[7rem] sm:text-[9rem] leading-none select-none"
+              className="absolute inset-0 flex items-center justify-center font-serif font-black text-amber-950/[0.06] text-[5rem] sm:text-[6.5rem] leading-none select-none"
             >
               {stat.value}
             </span>
             <div className="relative z-10">
-              <div className="font-serif font-extrabold text-4xl sm:text-5xl text-amber-950">{stat.value}</div>
-              <div className="text-xs sm:text-sm font-bold text-stone-600 mt-1.5 uppercase tracking-wide">
+              <div className="font-serif font-extrabold text-2xl sm:text-3xl text-amber-950">{stat.value}</div>
+              <div className="text-xs sm:text-sm font-bold text-stone-600 mt-1 uppercase tracking-wide">
                 {stat.label}
               </div>
             </div>

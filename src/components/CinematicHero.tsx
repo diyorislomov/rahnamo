@@ -1,16 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Anton } from 'next/font/google';
 import { motion, useReducedMotion, useScroll } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
 import Starfield from './Starfield';
-import DuneParallax from './DuneParallax';
-
-const anton = Anton({ subsets: ['latin', 'latin-ext'], weight: '400', display: 'swap' });
+import HeroHorizon from './HeroHorizon';
 
 // Static SVG-noise data URI: adds a touch of film grain over the flat
-// illustrated sky/dune scene, at zero network cost.
+// illustrated sky, at zero network cost.
 const GRAIN_URL =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>";
 
@@ -52,11 +48,10 @@ export default function CinematicHero() {
     <div style={headerHeight ? { marginTop: -headerHeight } : undefined}>
       <section ref={sectionRef} className="relative h-dvh w-full overflow-hidden bg-[#0d0a06]">
         <Starfield />
-        <DuneParallax scrollYProgress={scrollYProgress} shouldReduceMotion={shouldReduceMotion} />
+        <HeroHorizon scrollYProgress={scrollYProgress} shouldReduceMotion={shouldReduceMotion} />
 
         {/* Darkens the sky for text legibility, then eases off well before the
-            dune band -- the old to-black/70 stop was tuned for a bright photo
-            and was crushing the illustrated dunes to near-invisibility. */}
+            horizon band. */}
         <div
           className="absolute inset-0"
           style={{
@@ -64,10 +59,7 @@ export default function CinematicHero() {
               'linear-gradient(to bottom, rgba(69,26,3,0.35) 0%, rgba(69,26,3,0.5) 45%, rgba(20,13,6,0.4) 60%, rgba(20,13,6,0.1) 100%)',
           }}
         />
-        {/* Shared grain across sky AND illustration -- bumped from an
-            earlier 0.06 that was too faint to register on the flat SVG
-            fills, which was exactly why the dune read as crisp/flat next to
-            the softer-looking starfield. */}
+        {/* Shared grain across the whole hero. */}
         <div
           className="absolute inset-0 opacity-[0.1] mix-blend-overlay"
           style={{ backgroundImage: `url("${GRAIN_URL}")` }}
@@ -85,21 +77,12 @@ export default function CinematicHero() {
                 Ipak yo&apos;li karyera platformasi
               </p>
 
-              <h1
-                className={`${anton.className} uppercase text-5xl sm:text-7xl lg:text-8xl text-amber-50 leading-[0.9] tracking-tight max-w-5xl`}
-              >
+              <h1 className="font-serif font-extrabold text-4xl sm:text-6xl lg:text-7xl text-amber-50 leading-[1.1] tracking-tight max-w-4xl">
                 Markaziy Osiyoning eng kuchli mutaxassislari bilan kelajagingizni quring.
               </h1>
             </motion.div>
           </div>
         </div>
-
-        {!shouldReduceMotion && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-amber-100/70">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Pastga aylantiring</span>
-            <ChevronDown className="w-4 h-4" />
-          </div>
-        )}
       </section>
 
       {/* Short breath into the catalog — a plain gradient, no image or text.

@@ -34,21 +34,21 @@ export default function CatalogIntro({
 }: CatalogIntroProps) {
   return (
     <div className="bg-[#FAF6EE]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 sm:pt-20 pb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-6">
         {/* Statement + dual CTA */}
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-amber-800">
             1-ga-1 shaxsiy mentorlik
           </p>
-          <h2 className="font-serif font-extrabold text-2xl sm:text-4xl text-amber-950 mt-3 leading-tight">
+          <h2 className="font-serif font-extrabold text-2xl sm:text-4xl text-amber-950 mt-2 leading-tight">
             O&apos;z sohangizdagi haqiqiy mutaxassis bilan bevosita suhbatlashing.
           </h2>
-          <p className="text-xs sm:text-sm text-stone-600 mt-4 max-w-xl mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-stone-600 mt-3 max-w-xl mx-auto leading-relaxed">
             Tasdiqlangan Rahnamolar orasidan tanlang, vaqt band qiling va bir hafta ichida birinchi
             konsultatsiyangizni o&apos;tkazing.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-7">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-5">
             <a
               href="#rahnamolar"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-bold text-sm px-6 py-3.5 rounded-2xl shadow-md transition-all"
@@ -67,12 +67,12 @@ export default function CatalogIntro({
         </div>
 
         {/* Trust stats -- StatsBand exactly as already built, just moved here */}
-        <div className="mt-12 sm:mt-16">
+        <div className="mt-7 sm:mt-9">
           <StatsBand counselors={counselors} />
         </div>
 
         {/* Search */}
-        <div className="max-w-2xl mx-auto mt-4">
+        <div className="max-w-2xl mx-auto">
           <div className="relative">
             <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
@@ -94,8 +94,8 @@ export default function CatalogIntro({
         </div>
 
         {/* Discipline grid -- primary category selector, replaces the old pill row */}
-        <div id="discipline-grid" className="mt-10 scroll-mt-24">
-          <h3 className="text-center font-serif font-bold text-lg text-amber-950 mb-5">
+        <div id="discipline-grid" className="mt-6 scroll-mt-24">
+          <h3 className="text-center font-serif font-bold text-lg text-amber-950 mb-4">
             Yo&apos;nalish bo&apos;yicha tanlang
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
