@@ -10,7 +10,7 @@ import { getDeviceId } from '@/lib/deviceId';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X, MessageCircleHeart } from 'lucide-react';
+import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X, MessageCircleHeart, Send } from 'lucide-react';
 import Link from 'next/link';
 
 import { generateMeetLink } from '@/lib/meeting';
@@ -572,6 +572,36 @@ export default function CounselorPage() {
                 <p className="leading-relaxed">
                   Elektron pochtangizga (<span className="font-bold">{bookingTicket.email}</span>) va tizimimizga uchrashuv ma'lumotlari kiritildi.
                 </p>
+
+                {/* The single most important next action -- called out on its
+                    own, with the booking ID immediately copyable right here,
+                    rather than folded into the paragraph above where a
+                    student skimming past the confirmation could miss it. */}
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3.5 flex items-start gap-2.5">
+                  <Send className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <p className="text-amber-950 leading-relaxed">
+                    To&apos;lov skrinshotini{' '}
+                    <a
+                      href={`https://t.me/rahnamo_admin?start=${bookingTicket.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-bold text-sky-700 hover:text-sky-800 underline underline-offset-2"
+                    >
+                      @rahnamo_admin
+                    </a>{' '}
+                    ga ushbu qabul raqami bilan yuboring:{' '}
+                    <button
+                      type="button"
+                      onClick={copyBookingId}
+                      className="inline-flex items-center gap-1 font-mono font-bold bg-white hover:bg-amber-100 text-amber-950 px-2 py-0.5 rounded-md border border-amber-300 transition-all cursor-pointer align-middle"
+                    >
+                      <span>{bookingTicket.id}</span>
+                      <Copy className="w-3 h-3" />
+                    </button>
+                    {copied && <span className="ml-2 text-[11px] text-emerald-600 font-semibold">Nusxalandi!</span>}
+                  </p>
+                </div>
+
                 <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap gap-2">
                   <a
                     href={`https://t.me/rahnamo_admin?start=${bookingTicket.id}`}
