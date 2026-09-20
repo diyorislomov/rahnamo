@@ -21,6 +21,7 @@ interface SavedBooking {
   tier: string;
   price: number;
   paymentMethod?: string;
+  payment_method?: string;
   slot: string;
   studentName?: string;
   student_name?: string;
@@ -265,6 +266,7 @@ export default function MyBookingsPage() {
                 const headline = b.counselorHeadline || b.counselor_headline || '';
                 const avatar = b.counselorAvatar || b.counselor_avatar || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400';
                 const meetUrl = b.meetLink || b.meet_link || 'https://meet.jit.si';
+                const paymentMethod = b.paymentMethod || b.payment_method;
                 const paymentStatus = b.paymentStatus || b.payment_status || 'pending';
                 const isPaymentConfirmed = paymentStatus === 'confirmed';
                 const isCompleted = b.status === 'completed';
@@ -307,7 +309,7 @@ export default function MyBookingsPage() {
                           </span>
                           <span>•</span>
                           <span className="capitalize font-bold text-amber-900">
-                            {b.tier} ({b.price.toLocaleString()} UZS {b.paymentMethod ? `via ${b.paymentMethod.toUpperCase()}` : ''})
+                            {b.tier} ({b.price.toLocaleString()} UZS {paymentMethod ? `via ${paymentMethod.toUpperCase()}` : ''})
                           </span>
                         </div>
                       </div>
