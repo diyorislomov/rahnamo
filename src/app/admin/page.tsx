@@ -108,8 +108,22 @@ export default function AdminDashboardPage() {
             createdAt: b.created_at,
           }));
 
-          const ids = new Set(localBookings.map((x) => x.id));
-          const combined = [...localBookings, ...mapped.filter((m) => !ids.has(m.id))];
+          // Local goes in FIRST so it only ever fills a genuine gap (a
+          // booking made while Supabase was unreachable) -- Supabase's row
+          // must win for any id both sources have, same fix and same root
+          // cause as /my-bookings' merge bug: this used to put local first
+          // in the array and then only ADD supabase rows whose id wasn't
+          // already known locally, which meant a stale local copy on
+          // admin's own device would permanently mask a real status change
+          // made from a different session (e.g. a student confirming their
+          // own booking, or another admin device), no matter how many
+          // times this page was refreshed.
+          const mergedMap = new Map<string, BookingTicketData>();
+          localBookings.forEach((b) => mergedMap.set(b.id, b));
+          mapped.forEach((b) => mergedMap.set(b.id, b));
+          const combined = Array.from(mergedMap.values()).sort(
+            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          );
           setBookings(combined);
         } else {
           setBookings(localBookings);
