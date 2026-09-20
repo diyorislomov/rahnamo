@@ -55,9 +55,17 @@ ${payload.meetLink}
         parse_mode: 'Markdown',
       }),
     });
+    // A non-2xx here doesn't throw -- fetch only rejects on network failure
+    // -- so without this, a real API rejection (bad chat id, a message that
+    // breaks Telegram's Markdown parser, etc.) would resolve as an unlogged
+    // `false` that every call site used to silently ignore.
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('[TELEGRAM_API_REJECTED]', res.status, body);
+    }
     return res.ok;
   } catch (err) {
-    console.error('Telegram notification error:', err);
+    console.error('[TELEGRAM_NETWORK_ERROR]', err);
     return false;
   }
 }

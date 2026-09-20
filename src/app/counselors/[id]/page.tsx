@@ -233,7 +233,7 @@ export default function CounselorPage() {
     setShowPaymentModal(true);
   };
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     const rawCardDigits = cardNumber.replace(/\D/g, '');
     if (rawCardDigits.length !== 16) {
       setCardError("Karta raqami to'liq 16 xonali bo'lishi kerak (Uzcard / Humo / Visa).");
@@ -241,6 +241,7 @@ export default function CounselorPage() {
     }
 
     setIsProcessingPayment(true);
+    setCardError('');
 
     let cleanedTelegram = telegram.trim().replace(/^https?:\/\/t\.me\//, '');
     if (!cleanedTelegram.startsWith('@')) {
@@ -281,7 +282,9 @@ export default function CounselorPage() {
       console.error('LocalStorage save error:', err);
     }
 
-    // Send Telegram Notification (non-blocking)
+    // Telegram alert to admin -- secondary channel, never blocks the booking
+    // itself. Its own resolved-false case (not just a thrown error) is now
+    // logged distinctly so a silent Telegram failure doesn't go unnoticed.
     sendTelegramNotification({
       id: newBooking.id,
       studentName: newBooking.studentName,
@@ -296,9 +299,14 @@ export default function CounselorPage() {
       education: newBooking.education,
       question: newBooking.question,
       meetLink: newBooking.meetLink || meetLink,
-    }).catch((err) => console.warn('Telegram notify error:', err));
+    })
+      .then((ok) => {
+        if (!ok) console.error('[TELEGRAM_NOTIFY_FAILED] booking created, admin alert did not send:', newBooking.id);
+      })
+      .catch((err) => console.error('[TELEGRAM_NOTIFY_FAILED] booking created, threw:', newBooking.id, err));
 
-    // Send Email Receipt (non-blocking)
+    // Send Email Receipt (non-blocking -- a best-effort courtesy copy of what
+    // the on-screen ticket already tells the student; not the core write).
     fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -318,41 +326,57 @@ export default function CounselorPage() {
       }),
     }).catch((err) => console.warn('Email receipt error:', err));
 
-    // Non-blocking sync to Supabase (if configured)
+    // The booking write itself -- this is the core function of the entire
+    // platform. Awaited on purpose: a success ticket must never appear
+    // unless this actually persisted, since that was the exact silent-failure
+    // incident this whole session traced back to a misconfigured connection.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      Promise.resolve(
-        supabase.from('bookings').insert({
-          id: newBooking.id,
-          device_id: getDeviceId(),
-          counselor_id: newBooking.counselorId,
-          counselor_name: newBooking.counselorName,
-          counselor_headline: newBooking.counselorHeadline,
-          counselor_avatar: newBooking.counselorAvatar,
-          tier: newBooking.tier,
-          price: newBooking.price,
-          payment_method: newBooking.paymentMethod,
-          slot: newBooking.slot,
-          student_name: newBooking.studentName,
-          email: newBooking.email,
-          phone: newBooking.phone,
-          telegram: newBooking.telegram,
-          education: newBooking.education,
-          question: newBooking.question,
-          meet_link: newBooking.meetLink,
-        })
-      )
-        .then((res: any) => {
-          if (res?.error) console.warn('Supabase sync warning:', res.error);
-        })
-        .catch((err: any) => console.warn('Supabase sync error:', err));
+      const { error } = await supabase.from('bookings').insert({
+        id: newBooking.id,
+        device_id: getDeviceId(),
+        counselor_id: newBooking.counselorId,
+        counselor_name: newBooking.counselorName,
+        counselor_headline: newBooking.counselorHeadline,
+        counselor_avatar: newBooking.counselorAvatar,
+        tier: newBooking.tier,
+        price: newBooking.price,
+        payment_method: newBooking.paymentMethod,
+        slot: newBooking.slot,
+        student_name: newBooking.studentName,
+        email: newBooking.email,
+        phone: newBooking.phone,
+        telegram: newBooking.telegram,
+        education: newBooking.education,
+        question: newBooking.question,
+        meet_link: newBooking.meetLink,
+      });
+
+      if (error) {
+        console.error('[BOOKING_INSERT_FAILED]', newBooking.id, error);
+        // Undo the optimistic localStorage write -- it must not look booked
+        // anywhere (including this device's own /my-bookings) if the
+        // authoritative write never actually happened.
+        try {
+          const existing = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
+          localStorage.setItem(
+            'rahnamo_bookings',
+            JSON.stringify(existing.filter((b: BookingTicketData) => b.id !== newBooking.id))
+          );
+        } catch (err) {
+          console.error(err);
+        }
+        setIsProcessingPayment(false);
+        setCardError(
+          "Qabulni saqlashda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling."
+        );
+        return;
+      }
     }
 
-    setTimeout(() => {
-      setIsProcessingPayment(false);
-      setShowPaymentModal(false);
-      setBookingTicket(newBooking);
-    }, 1000);
+    setIsProcessingPayment(false);
+    setShowPaymentModal(false);
+    setBookingTicket(newBooking);
   };
 
   const copyBookingId = () => {

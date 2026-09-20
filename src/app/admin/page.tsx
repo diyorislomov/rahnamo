@@ -62,6 +62,13 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Per-booking-id action state -- lets each row show its own in-flight
+  // spinner and its own error/warning without one booking's failure
+  // clobbering another's.
+  const [bookingActionId, setBookingActionId] = useState<string | null>(null);
+  const [bookingActionErrors, setBookingActionErrors] = useState<{ [id: string]: string }>({});
+  const [bookingActionWarnings, setBookingActionWarnings] = useState<{ [id: string]: string }>({});
+
   const fetchAdminData = async () => {
     setLoading(true);
     
@@ -192,12 +199,34 @@ export default function AdminDashboardPage() {
     );
   };
 
-  const handleApprovePayment = (booking: BookingTicketData) => {
+  const handleApprovePayment = async (booking: BookingTicketData) => {
     const id = booking.id;
+    setBookingActionId(id);
+    setBookingActionErrors((prev) => ({ ...prev, [id]: '' }));
+    setBookingActionWarnings((prev) => ({ ...prev, [id]: '' }));
+
+    // The DB write is the actual source of truth here -- awaited on purpose.
+    // The UI must not flip to "confirmed" (which also unlocks the real meet
+    // link on /my-bookings) unless this genuinely persisted; an admin who
+    // believes they confirmed a payment that never actually wrote would have
+    // no way to know the student is still locked out.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+      const { error } = await supabase.from('bookings').update({ payment_status: 'confirmed' }).eq('id', id);
+      if (error) {
+        console.error('[PAYMENT_CONFIRM_FAILED]', id, error);
+        setBookingActionId(null);
+        setBookingActionErrors((prev) => ({
+          ...prev,
+          [id]: "To'lovni tasdiqlashda xatolik yuz berdi. Bazaga yozilmadi -- qayta urinib ko'ring.",
+        }));
+        return;
+      }
+    }
+
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b))
     );
-
     try {
       const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
       const updated = existing.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b));
@@ -206,37 +235,67 @@ export default function AdminDashboardPage() {
       console.error(e);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      Promise.resolve(supabase.from('bookings').update({ payment_status: 'confirmed' }).eq('id', id))
-        .catch((err) => console.warn('Supabase update error:', err));
+    // Tells the student directly -- this is the only place the real meet
+    // link is ever sent to them. The DB write above already succeeded, so a
+    // failure here is a warning (the confirmation is real, just unnotified),
+    // not a hard error -- but the admin must still be told, since there is
+    // no other channel that would ever surface this.
+    try {
+      const emailRes = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'payment_confirmed',
+          id: booking.id,
+          studentName: booking.studentName,
+          counselorName: booking.counselorName,
+          tier: booking.tier,
+          price: booking.price,
+          slot: booking.slot,
+          paymentMethod: booking.paymentMethod,
+          email: booking.email,
+          meetLink: booking.meetLink,
+        }),
+      });
+      const emailData = await emailRes.json();
+      if (!emailRes.ok || !emailData?.success) {
+        console.error('[PAYMENT_CONFIRMED_EMAIL_FAILED]', id, emailData);
+        setBookingActionWarnings((prev) => ({
+          ...prev,
+          [id]: "To'lov tasdiqlandi, lekin talabaga email yuborilmadi -- unga qo'lda xabar bering.",
+        }));
+      }
+    } catch (err) {
+      console.error('[PAYMENT_CONFIRMED_EMAIL_FAILED]', id, err);
+      setBookingActionWarnings((prev) => ({
+        ...prev,
+        [id]: "To'lov tasdiqlandi, lekin talabaga email yuborilmadi -- unga qo'lda xabar bering.",
+      }));
     }
 
-    // Tells the student directly -- this is the only place the real meet
-    // link is ever sent to them. Reuses the same /api/send-email route the
-    // booking-created flow already calls, just with kind: 'payment_confirmed'
-    // selecting the other template (see that route for both).
-    fetch('/api/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        kind: 'payment_confirmed',
-        id: booking.id,
-        studentName: booking.studentName,
-        counselorName: booking.counselorName,
-        tier: booking.tier,
-        price: booking.price,
-        slot: booking.slot,
-        paymentMethod: booking.paymentMethod,
-        email: booking.email,
-        meetLink: booking.meetLink,
-      }),
-    }).catch((err) => console.warn('Payment-confirmed email error:', err));
+    setBookingActionId(null);
   };
 
-  const handleCompleteBooking = (id: string) => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'completed' } : b)));
+  const handleCompleteBooking = async (id: string) => {
+    const errorKey = `complete-${id}`;
+    setBookingActionId(id);
+    setBookingActionErrors((prev) => ({ ...prev, [errorKey]: '' }));
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+      const { error } = await supabase.from('bookings').update({ status: 'completed' }).eq('id', id);
+      if (error) {
+        console.error('[COMPLETE_BOOKING_FAILED]', id, error);
+        setBookingActionId(null);
+        setBookingActionErrors((prev) => ({
+          ...prev,
+          [errorKey]: "Yakunlashda xatolik yuz berdi. Bazaga yozilmadi -- qayta urinib ko'ring.",
+        }));
+        return;
+      }
+    }
+
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'completed' } : b)));
     try {
       const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
       const updated = existing.map((b) => (b.id === id ? { ...b, status: 'completed' as const } : b));
@@ -245,11 +304,7 @@ export default function AdminDashboardPage() {
       console.error(e);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      Promise.resolve(supabase.from('bookings').update({ status: 'completed' }).eq('id', id))
-        .catch((err) => console.warn('Supabase update error:', err));
-    }
+    setBookingActionId(null);
   };
 
   const handleApproveApplication = (app: CounselorApp) => {
@@ -544,10 +599,18 @@ export default function AdminDashboardPage() {
                           </td>
                           <td className="p-4">
                             {b.paymentStatus === 'confirmed' ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                                <CheckCircle className="w-3 h-3 text-emerald-700" />
-                                <span>TASDIQLANGAN ({b.paymentMethod})</span>
-                              </span>
+                              <div className="space-y-1.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                  <CheckCircle className="w-3 h-3 text-emerald-700" />
+                                  <span>TASDIQLANGAN ({b.paymentMethod})</span>
+                                </span>
+                                {bookingActionWarnings[b.id] && (
+                                  <div className="flex items-start gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-2 py-1.5 max-w-[220px]">
+                                    <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                    <span>{bookingActionWarnings[b.id]}</span>
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <div className="space-y-1.5">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
@@ -559,12 +622,19 @@ export default function AdminDashboardPage() {
                                     Chek ID: <span className="font-bold text-amber-950">{b.paymentReceipt}</span>
                                   </div>
                                 )}
+                                {bookingActionErrors[b.id] && (
+                                  <div className="flex items-start gap-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-300 rounded-lg px-2 py-1.5 max-w-[220px]">
+                                    <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                    <span>{bookingActionErrors[b.id]}</span>
+                                  </div>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => handleApprovePayment(b)}
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block"
+                                  disabled={bookingActionId === b.id}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  To'lovni Tasdiqlash ✓
+                                  {bookingActionId === b.id ? 'Tekshirilmoqda...' : "To'lovni Tasdiqlash ✓"}
                                 </button>
                               </div>
                             )}
@@ -575,13 +645,22 @@ export default function AdminDashboardPage() {
                                 <CheckCircle className="w-3 h-3" /> YAKUNLANGAN
                               </span>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleCompleteBooking(b.id)}
-                                className="px-2.5 py-1 rounded-lg bg-stone-700 hover:bg-stone-800 text-stone-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer"
-                              >
-                                Yakunlash
-                              </button>
+                              <div className="space-y-1.5">
+                                {bookingActionErrors[`complete-${b.id}`] && (
+                                  <div className="flex items-start gap-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-300 rounded-lg px-2 py-1.5 max-w-[220px]">
+                                    <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                    <span>{bookingActionErrors[`complete-${b.id}`]}</span>
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCompleteBooking(b.id)}
+                                  disabled={bookingActionId === b.id}
+                                  className="px-2.5 py-1 rounded-lg bg-stone-700 hover:bg-stone-800 text-stone-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {bookingActionId === b.id ? '...' : 'Yakunlash'}
+                                </button>
+                              </div>
                             )}
                           </td>
                           <td className="p-4">

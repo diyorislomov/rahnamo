@@ -38,6 +38,7 @@ export default function BecomeCounselorPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Monthly Earnings Calculation
   const estimatedMonthlyEarnings = sessionsPerWeek * avgPrice * 4;
@@ -83,6 +84,7 @@ export default function BecomeCounselorPage() {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    setSubmitError('');
 
     let cleanedTelegram = telegram.trim().replace(/^https?:\/\/t\.me\//, '');
     if (!cleanedTelegram.startsWith('@')) {
@@ -108,7 +110,7 @@ export default function BecomeCounselorPage() {
       expected_premium_price: parseInt(premiumPrice, 10) || 130000,
     };
 
-    // Save locally
+    // Save locally (fallback store, independent of the outcome below)
     try {
       const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
       localStorage.setItem('rahnamo_applications', JSON.stringify([applicationData, ...existing]));
@@ -116,30 +118,56 @@ export default function BecomeCounselorPage() {
       console.error(err);
     }
 
-    // Save to Supabase (if configured) -- captures the real DB-generated id
-    // and patches it into the just-saved localStorage copy, so admin's
-    // reject/approve/delete actions (which target a row by id) have a real
-    // one to match against even when reading from the localStorage fallback
-    // rather than a live fetch.
+    // The application write itself -- awaited on purpose. A rejected or lost
+    // application with no visible error is a real trust cost (the applicant
+    // walks away believing they applied when admin never saw it), so the
+    // success screen must not appear unless this actually persisted.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      Promise.resolve(supabase.from('counselor_applications').insert(applicationData).select('id').single())
-        .then(({ data, error }) => {
-          if (error || !data?.id) return;
-          try {
-            const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-            if (existing[0] && !existing[0].id && existing[0].email === applicationData.email) {
-              existing[0].id = data.id;
-              localStorage.setItem('rahnamo_applications', JSON.stringify(existing));
-            }
-          } catch (err) {
-            console.error(err);
+      const { data, error } = await supabase
+        .from('counselor_applications')
+        .insert(applicationData)
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('[APPLICATION_INSERT_FAILED]', error);
+        try {
+          const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
+          localStorage.setItem(
+            'rahnamo_applications',
+            JSON.stringify(existing.filter((a: { email: string }) => a.email !== applicationData.email))
+          );
+        } catch (err) {
+          console.error(err);
+        }
+        setIsSubmitting(false);
+        setSubmitError(
+          "Arizani yuborishda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling."
+        );
+        return;
+      }
+
+      // Captures the real DB-generated id and patches it into the just-saved
+      // localStorage copy, so admin's reject/approve/delete actions (which
+      // target a row by id) have a real one to match against even when
+      // reading from the localStorage fallback rather than a live fetch.
+      if (data?.id) {
+        try {
+          const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
+          if (existing[0] && !existing[0].id && existing[0].email === applicationData.email) {
+            existing[0].id = data.id;
+            localStorage.setItem('rahnamo_applications', JSON.stringify(existing));
           }
-        })
-        .catch((err: unknown) => console.warn('Supabase app insert:', err));
+        } catch (err) {
+          console.error(err);
+        }
+      }
     }
 
-    // Send Telegram Notification to Admin
+    // Telegram alert to admin -- secondary channel, doesn't block the
+    // application itself, but a resolved-false (not just a thrown error) is
+    // now logged distinctly so a silent failure doesn't go unnoticed.
     sendTelegramNotification({
       id: `APP-${Math.floor(1000 + Math.random() * 9000)}`,
       studentName: `${applicationData.full_name} (MENTOR ARIZASI)`,
@@ -154,12 +182,14 @@ export default function BecomeCounselorPage() {
       education: applicationData.headline,
       question: `Bio: ${bio.slice(0, 120)}...`,
       meetLink: 'https://rahnamo-one.vercel.app/admin',
-    }).catch((err) => console.warn('Telegram notify error:', err));
+    })
+      .then((ok) => {
+        if (!ok) console.error('[TELEGRAM_NOTIFY_FAILED] application submitted, admin alert did not send');
+      })
+      .catch((err) => console.error('[TELEGRAM_NOTIFY_FAILED] application submitted, threw:', err));
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-    }, 800);
+    setIsSubmitting(false);
+    setSubmitted(true);
   };
 
   return (
@@ -431,6 +461,12 @@ export default function BecomeCounselorPage() {
                   />
                 </div>
               </div>
+
+              {submitError && (
+                <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-300 rounded-xl px-3.5 py-2.5">
+                  {submitError}
+                </p>
+              )}
 
               <button
                 type="submit"

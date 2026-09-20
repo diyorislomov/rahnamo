@@ -40,6 +40,7 @@ export default function ForumPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Inline "answer this" mini-forms, keyed by question id
   const [answeringId, setAnsweringId] = useState<string | null>(null);
@@ -110,6 +111,7 @@ export default function ForumPage() {
     e.preventDefault();
     if (!validateQuestion()) return;
     setSubmitting(true);
+    setSubmitError('');
 
     const newQuestion: ForumQuestion = {
       id: crypto.randomUUID(),
@@ -121,6 +123,11 @@ export default function ForumPage() {
       createdAt: new Date().toISOString(),
     };
 
+    // Awaited and gated on purpose: the question must not appear posted
+    // (optimistic local state) unless it actually persisted -- previously
+    // this only console.warn'd and added it to local state regardless,
+    // so the poster could believe it was public when no one else could
+    // ever see it.
     if (isSupabaseConfigured()) {
       const { error } = await supabase.from('forum_questions').insert({
         id: newQuestion.id,
@@ -130,7 +137,14 @@ export default function ForumPage() {
         title: newQuestion.title,
         body: newQuestion.body,
       });
-      if (error) console.warn('Forum question insert error:', error);
+      if (error) {
+        console.error('[FORUM_QUESTION_INSERT_FAILED]', error);
+        setSubmitting(false);
+        setSubmitError(
+          "Savolni joylashda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring."
+        );
+        return;
+      }
     }
 
     try {
@@ -349,6 +363,13 @@ export default function ForumPage() {
               </p>
             </div>
           </div>
+
+          {submitError && (
+            <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-300 rounded-xl px-3.5 py-2.5 flex items-start gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              <span>{submitError}</span>
+            </p>
+          )}
 
           <button
             type="submit"
