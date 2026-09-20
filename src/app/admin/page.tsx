@@ -62,40 +62,6 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Initial mock applications fallback
-  const INITIAL_APPS: CounselorApp[] = [
-    {
-      id: 'APP-101',
-      full_name: 'Jasurbek Alimov',
-      headline: 'Senior Backend Engineer @ EPAM Systems',
-      category: 'Engineering & Tech',
-      company: 'EPAM Systems',
-      email: 'jasur.alimov@epam.com',
-      phone: '+998 90 345 67 89',
-      telegram: '@jasuralimov',
-      linkedin: 'https://linkedin.com/in/jasur-alimov',
-      bio: '8+ years designing Java & Spring Cloud microservices. Mentored 30+ junior developers.',
-      expected_standard_price: 60000,
-      expected_premium_price: 150000,
-      status: 'pending',
-    },
-    {
-      id: 'APP-102',
-      full_name: 'Dildora Niyazova',
-      headline: 'Fulbright Scholar & Education Consultant',
-      category: 'Study Abroad',
-      company: 'Fulbright Association',
-      email: 'dildora.niyazova@gmail.com',
-      phone: '+998 93 111 22 33',
-      telegram: '@dildoraniiazova',
-      linkedin: 'https://linkedin.com/in/dildora-niyazova',
-      bio: 'Assisting students with US University admissions and full scholarship applications.',
-      expected_standard_price: 50000,
-      expected_premium_price: 130000,
-      status: 'pending',
-    },
-  ];
-
   const fetchAdminData = async () => {
     setLoading(true);
     
@@ -148,7 +114,7 @@ export default function AdminDashboardPage() {
           setApplications(supaApps);
         } else {
           const localApps = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-          setApplications(localApps.length > 0 ? localApps : INITIAL_APPS);
+          setApplications(localApps);
         }
 
         // 3. Fetch Forum questions & answers (moderation view — read-only)
@@ -165,14 +131,13 @@ export default function AdminDashboardPage() {
       } catch (err) {
         console.warn('Supabase fetch error:', err);
         setBookings(localBookings);
-        setApplications(INITIAL_APPS);
+        setApplications(JSON.parse(localStorage.getItem('rahnamo_applications') || '[]'));
         setForumQuestions(loadLocalForumQuestions());
         setForumAnswers(loadLocalForumAnswers());
       }
     } else {
       setBookings(localBookings);
-      const localApps = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-      setApplications(localApps.length > 0 ? localApps : INITIAL_APPS);
+      setApplications(JSON.parse(localStorage.getItem('rahnamo_applications') || '[]'));
       setForumQuestions(loadLocalForumQuestions());
       setForumAnswers(loadLocalForumAnswers());
     }
