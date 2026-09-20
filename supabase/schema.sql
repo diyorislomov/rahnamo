@@ -120,6 +120,14 @@ CREATE POLICY "Allow public update bookings" ON public.bookings FOR UPDATE USING
 CREATE POLICY "Allow public update applications" ON public.counselor_applications FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public insert counselors" ON public.counselors FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public insert applications" ON public.counselor_applications FOR INSERT WITH CHECK (true);
+-- No SELECT policy existed until now, so admin's applications tab could
+-- never actually read a real row back (RLS silently returns zero rows,
+-- no error) -- it was always rendering the localStorage/mock fallback,
+-- which is also why approve/reject's status updates looked like they
+-- worked in the UI but never reliably matched a real row by id.
+CREATE POLICY "Allow public read applications" ON public.counselor_applications FOR SELECT USING (true);
+-- Needed for admin's delete-application action.
+CREATE POLICY "Allow public delete applications" ON public.counselor_applications FOR DELETE USING (true);
 
 CREATE POLICY "Allow public read reviews" ON public.reviews FOR SELECT USING (true);
 CREATE POLICY "Allow public insert reviews" ON public.reviews FOR INSERT WITH CHECK (true);

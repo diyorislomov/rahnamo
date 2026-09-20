@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { BookingTicketData, ForumQuestion, ForumAnswer } from '@/types';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, Phone, ExternalLink, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw, ArrowLeft, Lock, LogOut, KeyRound, MessageCircleQuestion } from 'lucide-react';
+import { ShieldCheck, UserCheck, Calendar, Video, Mail, Phone, ExternalLink, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw, ArrowLeft, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2 } from 'lucide-react';
 import { CamelIcon } from '@/components/Icons';
 
 interface CounselorApp {
@@ -31,6 +31,22 @@ interface CounselorApp {
   expected_standard_price: number;
   expected_premium_price: number;
   status?: 'pending' | 'approved' | 'rejected';
+}
+
+// Shared by reject/approve/delete below -- all three need to patch the same
+// `rahnamo_applications` localStorage cache, which is what this tab actually
+// renders from whenever the Supabase fetch comes back empty (see comment at
+// the SELECT policy in schema.sql for why that was always happening before).
+// Without this, a page refresh silently reverted every status change back
+// to the stale cached copy, regardless of whether the Supabase write itself
+// succeeded.
+function persistLocalApplications(updater: (apps: CounselorApp[]) => CounselorApp[]) {
+  try {
+    const existing: CounselorApp[] = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
+    localStorage.setItem('rahnamo_applications', JSON.stringify(updater(existing)));
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 export default function AdminDashboardPage() {
@@ -254,6 +270,9 @@ export default function AdminDashboardPage() {
     setApplications((prev) =>
       prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
     );
+    persistLocalApplications((apps) =>
+      apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
+    );
 
     const newCounselorId = `c-${(app.full_name || 'mentor')
       .toLowerCase()
@@ -304,12 +323,33 @@ export default function AdminDashboardPage() {
     setApplications((prev) =>
       prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
     );
+    persistLocalApplications((apps) =>
+      apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
+    );
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!supabaseUrl || supabaseUrl.includes('placeholder') || !app.id) return;
 
     Promise.resolve(supabase.from('counselor_applications').update({ status: 'rejected' }).eq('id', app.id)).catch(
       (err) => console.warn('Application reject error:', err)
+    );
+  };
+
+  const handleDeleteApplication = (app: CounselorApp) => {
+    const confirmed = window.confirm(
+      `"${app.full_name}" arizasini butunlay o'chirmoqchimisiz? Bu amalni ORQAGA QAYTARIB BO'LMAYDI.`
+    );
+    if (!confirmed) return;
+
+    const appKey = app.id || app.email;
+    setApplications((prev) => prev.filter((a) => (a.id || a.email) !== appKey));
+    persistLocalApplications((apps) => apps.filter((a) => (a.id || a.email) !== appKey));
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !app.id) return;
+
+    Promise.resolve(supabase.from('counselor_applications').delete().eq('id', app.id)).catch((err) =>
+      console.warn('Application delete error:', err)
     );
   };
 
@@ -601,15 +641,24 @@ export default function AdminDashboardPage() {
                         <p className="text-xs text-stone-600">{app.headline}{app.company ? ` (${app.company})` : ''}</p>
                       </div>
 
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        app.status === 'approved'
-                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                          : app.status === 'rejected'
-                          ? 'bg-red-100 text-red-900 border border-red-300'
-                          : 'bg-amber-100 text-amber-900 border border-amber-300'
-                      }`}>
-                        {app.status ? app.status.toUpperCase() : 'PENDING'}
-                      </span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          app.status === 'approved'
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                            : app.status === 'rejected'
+                            ? 'bg-red-100 text-red-900 border border-red-300'
+                            : 'bg-amber-100 text-amber-900 border border-amber-300'
+                        }`}>
+                          {app.status ? app.status.toUpperCase() : 'PENDING'}
+                        </span>
+                        <button
+                          onClick={() => handleDeleteApplication(app)}
+                          title="Arizani butunlay o'chirish"
+                          className="p-1.5 rounded-lg border border-stone-200 bg-stone-50 text-stone-500 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-stone-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-900/10">

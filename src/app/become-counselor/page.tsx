@@ -116,11 +116,27 @@ export default function BecomeCounselorPage() {
       console.error(err);
     }
 
-    // Save to Supabase (if configured)
+    // Save to Supabase (if configured) -- captures the real DB-generated id
+    // and patches it into the just-saved localStorage copy, so admin's
+    // reject/approve/delete actions (which target a row by id) have a real
+    // one to match against even when reading from the localStorage fallback
+    // rather than a live fetch.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      Promise.resolve(supabase.from('counselor_applications').insert(applicationData))
-        .catch((err) => console.warn('Supabase app insert:', err));
+      Promise.resolve(supabase.from('counselor_applications').insert(applicationData).select('id').single())
+        .then(({ data, error }) => {
+          if (error || !data?.id) return;
+          try {
+            const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
+            if (existing[0] && !existing[0].id && existing[0].email === applicationData.email) {
+              existing[0].id = data.id;
+              localStorage.setItem('rahnamo_applications', JSON.stringify(existing));
+            }
+          } catch (err) {
+            console.error(err);
+          }
+        })
+        .catch((err: unknown) => console.warn('Supabase app insert:', err));
     }
 
     // Send Telegram Notification to Admin
