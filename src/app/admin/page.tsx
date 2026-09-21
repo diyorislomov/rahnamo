@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
@@ -50,6 +51,9 @@ function persistLocalApplications(updater: (apps: CounselorApp[]) => CounselorAp
 }
 
 export default function AdminDashboardPage() {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
+  const dateLocale = t('dateLocale');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -238,10 +242,10 @@ export default function AdminDashboardPage() {
           setLoginError('');
           fetchAdminData();
         } else {
-          setLoginError("Administrator paroli noto'g'ri. Parolni qaytadan kiriting.");
+          setLoginError(t('login.wrongPassword'));
         }
       })
-      .catch(() => setLoginError("Tekshirishda xatolik yuz berdi. Qayta urinib ko'ring."));
+      .catch(() => setLoginError(t('login.checkFailed')));
   };
 
   const handleAdminLogout = () => {
@@ -266,7 +270,7 @@ export default function AdminDashboardPage() {
       setBookingActionId(null);
       setBookingActionErrors((prev) => ({
         ...prev,
-        [id]: 'Sahifa eski versiyada ishlamoqda. Sahifani yangilang (F5) va qaytadan urinib ko\'ring.',
+        [id]: t('bookings.staleBuildError'),
       }));
       return;
     }
@@ -294,7 +298,7 @@ export default function AdminDashboardPage() {
         setBookingActionId(null);
         setBookingActionErrors((prev) => ({
           ...prev,
-          [id]: "To'lovni tasdiqlashda xatolik yuz berdi. Bazaga yozilmadi -- qayta urinib ko'ring.",
+          [id]: t('bookings.confirmPaymentFailed'),
         }));
         return;
       }
@@ -339,14 +343,14 @@ export default function AdminDashboardPage() {
         console.error('[PAYMENT_CONFIRMED_EMAIL_FAILED]', id, emailData);
         setBookingActionWarnings((prev) => ({
           ...prev,
-          [id]: "To'lov tasdiqlandi, lekin talabaga email yuborilmadi -- unga qo'lda xabar bering.",
+          [id]: t('bookings.emailNotSentWarning'),
         }));
       }
     } catch (err) {
       console.error('[PAYMENT_CONFIRMED_EMAIL_FAILED]', id, err);
       setBookingActionWarnings((prev) => ({
         ...prev,
-        [id]: "To'lov tasdiqlandi, lekin talabaga email yuborilmadi -- unga qo'lda xabar bering.",
+        [id]: t('bookings.emailNotSentWarning'),
       }));
     }
 
@@ -373,7 +377,7 @@ export default function AdminDashboardPage() {
         setBookingActionId(null);
         setBookingActionErrors((prev) => ({
           ...prev,
-          [errorKey]: "Yakunlashda xatolik yuz berdi. Bazaga yozilmadi -- qayta urinib ko'ring.",
+          [errorKey]: t('bookings.completeBookingFailed'),
         }));
         return;
       }
@@ -462,9 +466,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteApplication = (app: CounselorApp) => {
-    const confirmed = window.confirm(
-      `"${app.full_name}" arizasini butunlay o'chirmoqchimisiz? Bu amalni ORQAGA QAYTARIB BO'LMAYDI.`
-    );
+    const confirmed = window.confirm(t('applications.deleteConfirm', { name: app.full_name }));
     if (!confirmed) return;
 
     const appKey = app.id || app.email;
@@ -500,20 +502,20 @@ export default function AdminDashboardPage() {
 
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
-                Maxfiy Administrator Kirishi
+                {t('login.badge')}
               </span>
               <h1 className="font-serif font-extrabold text-2xl text-amber-950 mt-3">
-                Rahnamo Admin Gate
+                {t('login.title')}
               </h1>
               <p className="text-xs text-stone-600 mt-1">
-                Talaba va mentorlarning shaxsiy ma'lumotlarini himoya qilish uchun administrator parolini kiriting.
+                {t('login.subtitle')}
               </p>
             </div>
 
             <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
               <div>
                 <label className="text-xs font-semibold text-stone-700 block mb-1">
-                  Administrator Paroli
+                  {t('login.passwordLabel')}
                 </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
@@ -533,12 +535,12 @@ export default function AdminDashboardPage() {
                 className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <Lock className="w-4 h-4 text-amber-300" />
-                <span>Panelga Kirish</span>
+                <span>{t('login.submit')}</span>
               </button>
             </form>
 
             <p className="text-[10px] text-stone-400 pt-2 border-t border-amber-900/10">
-              O'zbekiston Respublikasining "Shaxsga doir ma'lumotlar to'g'risida"gi qonuniga muvofiq himoyalangan.
+              {t('login.legalNotice')}
             </p>
           </div>
         </main>
@@ -558,13 +560,13 @@ export default function AdminDashboardPage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-bold mb-2">
               <ShieldCheck className="w-4 h-4 text-amber-800" />
-              <span>Rahnamo Admin Management</span>
+              <span>{t('header.badge')}</span>
             </div>
             <h1 className="font-serif font-extrabold text-2xl sm:text-3xl text-amber-950">
-              Platforma Boshqaruv Paneli
+              {t('header.title')}
             </h1>
             <p className="text-xs text-stone-600 mt-1">
-              Band qilingan konsultatsiyalar va kelib tushgan Rahnamolik arizalarini boshqarish
+              {t('header.subtitle')}
             </p>
           </div>
 
@@ -574,7 +576,7 @@ export default function AdminDashboardPage() {
               className="inline-flex items-center gap-2 bg-amber-900 text-amber-50 font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-amber-800 transition-all cursor-pointer shadow-xs"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>Yangilash</span>
+              <span>{t('header.refresh')}</span>
             </button>
 
             <button
@@ -582,7 +584,7 @@ export default function AdminDashboardPage() {
               className="inline-flex items-center gap-1.5 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Chiqish</span>
+              <span>{t('header.logout')}</span>
             </button>
           </div>
         </div>
@@ -598,7 +600,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span>Konsultatsiya Qabullari ({bookings.length})</span>
+            <span>{t('tabs.bookings', { count: bookings.length })}</span>
           </button>
 
           <button
@@ -610,7 +612,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            <span>Rahnamolik Arizalari ({applications.length})</span>
+            <span>{t('tabs.applications', { count: applications.length })}</span>
           </button>
 
           <button
@@ -622,7 +624,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <MessageCircleQuestion className="w-4 h-4" />
-            <span>Forum ({forumQuestions.length})</span>
+            <span>{t('tabs.forum', { count: forumQuestions.length })}</span>
           </button>
 
           <button
@@ -634,7 +636,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <ClipboardList className="w-4 h-4" />
-            <span>So&apos;rovnoma Javoblari ({surveyResponses.length})</span>
+            <span>{t('tabs.survey', { count: surveyResponses.length })}</span>
           </button>
 
           <button
@@ -646,7 +648,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Rahnamolar ({counselors.length})</span>
+            <span>{t('tabs.counselors', { count: counselors.length })}</span>
           </button>
         </div>
 
@@ -658,7 +660,7 @@ export default function AdminDashboardPage() {
               <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
               <input
                 type="text"
-                placeholder="Talaba ismi, Rahnamo yoki Chipta ID bo'yicha..."
+                placeholder={t('bookings.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-amber-900/15 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
@@ -668,8 +670,8 @@ export default function AdminDashboardPage() {
             {filteredBookings.length === 0 ? (
               <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
                 <Calendar className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">Hali hech qanday bandlovlar mavjud emas</h4>
-                <p className="text-xs text-stone-500 mt-1">Platformada yangi bandlov to'lovi amalga oshirilganda shu yerda ko'rinadi.</p>
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('bookings.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('bookings.emptyBody')}</p>
               </div>
             ) : (
               <div className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm overflow-hidden">
@@ -677,13 +679,13 @@ export default function AdminDashboardPage() {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-amber-50/80 border-b border-amber-900/10 text-amber-950 font-serif font-bold">
-                        <th className="p-4">Chipta ID</th>
-                        <th className="p-4">Talaba / Buyurtmachi</th>
-                        <th className="p-4">Rahnamo</th>
-                        <th className="p-4">Vaqt & Paket</th>
-                        <th className="p-4">To'lov Status</th>
-                        <th className="p-4">Sessiya Holati</th>
-                        <th className="p-4">Video Xona</th>
+                        <th className="p-4">{t('bookings.colTicketId')}</th>
+                        <th className="p-4">{t('bookings.colStudent')}</th>
+                        <th className="p-4">{t('bookings.colCounselor')}</th>
+                        <th className="p-4">{t('bookings.colTimePackage')}</th>
+                        <th className="p-4">{t('bookings.colPaymentStatus')}</th>
+                        <th className="p-4">{t('bookings.colSessionStatus')}</th>
+                        <th className="p-4">{t('bookings.colVideoRoom')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-amber-900/10">
@@ -702,7 +704,7 @@ export default function AdminDashboardPage() {
                           <td className="p-4">
                             <div className="font-semibold text-stone-900">{b.slot}</div>
                             <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300/50">
-                              {b.tier.toUpperCase()} ({b.price.toLocaleString()} UZS)
+                              {(b.tier === 'standard' || b.tier === 'premium' ? tCommon(b.tier) : b.tier).toUpperCase()} ({b.price.toLocaleString()} UZS)
                             </span>
                           </td>
                           <td className="p-4">
@@ -710,7 +712,7 @@ export default function AdminDashboardPage() {
                               <div className="space-y-1.5">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
                                   <CheckCircle className="w-3 h-3 text-emerald-700" />
-                                  <span>TASDIQLANGAN ({b.paymentMethod})</span>
+                                  <span>{t('bookings.paymentConfirmedBadge', { method: b.paymentMethod })}</span>
                                 </span>
                                 {bookingActionWarnings[b.id] && (
                                   <div className="flex items-start gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-2 py-1.5 max-w-[220px]">
@@ -723,11 +725,11 @@ export default function AdminDashboardPage() {
                               <div className="space-y-1.5">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                                   <Clock className="w-3 h-3 text-amber-700 animate-spin" />
-                                  <span>TEKSHIRILMOQDA</span>
+                                  <span>{t('bookings.paymentPendingBadge')}</span>
                                 </span>
                                 {b.paymentReceipt && (
                                   <div className="text-[10px] font-mono text-stone-600">
-                                    Chek ID: <span className="font-bold text-amber-950">{b.paymentReceipt}</span>
+                                    {t('bookings.receiptIdLabel')} <span className="font-bold text-amber-950">{b.paymentReceipt}</span>
                                   </div>
                                 )}
                                 {bookingActionErrors[b.id] && (
@@ -742,7 +744,7 @@ export default function AdminDashboardPage() {
                                   disabled={bookingActionId === b.id}
                                   className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {bookingActionId === b.id ? 'Tekshirilmoqda...' : "To'lovni Tasdiqlash ✓"}
+                                  {bookingActionId === b.id ? t('bookings.approving') : t('bookings.approvePayment')}
                                 </button>
                               </div>
                             )}
@@ -750,7 +752,7 @@ export default function AdminDashboardPage() {
                           <td className="p-4">
                             {b.status === 'completed' ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-200 text-stone-700 border border-stone-300">
-                                <CheckCircle className="w-3 h-3" /> YAKUNLANGAN
+                                <CheckCircle className="w-3 h-3" /> {t('bookings.sessionCompletedBadge')}
                               </span>
                             ) : (
                               <div className="space-y-1.5">
@@ -766,7 +768,7 @@ export default function AdminDashboardPage() {
                                   disabled={bookingActionId === b.id}
                                   className="px-2.5 py-1 rounded-lg bg-stone-700 hover:bg-stone-800 text-stone-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {bookingActionId === b.id ? '...' : 'Yakunlash'}
+                                  {bookingActionId === b.id ? '...' : t('bookings.completeButton')}
                                 </button>
                               </div>
                             )}
@@ -779,7 +781,7 @@ export default function AdminDashboardPage() {
                               className="inline-flex items-center gap-1 text-emerald-800 font-bold hover:underline"
                             >
                               <Video className="w-3.5 h-3.5" />
-                              <span>Xonaga kirish</span>
+                              <span>{t('bookings.joinRoom')}</span>
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           </td>
@@ -799,8 +801,8 @@ export default function AdminDashboardPage() {
             {applications.length === 0 ? (
               <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
                 <UserCheck className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">Arizalar mavjud emas</h4>
-                <p className="text-xs text-stone-500 mt-1">Nomi ko'rsatilgan mutaxassislar ariza topshirganda bu yerda ko'rinadi.</p>
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('applications.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('applications.emptyBody')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -809,7 +811,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
                       <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                          {app.category || app.specialties || 'Umumiy'}
+                          {app.category || app.specialties || t('applications.generalCategoryFallback')}
                         </span>
                         <h3 className="font-serif font-bold text-base text-amber-950">{app.full_name}</h3>
                         <p className="text-xs text-stone-600">{app.headline}{app.company ? ` (${app.company})` : ''}</p>
@@ -823,11 +825,15 @@ export default function AdminDashboardPage() {
                             ? 'bg-red-100 text-red-900 border border-red-300'
                             : 'bg-amber-100 text-amber-900 border border-amber-300'
                         }`}>
-                          {app.status ? app.status.toUpperCase() : 'PENDING'}
+                          {app.status === 'approved'
+                            ? t('applications.statusApproved')
+                            : app.status === 'rejected'
+                            ? t('applications.statusRejected')
+                            : t('applications.statusPending')}
                         </span>
                         <button
                           onClick={() => handleDeleteApplication(app)}
-                          title="Arizani butunlay o'chirish"
+                          title={t('applications.deleteButtonTitle')}
                           className="p-1.5 rounded-lg border border-stone-200 bg-stone-50 text-stone-500 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -846,17 +852,17 @@ export default function AdminDashboardPage() {
                       <div>
                         {app.linkedin ? (
                           <a href={app.linkedin} target="_blank" rel="noreferrer" className="text-amber-800 underline">
-                            LinkedIn profil
+                            {t('applications.linkedinProfile')}
                           </a>
                         ) : (
-                          <span className="text-stone-400">LinkedIn ko&apos;rsatilmagan</span>
+                          <span className="text-stone-400">{t('applications.linkedinNotProvided')}</span>
                         )}
                       </div>
                     </div>
 
                     <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between">
                       <div className="text-xs font-serif">
-                        <span className="text-stone-400 block text-[10px]">Kutilayotgan sessiya narxi</span>
+                        <span className="text-stone-400 block text-[10px]">{t('applications.expectedPriceLabel')}</span>
                         <span className="font-bold text-amber-950">{app.expected_standard_price?.toLocaleString()} UZS</span>
                       </div>
 
@@ -866,14 +872,14 @@ export default function AdminDashboardPage() {
                           disabled={app.status === 'approved' || app.status === 'rejected'}
                           className="px-3.5 py-1.5 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          Rad etish
+                          {t('applications.reject')}
                         </button>
                         <button
                           onClick={() => handleApproveApplication(app)}
                           disabled={app.status === 'approved' || app.status === 'rejected'}
                           className="px-3.5 py-1.5 rounded-xl bg-amber-900 text-amber-50 text-xs font-bold hover:bg-amber-800 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          Tasdiqlash (Katalogga qo'shish)
+                          {t('applications.approve')}
                         </button>
                       </div>
                     </div>
@@ -890,8 +896,8 @@ export default function AdminDashboardPage() {
             {forumQuestions.length === 0 ? (
               <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
                 <MessageCircleQuestion className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">Hali forum postlari yo'q</h4>
-                <p className="text-xs text-stone-500 mt-1">Talabalar savol berganda shu yerda ko'rinadi.</p>
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('forum.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('forum.emptyBody')}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -908,7 +914,7 @@ export default function AdminDashboardPage() {
                             <p className="text-xs text-stone-600 mt-1">{q.body}</p>
                           </div>
                           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 whitespace-nowrap">
-                            {qAnswers.length} javob
+                            {t('forum.answersCountSuffix', { count: qAnswers.length })}
                           </span>
                         </div>
 
@@ -946,8 +952,8 @@ export default function AdminDashboardPage() {
             {surveyResponses.length === 0 ? (
               <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
                 <ClipboardList className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">Hali so&apos;rovnoma javoblari yo&apos;q</h4>
-                <p className="text-xs text-stone-500 mt-1">Birov /survey sahifasini to&apos;ldirganda shu yerda ko&apos;rinadi.</p>
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('survey.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('survey.emptyBody')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -956,7 +962,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
                       <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                          {s.status || "Ko'rsatilmagan"} {s.ageRange ? `• ${s.ageRange}` : ''}
+                          {s.status || t('survey.statusFallback')} {s.ageRange ? `• ${s.ageRange}` : ''}
                         </span>
                         <h3 className="font-serif font-bold text-base text-amber-950">{s.contactInfo}</h3>
                         {s.fieldOfStudy && <p className="text-xs text-stone-600">{s.fieldOfStudy}</p>}
@@ -976,19 +982,19 @@ export default function AdminDashboardPage() {
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-stone-600">
                       <div>
-                        <span className="text-stone-400 block text-[10px]">Qiziqish sohasi</span>
+                        <span className="text-stone-400 block text-[10px]">{t('survey.interestAreaLabel')}</span>
                         {s.interestArea || '—'}
                       </div>
                       <div>
-                        <span className="text-stone-400 block text-[10px]">Maslahat manbasi</span>
+                        <span className="text-stone-400 block text-[10px]">{t('survey.adviceSourceLabel')}</span>
                         {s.priorAdviceSource || '—'}
                       </div>
                       <div>
-                        <span className="text-stone-400 block text-[10px]">To&apos;lashga tayyor</span>
+                        <span className="text-stone-400 block text-[10px]">{t('survey.priceWillingnessLabel')}</span>
                         {s.priceWillingness || '—'}
                       </div>
                       <div>
-                        <span className="text-stone-400 block text-[10px]">Format</span>
+                        <span className="text-stone-400 block text-[10px]">{t('survey.formatLabel')}</span>
                         {s.preferredFormat || '—'}
                       </div>
                     </div>
@@ -1000,8 +1006,8 @@ export default function AdminDashboardPage() {
                     )}
 
                     <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
-                      <span>{s.willingToRefer ? '✓ Tavsiya qilishga tayyor' : 'Tavsiya haqida aytmagan'}</span>
-                      <span>{s.createdAt ? new Date(s.createdAt).toLocaleDateString('uz-UZ') : ''}</span>
+                      <span>{s.willingToRefer ? t('survey.willingToReferYes') : t('survey.willingToReferNo')}</span>
+                      <span>{s.createdAt ? new Date(s.createdAt).toLocaleDateString(dateLocale) : ''}</span>
                     </div>
                   </div>
                 ))}
@@ -1018,8 +1024,8 @@ export default function AdminDashboardPage() {
             {counselors.length === 0 ? (
               <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
                 <Users className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">Hali rahnamolar yo&apos;q</h4>
-                <p className="text-xs text-stone-500 mt-1">Ariza tasdiqlanganda yangi rahnamo shu yerda ko&apos;rinadi.</p>
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('counselors.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('counselors.emptyBody')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1043,26 +1049,26 @@ export default function AdminDashboardPage() {
                             }`}
                           >
                             {isCommissionFree
-                              ? `Komissiyasiz: ${freeUntil.toLocaleDateString('uz-UZ')}gacha`
-                              : 'Komissiya boshlandi'}
+                              ? t('counselors.commissionFreeLabel', { date: freeUntil.toLocaleDateString(dateLocale) })
+                              : t('counselors.commissionStartedLabel')}
                           </span>
                         )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs text-stone-600">
                         <div>
-                          <span className="text-stone-400 block text-[10px]">Standart narx</span>
+                          <span className="text-stone-400 block text-[10px]">{t('counselors.standardPriceLabel')}</span>
                           {c.standardPrice.toLocaleString()} UZS
                         </div>
                         <div>
-                          <span className="text-stone-400 block text-[10px]">Premium narx</span>
+                          <span className="text-stone-400 block text-[10px]">{t('counselors.premiumPriceLabel')}</span>
                           {c.premiumPrice.toLocaleString()} UZS
                         </div>
                       </div>
 
                       <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
-                        <span>Reyting: {c.rating} ({c.reviewsCount} sharh)</span>
-                        <span>{c.joinedAt ? `Qo'shildi: ${new Date(c.joinedAt).toLocaleDateString('uz-UZ')}` : ''}</span>
+                        <span>{t('counselors.ratingLabel', { rating: c.rating, count: c.reviewsCount })}</span>
+                        <span>{c.joinedAt ? t('counselors.joinedLabel', { date: new Date(c.joinedAt).toLocaleDateString(dateLocale) }) : ''}</span>
                       </div>
                     </div>
                   );

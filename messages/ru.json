@@ -334,6 +334,98 @@
       "subtitle": "Ваша сессия теперь официально назначена"
     }
   },
+  "admin": {
+    "dateLocale": "ru-RU",
+    "login": {
+      "badge": "Секретный вход администратора",
+      "title": "Панель администратора Rahnamo",
+      "subtitle": "Введите пароль администратора для защиты личных данных студентов и менторов.",
+      "passwordLabel": "Пароль администратора",
+      "submit": "Войти в панель",
+      "legalNotice": "Защищено в соответствии с Законом Республики Узбекистан «О персональных данных».",
+      "wrongPassword": "Неверный пароль администратора. Введите пароль ещё раз.",
+      "checkFailed": "Ошибка при проверке. Попробуйте снова."
+    },
+    "header": {
+      "badge": "Rahnamo Admin Management",
+      "title": "Панель управления платформой",
+      "subtitle": "Управление забронированными консультациями и поступившими заявками Рахнамо",
+      "refresh": "Обновить",
+      "logout": "Выйти"
+    },
+    "tabs": {
+      "bookings": "Консультации ({count})",
+      "applications": "Заявки Рахнамо ({count})",
+      "forum": "Форум ({count})",
+      "survey": "Ответы на опрос ({count})",
+      "counselors": "Рахнамо ({count})"
+    },
+    "bookings": {
+      "searchPlaceholder": "По имени студента, Рахнамо или ID билета...",
+      "emptyTitle": "Пока нет бронирований",
+      "emptyBody": "Здесь появится информация, когда на платформе будет оплачено новое бронирование.",
+      "colTicketId": "ID билета",
+      "colStudent": "Студент / Заказчик",
+      "colCounselor": "Рахнамо",
+      "colTimePackage": "Время и пакет",
+      "colPaymentStatus": "Статус оплаты",
+      "colSessionStatus": "Статус сессии",
+      "colVideoRoom": "Видеокомната",
+      "paymentConfirmedBadge": "ПОДТВЕРЖДЕНО ({method})",
+      "paymentPendingBadge": "ПРОВЕРЯЕТСЯ",
+      "receiptIdLabel": "ID чека:",
+      "approvePayment": "Подтвердить оплату ✓",
+      "approving": "Проверка...",
+      "sessionCompletedBadge": "ЗАВЕРШЕНО",
+      "completeButton": "Завершить",
+      "joinRoom": "Войти в комнату",
+      "staleBuildError": "Страница работает на устаревшей версии. Обновите страницу (F5) и попробуйте снова.",
+      "confirmPaymentFailed": "Ошибка при подтверждении оплаты. Данные не записаны в базу -- попробуйте снова.",
+      "emailNotSentWarning": "Оплата подтверждена, но письмо студенту не отправлено -- сообщите ему вручную.",
+      "completeBookingFailed": "Ошибка при завершении. Данные не записаны в базу -- попробуйте снова."
+    },
+    "applications": {
+      "emptyTitle": "Заявок нет",
+      "emptyBody": "Здесь появятся заявки, когда специалисты начнут их подавать.",
+      "generalCategoryFallback": "Общее",
+      "statusPending": "НА РАССМОТРЕНИИ",
+      "statusApproved": "ОДОБРЕНО",
+      "statusRejected": "ОТКЛОНЕНО",
+      "deleteButtonTitle": "Полностью удалить заявку",
+      "deleteConfirm": "Вы хотите полностью удалить заявку «{name}»? Это действие НЕЛЬЗЯ ОТМЕНИТЬ.",
+      "linkedinProfile": "Профиль LinkedIn",
+      "linkedinNotProvided": "LinkedIn не указан",
+      "expectedPriceLabel": "Ожидаемая стоимость сессии",
+      "reject": "Отклонить",
+      "approve": "Одобрить (добавить в каталог)"
+    },
+    "forum": {
+      "emptyTitle": "Постов на форуме пока нет",
+      "emptyBody": "Здесь появится информация, когда студенты начнут задавать вопросы.",
+      "answersCountSuffix": "{count} ответ(ов)"
+    },
+    "survey": {
+      "statusFallback": "Не указано",
+      "interestAreaLabel": "Сфера интереса",
+      "adviceSourceLabel": "Источник совета",
+      "priceWillingnessLabel": "Готовы заплатить",
+      "formatLabel": "Формат",
+      "willingToReferYes": "✓ Готов рекомендовать",
+      "willingToReferNo": "Не высказался о рекомендации",
+      "emptyTitle": "Ответов на опрос пока нет",
+      "emptyBody": "Здесь появится информация, когда кто-то заполнит страницу /survey."
+    },
+    "counselors": {
+      "emptyTitle": "Рахнамо пока нет",
+      "emptyBody": "Здесь появится новый Рахнамо, когда заявка будет одобрена.",
+      "commissionFreeLabel": "Без комиссии до: {date}",
+      "commissionStartedLabel": "Комиссия действует",
+      "standardPriceLabel": "Стандартная цена",
+      "premiumPriceLabel": "Премиум цена",
+      "ratingLabel": "Рейтинг: {rating} ({count} отзывов)",
+      "joinedLabel": "Присоединился: {date}"
+    }
+  },
   "home": {
     "sortLabel": "Сортировка:",
     "sortOptions": {

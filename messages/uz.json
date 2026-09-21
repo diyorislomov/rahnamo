@@ -334,6 +334,98 @@
       "subtitle": "Sessiyangiz endi rasman belgilandi"
     }
   },
+  "admin": {
+    "dateLocale": "uz-UZ",
+    "login": {
+      "badge": "Maxfiy Administrator Kirishi",
+      "title": "Rahnamo Admin Gate",
+      "subtitle": "Talaba va mentorlarning shaxsiy ma'lumotlarini himoya qilish uchun administrator parolini kiriting.",
+      "passwordLabel": "Administrator Paroli",
+      "submit": "Panelga Kirish",
+      "legalNotice": "O'zbekiston Respublikasining \"Shaxsga doir ma'lumotlar to'g'risida\"gi qonuniga muvofiq himoyalangan.",
+      "wrongPassword": "Administrator paroli noto'g'ri. Parolni qaytadan kiriting.",
+      "checkFailed": "Tekshirishda xatolik yuz berdi. Qayta urinib ko'ring."
+    },
+    "header": {
+      "badge": "Rahnamo Admin Management",
+      "title": "Platforma Boshqaruv Paneli",
+      "subtitle": "Band qilingan konsultatsiyalar va kelib tushgan Rahnamolik arizalarini boshqarish",
+      "refresh": "Yangilash",
+      "logout": "Chiqish"
+    },
+    "tabs": {
+      "bookings": "Konsultatsiya Qabullari ({count})",
+      "applications": "Rahnamolik Arizalari ({count})",
+      "forum": "Forum ({count})",
+      "survey": "So'rovnoma Javoblari ({count})",
+      "counselors": "Rahnamolar ({count})"
+    },
+    "bookings": {
+      "searchPlaceholder": "Talaba ismi, Rahnamo yoki Chipta ID bo'yicha...",
+      "emptyTitle": "Hali hech qanday bandlovlar mavjud emas",
+      "emptyBody": "Platformada yangi bandlov to'lovi amalga oshirilganda shu yerda ko'rinadi.",
+      "colTicketId": "Chipta ID",
+      "colStudent": "Talaba / Buyurtmachi",
+      "colCounselor": "Rahnamo",
+      "colTimePackage": "Vaqt & Paket",
+      "colPaymentStatus": "To'lov Status",
+      "colSessionStatus": "Sessiya Holati",
+      "colVideoRoom": "Video Xona",
+      "paymentConfirmedBadge": "TASDIQLANGAN ({method})",
+      "paymentPendingBadge": "TEKSHIRILMOQDA",
+      "receiptIdLabel": "Chek ID:",
+      "approvePayment": "To'lovni Tasdiqlash ✓",
+      "approving": "Tekshirilmoqda...",
+      "sessionCompletedBadge": "YAKUNLANGAN",
+      "completeButton": "Yakunlash",
+      "joinRoom": "Xonaga kirish",
+      "staleBuildError": "Sahifa eski versiyada ishlamoqda. Sahifani yangilang (F5) va qaytadan urinib ko'ring.",
+      "confirmPaymentFailed": "To'lovni tasdiqlashda xatolik yuz berdi. Bazaga yozilmadi -- qayta urinib ko'ring.",
+      "emailNotSentWarning": "To'lov tasdiqlandi, lekin talabaga email yuborilmadi -- unga qo'lda xabar bering.",
+      "completeBookingFailed": "Yakunlashda xatolik yuz berdi. Bazaga yozilmadi -- qayta urinib ko'ring."
+    },
+    "applications": {
+      "emptyTitle": "Arizalar mavjud emas",
+      "emptyBody": "Nomi ko'rsatilgan mutaxassislar ariza topshirganda bu yerda ko'rinadi.",
+      "generalCategoryFallback": "Umumiy",
+      "statusPending": "PENDING",
+      "statusApproved": "APPROVED",
+      "statusRejected": "REJECTED",
+      "deleteButtonTitle": "Arizani butunlay o'chirish",
+      "deleteConfirm": "\"{name}\" arizasini butunlay o'chirmoqchimisiz? Bu amalni ORQAGA QAYTARIB BO'LMAYDI.",
+      "linkedinProfile": "LinkedIn profil",
+      "linkedinNotProvided": "LinkedIn ko'rsatilmagan",
+      "expectedPriceLabel": "Kutilayotgan sessiya narxi",
+      "reject": "Rad etish",
+      "approve": "Tasdiqlash (Katalogga qo'shish)"
+    },
+    "forum": {
+      "emptyTitle": "Hali forum postlari yo'q",
+      "emptyBody": "Talabalar savol berganda shu yerda ko'rinadi.",
+      "answersCountSuffix": "{count} javob"
+    },
+    "survey": {
+      "statusFallback": "Ko'rsatilmagan",
+      "interestAreaLabel": "Qiziqish sohasi",
+      "adviceSourceLabel": "Maslahat manbasi",
+      "priceWillingnessLabel": "To'lashga tayyor",
+      "formatLabel": "Format",
+      "willingToReferYes": "✓ Tavsiya qilishga tayyor",
+      "willingToReferNo": "Tavsiya haqida aytmagan",
+      "emptyTitle": "Hali so'rovnoma javoblari yo'q",
+      "emptyBody": "Birov /survey sahifasini to'ldirganda shu yerda ko'rinadi."
+    },
+    "counselors": {
+      "emptyTitle": "Hali rahnamolar yo'q",
+      "emptyBody": "Ariza tasdiqlanganda yangi rahnamo shu yerda ko'rinadi.",
+      "commissionFreeLabel": "Komissiyasiz: {date}gacha",
+      "commissionStartedLabel": "Komissiya boshlandi",
+      "standardPriceLabel": "Standart narx",
+      "premiumPriceLabel": "Premium narx",
+      "ratingLabel": "Reyting: {rating} ({count} sharh)",
+      "joinedLabel": "Qo'shildi: {date}"
+    }
+  },
   "home": {
     "sortLabel": "Saralash:",
     "sortOptions": {

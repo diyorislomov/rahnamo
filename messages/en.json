@@ -334,6 +334,98 @@
       "subtitle": "Your session is now officially scheduled"
     }
   },
+  "admin": {
+    "dateLocale": "en-US",
+    "login": {
+      "badge": "Confidential Administrator Login",
+      "title": "Rahnamo Admin Gate",
+      "subtitle": "Enter the administrator password to protect students' and mentors' personal data.",
+      "passwordLabel": "Administrator Password",
+      "submit": "Enter Panel",
+      "legalNotice": "Protected in accordance with the Law of the Republic of Uzbekistan \"On Personal Data.\"",
+      "wrongPassword": "Incorrect administrator password. Please enter it again.",
+      "checkFailed": "There was an error checking your password. Please try again."
+    },
+    "header": {
+      "badge": "Rahnamo Admin Management",
+      "title": "Platform Admin Panel",
+      "subtitle": "Manage booked consultations and incoming Rahnamo applications",
+      "refresh": "Refresh",
+      "logout": "Log out"
+    },
+    "tabs": {
+      "bookings": "Consultation Bookings ({count})",
+      "applications": "Rahnamo Applications ({count})",
+      "forum": "Forum ({count})",
+      "survey": "Survey Responses ({count})",
+      "counselors": "Rahnamo ({count})"
+    },
+    "bookings": {
+      "searchPlaceholder": "By student name, Rahnamo, or ticket ID...",
+      "emptyTitle": "No bookings yet",
+      "emptyBody": "This will show up here once a new booking is paid for on the platform.",
+      "colTicketId": "Ticket ID",
+      "colStudent": "Student / Customer",
+      "colCounselor": "Rahnamo",
+      "colTimePackage": "Time & Package",
+      "colPaymentStatus": "Payment Status",
+      "colSessionStatus": "Session Status",
+      "colVideoRoom": "Video Room",
+      "paymentConfirmedBadge": "CONFIRMED ({method})",
+      "paymentPendingBadge": "BEING VERIFIED",
+      "receiptIdLabel": "Receipt ID:",
+      "approvePayment": "Confirm Payment ✓",
+      "approving": "Verifying...",
+      "sessionCompletedBadge": "COMPLETED",
+      "completeButton": "Complete",
+      "joinRoom": "Join room",
+      "staleBuildError": "This page is running an outdated version. Refresh the page (F5) and try again.",
+      "confirmPaymentFailed": "There was an error confirming the payment. It was not written to the database -- please try again.",
+      "emailNotSentWarning": "Payment confirmed, but the email to the student was not sent -- please notify them manually.",
+      "completeBookingFailed": "There was an error completing the booking. It was not written to the database -- please try again."
+    },
+    "applications": {
+      "emptyTitle": "No applications yet",
+      "emptyBody": "This will show up here once specialists start submitting applications.",
+      "generalCategoryFallback": "General",
+      "statusPending": "PENDING",
+      "statusApproved": "APPROVED",
+      "statusRejected": "REJECTED",
+      "deleteButtonTitle": "Permanently delete this application",
+      "deleteConfirm": "Do you want to permanently delete {name}'s application? This action CANNOT BE UNDONE.",
+      "linkedinProfile": "LinkedIn profile",
+      "linkedinNotProvided": "LinkedIn not provided",
+      "expectedPriceLabel": "Expected session price",
+      "reject": "Reject",
+      "approve": "Approve (add to catalog)"
+    },
+    "forum": {
+      "emptyTitle": "No forum posts yet",
+      "emptyBody": "This will show up here once students start asking questions.",
+      "answersCountSuffix": "{count} answer(s)"
+    },
+    "survey": {
+      "statusFallback": "Not specified",
+      "interestAreaLabel": "Area of interest",
+      "adviceSourceLabel": "Advice source",
+      "priceWillingnessLabel": "Willing to pay",
+      "formatLabel": "Format",
+      "willingToReferYes": "✓ Willing to refer",
+      "willingToReferNo": "Didn't say about referring",
+      "emptyTitle": "No survey responses yet",
+      "emptyBody": "This will show up here once someone fills out the /survey page."
+    },
+    "counselors": {
+      "emptyTitle": "No Rahnamo yet",
+      "emptyBody": "A new Rahnamo will show up here once an application is approved.",
+      "commissionFreeLabel": "Commission-free until: {date}",
+      "commissionStartedLabel": "Commission has started",
+      "standardPriceLabel": "Standard price",
+      "premiumPriceLabel": "Premium price",
+      "ratingLabel": "Rating: {rating} ({count} reviews)",
+      "joinedLabel": "Joined: {date}"
+    }
+  },
   "home": {
     "sortLabel": "Sort:",
     "sortOptions": {
