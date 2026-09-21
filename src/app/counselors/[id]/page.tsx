@@ -1059,7 +1059,7 @@ export default function CounselorPage() {
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
                 />
                 <span className="text-[10px] text-stone-500 block mt-1">
-                  Payme / Click chekidagi ID raqamini kiriting. Administratorimiz 5 daqiqada tasdiqlaydi.
+                  Payme / Click chekidagi ID raqamini kiriting. Administratorimiz imkon qadar tezroq tasdiqlaydi.
                 </span>
               </div>
 
