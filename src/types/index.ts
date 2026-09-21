@@ -18,6 +18,8 @@ export interface Counselor {
   company?: string;
   outcomes?: string[];
   whyWorkWithMe?: string;
+  joinedAt?: string;
+  commissionFreeUntil?: string;
 }
 
 export interface Review {

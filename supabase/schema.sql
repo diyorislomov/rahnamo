@@ -64,6 +64,55 @@ CREATE TABLE IF NOT EXISTS public.counselor_applications (
 ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS company TEXT;
 ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS why_work_with_me TEXT;
 
+-- 4c. Commission-free onboarding window: joined_at defaults to the moment a
+-- counselor row is created (i.e. approval time, since that INSERT is the
+-- only thing that creates a counselors row).
+--
+-- commission_free_until was originally a GENERATED ALWAYS AS (joined_at +
+-- INTERVAL '3 months') column -- rejected by Postgres with "42P17:
+-- generation expression is not immutable", because timestamptz + interval
+-- depends on the session's timezone/DST rules to resolve calendar-unit
+-- arithmetic, which disqualifies it from a generated column no matter how
+-- deterministic it looks in practice. A trigger has no such restriction (it
+-- can freely call STABLE/VOLATILE functions), so it computes the same
+-- single formula instead, applied automatically on every insert -- the
+-- column is still never set by hand in application code.
+--
+-- Deliberately no DEFAULT on this ADD COLUMN: a volatile default (now()) on
+-- ALTER TABLE ADD COLUMN forces a full table rewrite that evaluates the
+-- default once and stamps every existing row with that same single
+-- instant -- confirmed live, it silently defeated the "WHERE joined_at IS
+-- NULL" backfill below by making joined_at already non-null everywhere
+-- before the backfill ran, so every pre-existing counselor ended up with
+-- joined_at = "whenever this migration happened to run" instead of their
+-- real created_at. The default is attached separately, after backfilling,
+-- so it only ever applies to rows inserted from this point on.
+ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS commission_free_until TIMESTAMP WITH TIME ZONE;
+
+-- Backfill existing rows. There's no recorded real approval date for rows
+-- that predate joined_at, so created_at is the closest honest proxy.
+UPDATE public.counselors SET joined_at = created_at WHERE joined_at IS NULL;
+UPDATE public.counselors SET commission_free_until = joined_at + INTERVAL '3 months' WHERE commission_free_until IS NULL;
+
+ALTER TABLE public.counselors ALTER COLUMN joined_at SET DEFAULT timezone('utc'::text, now());
+
+CREATE OR REPLACE FUNCTION public.set_counselor_commission_window()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.joined_at IS NULL THEN
+    NEW.joined_at := timezone('utc'::text, now());
+  END IF;
+  NEW.commission_free_until := NEW.joined_at + INTERVAL '3 months';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_set_counselor_commission_window ON public.counselors;
+CREATE TRIGGER trg_set_counselor_commission_window
+  BEFORE INSERT OR UPDATE OF joined_at ON public.counselors
+  FOR EACH ROW EXECUTE FUNCTION public.set_counselor_commission_window();
+
 -- 4b. Defensive backfill for the `bookings` table: the CREATE TABLE above is
 -- a no-op if the table already existed from an earlier deploy that predates
 -- these columns (confirmed live: an already-provisioned project was missing

@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
-import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse } from '@/types';
+import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse, Counselor } from '@/types';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
+import { mapCounselorRow } from '@/lib/counselors';
 import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList } from 'lucide-react';
+import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users } from 'lucide-react';
 
 interface CounselorApp {
   id?: string;
@@ -53,12 +54,13 @@ export default function AdminDashboardPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum' | 'survey'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum' | 'survey' | 'counselors'>('bookings');
   const [bookings, setBookings] = useState<BookingTicketData[]>([]);
   const [applications, setApplications] = useState<CounselorApp[]>([]);
   const [forumQuestions, setForumQuestions] = useState<ForumQuestion[]>([]);
   const [forumAnswers, setForumAnswers] = useState<ForumAnswer[]>([]);
   const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
+  const [counselors, setCounselors] = useState<Counselor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -174,6 +176,16 @@ export default function AdminDashboardPage() {
             createdAt: s.created_at,
           }))
         );
+
+        // 5. Fetch the live counselor roster -- for the commission-window
+        // badge, which needs joined_at/commission_free_until straight from
+        // the counselors table, not the applications table (an approved
+        // application isn't linked back to the counselor row it created).
+        const { data: supaCounselors } = await supabase
+          .from('counselors')
+          .select('*')
+          .order('joined_at', { ascending: false });
+        setCounselors((supaCounselors || []).map(mapCounselorRow));
       } catch (err) {
         console.warn('Supabase fetch error:', err);
         setBookings(localBookings);
@@ -622,6 +634,18 @@ export default function AdminDashboardPage() {
             <ClipboardList className="w-4 h-4" />
             <span>So&apos;rovnoma Javoblari ({surveyResponses.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('counselors')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'counselors'
+                ? 'bg-amber-900 text-amber-50 shadow-sm'
+                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Rahnamolar ({counselors.length})</span>
+          </button>
         </div>
 
         {/* Tab 1: Bookings Management */}
@@ -979,6 +1003,68 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 5: Live counselor roster -- read-only, no actions. Mainly for
+            the commission-window badge so payouts don't require calculating
+            joined_at + 3 months by hand each time. */}
+        {activeTab === 'counselors' && (
+          <div className="space-y-6">
+            {counselors.length === 0 ? (
+              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
+                <Users className="w-12 h-12 text-stone-400 mx-auto mb-3" />
+                <h4 className="font-serif font-bold text-base text-amber-950">Hali rahnamolar yo&apos;q</h4>
+                <p className="text-xs text-stone-500 mt-1">Ariza tasdiqlanganda yangi rahnamo shu yerda ko&apos;rinadi.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {counselors.map((c) => {
+                  const freeUntil = c.commissionFreeUntil ? new Date(c.commissionFreeUntil) : null;
+                  const isCommissionFree = freeUntil ? new Date() < freeUntil : false;
+                  return (
+                    <div key={c.id} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-4">
+                      <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
+                        <div>
+                          <h3 className="font-serif font-bold text-base text-amber-950">{c.fullName}</h3>
+                          <p className="text-xs text-stone-600">{c.headline}</p>
+                          {c.company && <p className="text-[11px] text-stone-400">{c.company}</p>}
+                        </div>
+                        {freeUntil && (
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex-shrink-0 whitespace-nowrap ${
+                              isCommissionFree
+                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                : 'bg-amber-100 text-amber-900 border border-amber-300'
+                            }`}
+                          >
+                            {isCommissionFree
+                              ? `Komissiyasiz: ${freeUntil.toLocaleDateString('uz-UZ')}gacha`
+                              : 'Komissiya boshlandi'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs text-stone-600">
+                        <div>
+                          <span className="text-stone-400 block text-[10px]">Standart narx</span>
+                          {c.standardPrice.toLocaleString()} UZS
+                        </div>
+                        <div>
+                          <span className="text-stone-400 block text-[10px]">Premium narx</span>
+                          {c.premiumPrice.toLocaleString()} UZS
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
+                        <span>Reyting: {c.rating} ({c.reviewsCount} sharh)</span>
+                        <span>{c.joinedAt ? `Qo'shildi: ${new Date(c.joinedAt).toLocaleDateString('uz-UZ')}` : ''}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

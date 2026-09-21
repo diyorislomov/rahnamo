@@ -16,6 +16,8 @@ interface CounselorRow {
   available_slots: string[];
   company: string | null;
   why_work_with_me: string | null;
+  joined_at: string | null;
+  commission_free_until: string | null;
 }
 
 // Live Supabase rows never carry responseTime/totalSessions/outcomes -- those
@@ -36,5 +38,7 @@ export function mapCounselorRow(r: CounselorRow): Counselor {
     availableSlots: r.available_slots || [],
     company: r.company || undefined,
     whyWorkWithMe: r.why_work_with_me || undefined,
+    joinedAt: r.joined_at || undefined,
+    commissionFreeUntil: r.commission_free_until || undefined,
   };
 }
