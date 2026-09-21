@@ -48,6 +48,22 @@ export interface ForumAnswer {
   createdAt: string;
 }
 
+export interface SurveyResponse {
+  id: string;
+  ageRange?: string;
+  status?: string;
+  fieldOfStudy?: string;
+  interestArea?: string;
+  biggestChallenge?: string;
+  priorAdviceSource?: string;
+  interestedInService: string;
+  priceWillingness?: string;
+  preferredFormat?: string;
+  contactInfo: string;
+  willingToRefer?: boolean;
+  createdAt?: string;
+}
+
 export interface BookingTicketData {
   id: string;
   counselorId: string;

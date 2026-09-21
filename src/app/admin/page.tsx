@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
-import { BookingTicketData, ForumQuestion, ForumAnswer } from '@/types';
+import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse } from '@/types';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2 } from 'lucide-react';
+import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList } from 'lucide-react';
 
 interface CounselorApp {
   id?: string;
@@ -53,11 +53,12 @@ export default function AdminDashboardPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum' | 'survey'>('bookings');
   const [bookings, setBookings] = useState<BookingTicketData[]>([]);
   const [applications, setApplications] = useState<CounselorApp[]>([]);
   const [forumQuestions, setForumQuestions] = useState<ForumQuestion[]>([]);
   const [forumAnswers, setForumAnswers] = useState<ForumAnswer[]>([]);
+  const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -147,6 +148,31 @@ export default function AdminDashboardPage() {
         );
         setForumAnswers(
           supaAnswers && supaAnswers.length > 0 ? supaAnswers.map(mapForumAnswer) : loadLocalForumAnswers()
+        );
+
+        // 4. Fetch survey responses -- no localStorage fallback exists for
+        // this one (built after tonight's lessons, deliberately without a
+        // cache layer), so an empty/failed fetch just means an empty list.
+        const { data: supaSurvey } = await supabase
+          .from('survey_responses')
+          .select('*')
+          .order('created_at', { ascending: false });
+        setSurveyResponses(
+          (supaSurvey || []).map((s) => ({
+            id: s.id,
+            ageRange: s.age_range,
+            status: s.status,
+            fieldOfStudy: s.field_of_study,
+            interestArea: s.interest_area,
+            biggestChallenge: s.biggest_challenge,
+            priorAdviceSource: s.prior_advice_source,
+            interestedInService: s.interested_in_service,
+            priceWillingness: s.price_willingness,
+            preferredFormat: s.preferred_format,
+            contactInfo: s.contact_info,
+            willingToRefer: s.willing_to_refer,
+            createdAt: s.created_at,
+          }))
         );
       } catch (err) {
         console.warn('Supabase fetch error:', err);
@@ -584,6 +610,18 @@ export default function AdminDashboardPage() {
             <MessageCircleQuestion className="w-4 h-4" />
             <span>Forum ({forumQuestions.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('survey')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'survey'
+                ? 'bg-amber-900 text-amber-50 shadow-sm'
+                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span>So&apos;rovnoma Javoblari ({surveyResponses.length})</span>
+          </button>
         </div>
 
         {/* Tab 1: Bookings Management */}
@@ -871,6 +909,76 @@ export default function AdminDashboardPage() {
                       </div>
                     );
                   })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Survey Responses -- read-only lead list, no actions */}
+        {activeTab === 'survey' && (
+          <div className="space-y-6">
+            {surveyResponses.length === 0 ? (
+              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
+                <ClipboardList className="w-12 h-12 text-stone-400 mx-auto mb-3" />
+                <h4 className="font-serif font-bold text-base text-amber-950">Hali so&apos;rovnoma javoblari yo&apos;q</h4>
+                <p className="text-xs text-stone-500 mt-1">Birov /survey sahifasini to&apos;ldirganda shu yerda ko&apos;rinadi.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {surveyResponses.map((s) => (
+                  <div key={s.id} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-4">
+                    <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                          {s.status || "Ko'rsatilmagan"} {s.ageRange ? `• ${s.ageRange}` : ''}
+                        </span>
+                        <h3 className="font-serif font-bold text-base text-amber-950">{s.contactInfo}</h3>
+                        {s.fieldOfStudy && <p className="text-xs text-stone-600">{s.fieldOfStudy}</p>}
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex-shrink-0 ${
+                          s.interestedInService === 'Yes definitely'
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                            : s.interestedInService === 'Maybe'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-stone-100 text-stone-600 border border-stone-300'
+                        }`}
+                      >
+                        {s.interestedInService.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-stone-600">
+                      <div>
+                        <span className="text-stone-400 block text-[10px]">Qiziqish sohasi</span>
+                        {s.interestArea || '—'}
+                      </div>
+                      <div>
+                        <span className="text-stone-400 block text-[10px]">Maslahat manbasi</span>
+                        {s.priorAdviceSource || '—'}
+                      </div>
+                      <div>
+                        <span className="text-stone-400 block text-[10px]">To&apos;lashga tayyor</span>
+                        {s.priceWillingness || '—'}
+                      </div>
+                      <div>
+                        <span className="text-stone-400 block text-[10px]">Format</span>
+                        {s.preferredFormat || '—'}
+                      </div>
+                    </div>
+
+                    {s.biggestChallenge && (
+                      <p className="text-xs text-stone-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-900/10">
+                        &quot;{s.biggestChallenge}&quot;
+                      </p>
+                    )}
+
+                    <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
+                      <span>{s.willingToRefer ? '✓ Tavsiya qilishga tayyor' : 'Tavsiya haqida aytmagan'}</span>
+                      <span>{s.createdAt ? new Date(s.createdAt).toLocaleDateString('uz-UZ') : ''}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

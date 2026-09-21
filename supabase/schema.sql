@@ -105,6 +105,25 @@ CREATE TABLE IF NOT EXISTS public.forum_answers (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 7. Public interest survey (/survey) -- a lead-gen form, not tied to any
+-- booking. "Other" free text for interest_area/prior_advice_source is
+-- stored directly in that same column, no separate _other column.
+CREATE TABLE IF NOT EXISTS public.survey_responses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    age_range TEXT,
+    status TEXT,
+    field_of_study TEXT,
+    interest_area TEXT,
+    biggest_challenge TEXT,
+    prior_advice_source TEXT,
+    interested_in_service TEXT NOT NULL,
+    price_willingness TEXT,
+    preferred_format TEXT,
+    contact_info TEXT NOT NULL,
+    willing_to_refer BOOLEAN,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Migration for a database created before payment_method existed -- adds
 -- the column to an already-live bookings table (CREATE TABLE above only
 -- affects a fresh install). Safe to run repeatedly (IF NOT EXISTS).
@@ -117,6 +136,7 @@ ALTER TABLE public.counselor_applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.forum_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.forum_answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.survey_responses ENABLE ROW LEVEL SECURITY;
 
 -- Public RLS Policies
 CREATE POLICY "Allow public read counselors" ON public.counselors FOR SELECT USING (true);
@@ -163,6 +183,14 @@ CREATE POLICY "Allow public read forum questions" ON public.forum_questions FOR 
 CREATE POLICY "Allow public insert forum questions" ON public.forum_questions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public read forum answers" ON public.forum_answers FOR SELECT USING (true);
 CREATE POLICY "Allow public insert forum answers" ON public.forum_answers FOR INSERT WITH CHECK (true);
+
+-- Survey: public insert (anyone can submit) + public read (same actual
+-- pattern bookings/applications ended up needing tonight -- without this,
+-- admin's new tab would hit the identical "reads back empty, no error"
+-- bug those two just got fixed for). The only real gate is the
+-- password-protected admin UI, not RLS.
+CREATE POLICY "Allow public insert survey responses" ON public.survey_responses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read survey responses" ON public.survey_responses FOR SELECT USING (true);
 
 -- Seed Initial Counselors
 INSERT INTO public.counselors (id, full_name, headline, avatar_url, specialties, bio, standard_price, premium_price, rating, reviews_count, available_slots)
