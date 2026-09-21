@@ -75,7 +75,8 @@
     "Law & Legal Practice": "Huquq & Korporativ",
     "Study Abroad": "Xalqaro Grantlar",
     "Agriculture & Trade": "Qishloq xo'jaligi & Eksport",
-    "Engineering & Tech": "Dasturlash & IT"
+    "Engineering & Tech": "Dasturlash & IT",
+    "Other": "Boshqa"
   },
   "becomeCounselor": {
     "badge": "MentorCruise darajasidagi platforma",

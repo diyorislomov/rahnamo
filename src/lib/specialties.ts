@@ -41,4 +41,15 @@ export const SPECIALTY_CONFIG: {
     inactiveClass: 'bg-sky-100/90 text-sky-950 border-sky-300/80 hover:bg-sky-200/80',
     icon: '💻',
   },
+  // Catch-all for any real specialty outside the 6 named categories above
+  // (business, finance, psychology, marketing, ...). A mentor picking this
+  // is only discoverable via this pill or "All", not a named category --
+  // their actual field still shows up via the free-text specialties input
+  // on their card. Deliberately generic/neutral styling, not tied to any
+  // one field the way the named categories are.
+  Other: {
+    activeClass: 'bg-stone-700 text-stone-50 border-stone-800 shadow-md ring-2 ring-stone-600/30 scale-105',
+    inactiveClass: 'bg-stone-100/90 text-stone-950 border-stone-300/80 hover:bg-stone-200/80',
+    icon: '🧩',
+  },
 };

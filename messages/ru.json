@@ -75,7 +75,8 @@
     "Law & Legal Practice": "Право & Юриспруденция",
     "Study Abroad": "Международные гранты",
     "Agriculture & Trade": "Сельское хозяйство & Экспорт",
-    "Engineering & Tech": "Программирование & IT"
+    "Engineering & Tech": "Программирование & IT",
+    "Other": "Другое"
   },
   "becomeCounselor": {
     "badge": "Платформа уровня MentorCruise",

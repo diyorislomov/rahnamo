@@ -75,7 +75,8 @@
     "Law & Legal Practice": "Law & Legal Practice",
     "Study Abroad": "International Grants",
     "Agriculture & Trade": "Agriculture & Trade",
-    "Engineering & Tech": "Engineering & Tech"
+    "Engineering & Tech": "Engineering & Tech",
+    "Other": "Other"
   },
   "becomeCounselor": {
     "badge": "A MentorCruise-level platform",
