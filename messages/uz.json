@@ -85,13 +85,16 @@
       "badge": "Daromad kalkulyatori",
       "heading": "Qancha daromad olishingiz mumkin?",
       "subheading": "Haftasiga necha soat konsultatsiya bera olasiz?",
+      "priceLabel": "Bir sessiya narxi (so'm)",
+      "pricePlaceholder": "50 000",
       "weeklyLabel": "Haftalik qabullar:",
       "sessionsCount": "{count} ta sessiya",
       "sliderMin": "1 sessiya",
       "sliderMax": "20 sessiya",
       "monthlyLabel": "Taxminiy oylik daromad",
       "perMonth": "UZS / oy",
-      "commissionNote": "*Platforma komissiyasi ayirilgan"
+      "exampleNote": "*Masalan, {price} so'mlik sessiya narxi asosida hisoblangan",
+      "commissionNote": "*15% platforma komissiyasi ayirilgan (dastlabki 3 oy komissiyasiz)"
     },
     "perks": {
       "flexibleTitle": "100% Moslashuvchan Grafik",

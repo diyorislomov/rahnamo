@@ -19,7 +19,10 @@ export default function BecomeCounselorPage() {
   const tSpecialties = useTranslations('specialties');
   // Earnings Calculator State
   const [sessionsPerWeek, setSessionsPerWeek] = useState(5);
-  const [avgPrice, setAvgPrice] = useState(120000);
+  // String, not number -- has to be able to sit empty while the mentor is
+  // typing. An empty/invalid value falls back to an example price rather
+  // than showing "0" or NaN.
+  const [sessionPrice, setSessionPrice] = useState('');
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -45,7 +48,14 @@ export default function BecomeCounselorPage() {
   const [submitError, setSubmitError] = useState('');
 
   // Monthly Earnings Calculation
-  const estimatedMonthlyEarnings = sessionsPerWeek * avgPrice * 4;
+  const EXAMPLE_SESSION_PRICE = 50000;
+  const PLATFORM_COMMISSION_RATE = 0.15;
+  const parsedSessionPrice = parseInt(sessionPrice, 10);
+  const isRealPrice = Number.isFinite(parsedSessionPrice) && parsedSessionPrice > 0;
+  const effectiveSessionPrice = isRealPrice ? parsedSessionPrice : EXAMPLE_SESSION_PRICE;
+  const estimatedMonthlyEarnings = Math.round(
+    effectiveSessionPrice * sessionsPerWeek * 4 * (1 - PLATFORM_COMMISSION_RATE)
+  );
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -236,6 +246,20 @@ export default function BecomeCounselorPage() {
                   {t('calculator.subheading')}
                 </p>
 
+                {/* Session price input */}
+                <div className="mt-5 space-y-1.5">
+                  <label className="text-xs font-semibold block">{t('calculator.priceLabel')}</label>
+                  <input
+                    type="number"
+                    min={20000}
+                    step={5000}
+                    value={sessionPrice}
+                    onChange={(e) => setSessionPrice(e.target.value)}
+                    placeholder={t('calculator.pricePlaceholder')}
+                    className="w-full p-2.5 text-sm font-bold bg-white/10 border border-amber-300/30 rounded-xl outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-amber-100/40 placeholder:font-normal"
+                  />
+                </div>
+
                 {/* Slider */}
                 <div className="my-6 space-y-3">
                   <div className="flex justify-between text-xs font-semibold">
@@ -263,6 +287,11 @@ export default function BecomeCounselorPage() {
                 <div className="text-2xl sm:text-3xl font-serif font-extrabold text-amber-300 mt-1">
                   ~{estimatedMonthlyEarnings.toLocaleString()} <span className="text-xs text-amber-100 font-normal">{t('calculator.perMonth')}</span>
                 </div>
+                {!isRealPrice && (
+                  <span className="text-[10px] text-amber-300/60 block mt-1">
+                    {t('calculator.exampleNote', { price: EXAMPLE_SESSION_PRICE.toLocaleString() })}
+                  </span>
+                )}
                 <span className="text-[10px] text-amber-300/60 block mt-1">
                   {t('calculator.commissionNote')}
                 </span>

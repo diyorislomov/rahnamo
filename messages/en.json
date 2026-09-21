@@ -85,13 +85,16 @@
       "badge": "Earnings calculator",
       "heading": "How much could you earn?",
       "subheading": "How many hours a week can you offer for consultations?",
+      "priceLabel": "Price per session (UZS)",
+      "pricePlaceholder": "50,000",
       "weeklyLabel": "Sessions per week:",
       "sessionsCount": "{count} sessions",
       "sliderMin": "1 session",
       "sliderMax": "20 sessions",
       "monthlyLabel": "Estimated monthly income",
       "perMonth": "UZS / month",
-      "commissionNote": "*After platform commission"
+      "exampleNote": "*Calculated using an example session price of {price} UZS",
+      "commissionNote": "*After a 15% platform commission (commission-free for the first 3 months)"
     },
     "perks": {
       "flexibleTitle": "100% Flexible Schedule",
