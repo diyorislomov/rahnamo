@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import RahnamoLogo from '@/components/RahnamoLogo';
 import { supabase } from '@/lib/supabase';
 import { isSupabaseConfigured } from '@/lib/counselors';
-import { ArrowLeft, ClipboardList, CheckCircle2, Sparkles } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Sparkles } from 'lucide-react';
 
 const AGE_RANGES = ["18 dan kichik", '18-24', '25-34', '35-44', "45 va undan katta"];
 
@@ -139,16 +137,13 @@ export default function SurveyPage() {
   return (
     <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200 flex flex-col justify-between">
       <div>
-        <Navbar />
+        <header className="border-b border-amber-900/15 bg-[#FAF6EE]/90">
+          <div className="max-w-3xl mx-auto px-6 h-16 flex items-center">
+            <RahnamoLogo className="h-11 sm:h-12" />
+          </div>
+        </header>
 
         <main className="max-w-3xl mx-auto px-6 py-10">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 bg-amber-100 px-3.5 py-2 rounded-xl border border-amber-300/60 mb-6 shadow-xs"
-          >
-            <ArrowLeft className="w-4 h-4" /> Bosh sahifa
-          </Link>
-
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-semibold mb-3">
               <Sparkles className="w-3.5 h-3.5 text-amber-700" />
@@ -173,14 +168,6 @@ export default function SurveyPage() {
                 Javoblaringiz muvaffaqiyatli qabul qilindi. Fikringiz Rahnamo platformasini yaxshilashda bizga
                 yordam beradi.
               </p>
-              <div className="mt-6 flex justify-center gap-3">
-                <Link
-                  href="/"
-                  className="bg-amber-900 hover:bg-amber-800 text-amber-50 font-semibold text-xs px-6 py-3 rounded-xl transition-all"
-                >
-                  Bosh sahifaga qaytish
-                </Link>
-              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm space-y-5">
@@ -388,7 +375,9 @@ export default function SurveyPage() {
         </main>
       </div>
 
-      <Footer />
+      <footer className="text-center text-[11px] text-stone-400 py-6 border-t border-amber-900/10">
+        © {new Date().getFullYear()} Rahnamo
+      </footer>
     </div>
   );
 }
