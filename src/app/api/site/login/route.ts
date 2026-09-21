@@ -1,0 +1,31 @@
+import { NextResponse } from 'next/server';
+import { SITE_SESSION_COOKIE, signSiteSession } from '@/lib/siteSession';
+
+export async function POST(request: Request) {
+  const { password } = await request.json();
+  const validPassword = process.env.SITE_PASSWORD;
+
+  if (!validPassword) {
+    console.error('SITE_PASSWORD is not configured on the server');
+    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
+  }
+
+  if (!process.env.SESSION_SECRET) {
+    console.error('SESSION_SECRET is not configured on the server');
+    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
+  }
+
+  if (typeof password !== 'string' || password.trim() !== validPassword.trim()) {
+    return NextResponse.json({ success: false, error: 'invalid_password' }, { status: 401 });
+  }
+
+  const response = NextResponse.json({ success: true });
+  response.cookies.set(SITE_SESSION_COOKIE, signSiteSession(), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 12,
+  });
+  return response;
+}
