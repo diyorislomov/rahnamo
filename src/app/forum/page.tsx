@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
@@ -26,6 +27,8 @@ import {
 const CATEGORY_KEYS = Object.keys(SPECIALTY_CONFIG).filter((k) => k !== 'All');
 
 export default function ForumPage() {
+  const t = useTranslations('forum');
+  const tSpecialties = useTranslations('specialties');
   const [questions, setQuestions] = useState<ForumQuestion[]>([]);
   const [answers, setAnswers] = useState<ForumAnswer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,17 +94,17 @@ export default function ForumPage() {
   const validateQuestion = () => {
     const newErrors: { [key: string]: string } = {};
     if (!title.trim() || title.trim().length < 5) {
-      newErrors.title = "Savol sarlavhasini kiriting (kamida 5 ta belgi).";
+      newErrors.title = t('validation.title');
     }
     if (!body.trim() || body.trim().length < 10) {
-      newErrors.body = "Savolingizni biroz batafsilroq yozing.";
+      newErrors.body = t('validation.body');
     }
     if (!isAnonymous && (!name.trim() || name.trim().length < 2)) {
-      newErrors.name = "Ismingizni kiriting yoki anonim postlashni tanlang.";
+      newErrors.name = t('validation.name');
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
-      newErrors.email = "To'g'ri elektron pochta manzilini kiriting.";
+      newErrors.email = t('validation.email');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -115,7 +118,7 @@ export default function ForumPage() {
 
     const newQuestion: ForumQuestion = {
       id: crypto.randomUUID(),
-      studentNameOrAnonymous: isAnonymous ? 'Anonim' : name.trim(),
+      studentNameOrAnonymous: isAnonymous ? t('anonymousName') : name.trim(),
       email: email.trim(),
       category,
       title: title.trim(),
@@ -140,9 +143,7 @@ export default function ForumPage() {
       if (error) {
         console.error('[FORUM_QUESTION_INSERT_FAILED]', error);
         setSubmitting(false);
-        setSubmitError(
-          "Savolni joylashda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring."
-        );
+        setSubmitError(t('submitError'));
         return;
       }
     }
@@ -171,7 +172,7 @@ export default function ForumPage() {
     if (!draft?.counselorId || !draft.body?.trim() || draft.body.trim().length < 5) {
       setAnswerErrors((prev) => ({
         ...prev,
-        [questionId]: "Rahnamoni tanlang va javobingizni yozing (kamida 5 ta belgi).",
+        [questionId]: t('answer.validationError'),
       }));
       return;
     }
@@ -193,8 +194,8 @@ export default function ForumPage() {
         ...prev,
         [questionId]:
           result.error === 'invalid_passcode'
-            ? "Rahnamo kodi noto'g'ri. Kodni Rahnamo hamkorlik shartnomasidan tekshiring."
-            : "Javobni saqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
+            ? t('answer.invalidPasscode')
+            : t('answer.saveError'),
       }));
       return;
     }
@@ -228,14 +229,13 @@ export default function ForumPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-bold mb-3">
             <MessageCircleQuestion className="w-4 h-4 text-amber-800" />
-            <span>Rahnamodan So&apos;rang</span>
+            <span>{t('badge')}</span>
           </div>
           <h1 className="font-serif font-extrabold text-2xl sm:text-3xl text-amber-950">
-            Kasbiy savollaringizga ochiq javoblar
+            {t('heading')}
           </h1>
           <p className="text-xs text-stone-600 mt-2 max-w-xl mx-auto">
-            Savolingizni yozing — istalgan Rahnamo unga ommaviy javob beradi, va javob hamma uchun ko&apos;rinadi.
-            Ro&apos;yxatdan o&apos;tish shart emas.
+            {t('subheading')}
           </p>
         </div>
 
@@ -244,11 +244,11 @@ export default function ForumPage() {
           onSubmit={handleSubmitQuestion}
           className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm p-6 sm:p-8 space-y-4 mb-10"
         >
-          <h2 className="font-serif text-lg font-bold text-amber-950">Savol berish</h2>
+          <h2 className="font-serif text-lg font-bold text-amber-950">{t('askForm.heading')}</h2>
 
           <div>
             <label htmlFor="forum-title" className="text-xs font-semibold text-stone-700 block">
-              Savol sarlavhasi *
+              {t('askForm.titleLabel')}
             </label>
             <input
               id="forum-title"
@@ -258,7 +258,7 @@ export default function ForumPage() {
                 setTitle(e.target.value);
                 if (errors.title) setErrors((prev) => ({ ...prev, title: '' }));
               }}
-              placeholder="Masalan: Germaniyada ordinaturaga qanday hujjatlar kerak?"
+              placeholder={t('askForm.titlePlaceholder')}
               className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                 errors.title ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
               }`}
@@ -268,7 +268,7 @@ export default function ForumPage() {
 
           <div>
             <label htmlFor="forum-category" className="text-xs font-semibold text-stone-700 block">
-              Yo&apos;nalish *
+              {t('askForm.categoryLabel')}
             </label>
             <select
               id="forum-category"
@@ -278,7 +278,7 @@ export default function ForumPage() {
             >
               {CATEGORY_KEYS.map((key) => (
                 <option key={key} value={key}>
-                  {SPECIALTY_CONFIG[key].icon} {SPECIALTY_CONFIG[key].label}
+                  {SPECIALTY_CONFIG[key].icon} {tSpecialties(key)}
                 </option>
               ))}
             </select>
@@ -286,7 +286,7 @@ export default function ForumPage() {
 
           <div>
             <label htmlFor="forum-body" className="text-xs font-semibold text-stone-700 block">
-              Savolingiz *
+              {t('askForm.bodyLabel')}
             </label>
             <textarea
               id="forum-body"
@@ -296,7 +296,7 @@ export default function ForumPage() {
                 setBody(e.target.value);
                 if (errors.body) setErrors((prev) => ({ ...prev, body: '' }));
               }}
-              placeholder="Vaziyatingizni va aniq nimani bilmoqchi ekaningizni yozing..."
+              placeholder={t('askForm.bodyPlaceholder')}
               className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                 errors.body ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
               }`}
@@ -313,7 +313,7 @@ export default function ForumPage() {
               className="accent-amber-800 cursor-pointer"
             />
             <label htmlFor="forum-anonymous" className="text-xs font-semibold text-stone-700 cursor-pointer">
-              Anonim postlash
+              {t('askForm.anonymousLabel')}
             </label>
           </div>
 
@@ -321,7 +321,7 @@ export default function ForumPage() {
             {!isAnonymous && (
               <div>
                 <label htmlFor="forum-name" className="text-xs font-semibold text-stone-700 block">
-                  Ismingiz *
+                  {t('askForm.nameLabel')}
                 </label>
                 <input
                   id="forum-name"
@@ -331,7 +331,7 @@ export default function ForumPage() {
                     setName(e.target.value);
                     if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
                   }}
-                  placeholder="Masalan: Sardor"
+                  placeholder={t('askForm.namePlaceholder')}
                   className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                     errors.name ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                   }`}
@@ -342,7 +342,7 @@ export default function ForumPage() {
 
             <div className={isAnonymous ? 'sm:col-span-2' : ''}>
               <label htmlFor="forum-email" className="text-xs font-semibold text-stone-700 block">
-                Elektron pochta *
+                {t('askForm.emailLabel')}
               </label>
               <input
                 id="forum-email"
@@ -352,14 +352,14 @@ export default function ForumPage() {
                   setEmail(e.target.value);
                   if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
                 }}
-                placeholder="ism@domain.com"
+                placeholder={t('askForm.emailPlaceholder')}
                 className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                   errors.email ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                 }`}
               />
               {errors.email && <p className="text-[11px] text-red-600 mt-1">{errors.email}</p>}
               <p className="text-[10px] text-stone-400 mt-1">
-                Faqat moderatsiya uchun — hech qachon ommaviy ko&apos;rsatilmaydi.
+                {t('askForm.emailPrivacyNote')}
               </p>
             </div>
           </div>
@@ -377,12 +377,12 @@ export default function ForumPage() {
             className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
           >
             <Send className="w-4 h-4" />
-            <span>{submitting ? 'Yuborilmoqda...' : 'Savolni joylash'}</span>
+            <span>{submitting ? t('askForm.submitting') : t('askForm.submit')}</span>
           </button>
 
           {justSubmitted && (
             <p className="text-[11px] text-emerald-700 font-semibold text-center">
-              Savolingiz joylandi! Rahnamolar tez orada javob berishadi.
+              {t('askForm.successNote')}
             </p>
           )}
         </form>
@@ -390,7 +390,7 @@ export default function ForumPage() {
         {/* Question list */}
         <div className="space-y-4">
           <h2 className="font-serif text-lg font-bold text-amber-950 flex items-center gap-2">
-            <span>So&apos;nggi savollar</span>
+            <span>{t('recentQuestionsHeading')}</span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 font-mono">
               {sortedQuestions.length}
             </span>
@@ -398,13 +398,13 @@ export default function ForumPage() {
 
           {loading ? (
             <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
-              <p className="text-xs text-stone-500">Yuklanmoqda...</p>
+              <p className="text-xs text-stone-500">{t('loadingQuestions')}</p>
             </div>
           ) : sortedQuestions.length === 0 ? (
             <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
               <MessageCircleQuestion className="w-10 h-10 text-stone-400 mx-auto mb-3" />
-              <h4 className="font-serif font-bold text-base text-amber-950">Hali savollar yo&apos;q</h4>
-              <p className="text-xs text-stone-500 mt-1">Birinchi bo&apos;lib savol bering!</p>
+              <h4 className="font-serif font-bold text-base text-amber-950">{t('emptyTitle')}</h4>
+              <p className="text-xs text-stone-500 mt-1">{t('emptyBody')}</p>
             </div>
           ) : (
             sortedQuestions.map((q) => {
@@ -418,7 +418,7 @@ export default function ForumPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {cfg && (
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${cfg.inactiveClass}`}>
-                        {cfg.icon} {cfg.label}
+                        {cfg.icon} {tSpecialties(q.category)}
                       </span>
                     )}
                     <span className="text-[10px] text-stone-400 flex items-center gap-1">
@@ -439,7 +439,7 @@ export default function ForumPage() {
                           <div key={a.id} className="bg-amber-50/60 border border-amber-900/10 rounded-xl p-3.5">
                             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
                               <ShieldCheck className="w-3.5 h-3.5 text-amber-700 fill-amber-100" />
-                              <span>{responder?.fullName || 'Rahnamo'}</span>
+                              <span>{responder?.fullName || t('defaultResponderName')}</span>
                             </div>
                             <p className="text-xs text-stone-700 mt-1.5 leading-relaxed">{a.body}</p>
                           </div>
@@ -459,7 +459,7 @@ export default function ForumPage() {
                           }
                           className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
                         >
-                          <option value="">Rahnamoni tanlang...</option>
+                          <option value="">{t('answer.selectCounselorPlaceholder')}</option>
                           {INITIAL_COUNSELORS.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.fullName}
@@ -472,7 +472,7 @@ export default function ForumPage() {
                           onChange={(e) =>
                             setAnswerDrafts((prev) => ({ ...prev, [q.id]: { ...draft, body: e.target.value } }))
                           }
-                          placeholder="Javobingizni yozing..."
+                          placeholder={t('answer.bodyPlaceholder')}
                           className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
                         />
                         <input
@@ -481,7 +481,7 @@ export default function ForumPage() {
                           onChange={(e) =>
                             setAnswerDrafts((prev) => ({ ...prev, [q.id]: { ...draft, passcode: e.target.value } }))
                           }
-                          placeholder="Rahnamo maxfiy kodi"
+                          placeholder={t('answer.passcodePlaceholder')}
                           className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
                         />
                         {answerErrors[q.id] && (
@@ -495,14 +495,14 @@ export default function ForumPage() {
                             onClick={() => handleSubmitAnswer(q.id)}
                             className="px-3.5 py-2 rounded-xl bg-amber-900 text-amber-50 text-xs font-bold hover:bg-amber-800 transition-colors cursor-pointer"
                           >
-                            Javobni joylash
+                            {t('answer.submit')}
                           </button>
                           <button
                             type="button"
                             onClick={() => setAnsweringId(null)}
                             className="px-3.5 py-2 rounded-xl bg-stone-100 text-stone-600 text-xs font-bold hover:bg-stone-200 transition-colors cursor-pointer"
                           >
-                            Bekor qilish
+                            {t('answer.cancel')}
                           </button>
                         </div>
                       </div>
@@ -513,7 +513,7 @@ export default function ForumPage() {
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 hover:text-amber-950 cursor-pointer"
                       >
                         <ChevronDown className="w-3.5 h-3.5" />
-                        Rahnamo sifatida javob berish
+                        {t('answer.cta')}
                       </button>
                     )}
                   </div>

@@ -1,0 +1,381 @@
+{
+  "common": {
+    "catalog": "Rahnamolar Katalogi",
+    "howItWorks": "Qanday ishlaydi?",
+    "myBookings": "Mening qabullarim",
+    "becomeCounselor": "Rahnamo bo'lish",
+    "becomeCounselorJoin": "Rahnamo bo'lib qo'shilish",
+    "forum": "Forum",
+    "verifiedBadge": "Tasdiqlangan Rahnamo",
+    "viewCounselors": "Rahnamolarni ko'rish",
+    "responseTimeLabel": "Javob: {time}",
+    "backToHome": "Bosh sahifa",
+    "returnHome": "Bosh sahifaga qaytish",
+    "standard": "Standart",
+    "premium": "Premium"
+  },
+  "navbar": {
+    "banner": "Buyuk Ipak Yo'li karyera konsultatsiyasi va 1-ga-1 mentorlik platformasi",
+    "toggleMenuAriaLabel": "Navigatsiya menyusini ochish/yopish"
+  },
+  "footer": {
+    "tagline": "Ipak Yo'li karyera konsultatsiyasi. Markaziy Osiyo yoshlarini tajribali mutaxassislar bilan bog'laydigan 1-ga-1 shaxsiy mentorlik platformasi.",
+    "verifiedBadge": "100% Rasmiy va Kafolatlangan",
+    "platformHeading": "Platforma",
+    "adminPanel": "Boshqaruv paneli (Admin)",
+    "specialtiesHeading": "Yo'nalishlar",
+    "specialtiesList": [
+      "Tibbiyot & Ordinatura (Olmoniya / Turkiya)",
+      "Fulbright & Xalqaro Grantlar",
+      "Arxitektura & Portfoliyo Tahlili",
+      "Xalqaro Huquq & Korporativ Karyera",
+      "Dasturlash & Tizim Arxitekturasi"
+    ],
+    "contactHeading": "Murojaat & Qo'llab-quvvatlash",
+    "contactBlurb": "Savollaringiz bormi? Administratorimiz bilan bog'laning:",
+    "telegramSupport": "Telegram Support (@rahnamo_admin)",
+    "copyright": "© {year} Rahnamo. Silk Road Career Counselors platform.",
+    "madeWithPrefix": "Markaziy Osiyo yoshlari uchun",
+    "madeWithSuffix": "bilan yaratilgan."
+  },
+  "hero": {
+    "badge": "Ipak yo'li karyera platformasi",
+    "title": "Markaziy Osiyoning <strong>eng kuchli mutaxassislari</strong> bilan kelajagingizni quring.",
+    "subtitle": "Tibbiyot, Huquq, Arxitektura, Dasturlash va Xalqaro Grantlar bo'yicha tasdiqlangan Rahnamolardan 1-ga-1 shaxsiy maslahat oling.",
+    "viewProfile": "Profilni ko'rish",
+    "nextSlotLabel": "Yaqin bo'sh vaqt: {slot}",
+    "statLabelLine1": "Tasdiqlangan",
+    "statLabelLine2": "Rahnamo"
+  },
+  "catalogIntro": {
+    "eyebrow": "1-ga-1 shaxsiy mentorlik",
+    "heading": "O'z sohangizdagi haqiqiy mutaxassis bilan bevosita suhbatlashing.",
+    "subheading": "Tasdiqlangan Rahnamolar orasidan tanlang, vaqt band qiling va bir hafta ichida birinchi konsultatsiyangizni o'tkazing.",
+    "ctaSecondary": "Yo'nalish bo'yicha tanlash",
+    "searchPlaceholder": "Ism, soha yoki kalit so'z bo'yicha qidirish (masalan: Fulbright, Legal)...",
+    "clearSearch": "Tozalash",
+    "disciplineHeading": "Yo'nalish bo'yicha tanlang",
+    "countSuffix": "{count} Rahnamo"
+  },
+  "statsBand": {
+    "counselors": "Rahnamolar",
+    "specialtyCategories": "Yo'nalishlar",
+    "specialties": "Ixtisoslik sohalari"
+  },
+  "counselorCard": {
+    "sessionsCount": "{count} ta qabul",
+    "priceLabel": "Sessiya narxi",
+    "priceUnit": "UZS / 30m",
+    "selectTime": "Vaqt tanlash"
+  },
+  "specialties": {
+    "All": "Barcha sohalar",
+    "Medicine & Healthcare": "Tibbiyot & Salomatlik",
+    "Architecture & Design": "Arxitektura & Dizayn",
+    "Law & Legal Practice": "Huquq & Korporativ",
+    "Study Abroad": "Xalqaro Grantlar",
+    "Agriculture & Trade": "Qishloq xo'jaligi & Eksport",
+    "Engineering & Tech": "Dasturlash & IT"
+  },
+  "becomeCounselor": {
+    "badge": "MentorCruise darajasidagi platforma",
+    "heroTitle": "Rahnamo bo'lib o'zingiz xohlagan grafikda daromad oling",
+    "heroSubtitle": "Markaziy Osiyoning iqtidorli yoshlariga 1-ga-1 yo'l-yo'riq ko'rsating, shaxsiy brendingizni rivojlantiring va bo'sh vaqtingizda daromadga ega bo'ling.",
+    "calculator": {
+      "badge": "Daromad kalkulyatori",
+      "heading": "Qancha daromad olishingiz mumkin?",
+      "subheading": "Haftasiga necha soat konsultatsiya bera olasiz?",
+      "weeklyLabel": "Haftalik qabullar:",
+      "sessionsCount": "{count} ta sessiya",
+      "sliderMin": "1 sessiya",
+      "sliderMax": "20 sessiya",
+      "monthlyLabel": "Taxminiy oylik daromad",
+      "perMonth": "UZS / oy",
+      "commissionNote": "*Platforma komissiyasi ayirilgan"
+    },
+    "perks": {
+      "flexibleTitle": "100% Moslashuvchan Grafik",
+      "flexibleBody": "Qachon va qaysi soatlarda konsultatsiya berishni o'zingiz hal qilasiz. Dam olish kunlari yoki kechki payt 30 minut ajratish kifoya.",
+      "remoteTitle": "Masofaviy Muloqot",
+      "remoteBody": "Dunyoning qaysi nuqtasida bo'lishingizdan qat'i nazar, video havola orqali 1-ga-1 suhbat o'tkazing.",
+      "brandTitle": "Shaxsiy Brend & Maqom",
+      "brandBody": "O'z sohangizda taniling va Markaziy Osiyo yoshlari uchun rasmiy mentor maqomiga ega bo'ling.",
+      "guaranteedTitle": "Kafolatlangan To'lov",
+      "guaranteedBody": "Talabalar to'lovni oldindan amalga oshiradilar. Har bir yakunlangan sessiya uchun to'lov kartangizga o'tkazib beriladi."
+    },
+    "success": {
+      "title": "Arizangiz qabul qilindi!",
+      "body": "Rahmat, <b>{name}</b>! Platforma administratorimiz 24 soat ichida Telegram <b>{telegram}</b> orqali siz bilan bog'lanadi va profilingizni tasdiqlaydi."
+    },
+    "form": {
+      "heading": "Rahnamo bo'lib qo'shilish anketasi",
+      "fullNameLabel": "Ism va Familiyangiz *",
+      "fullNamePlaceholder": "Masalan: Dr. Jasur Mansurov",
+      "headlineLabel": "Qisqa sarlovha (Headline) *",
+      "headlinePlaceholder": "Masalan: Lead Architect & Studio Founder | Ex-Ankara",
+      "categoryLabel": "Asosiy yo'nalishingiz *",
+      "categoryHint": "Talabalar sizni katalogda shu yo'nalish bo'yicha filtrlashda topadi.",
+      "specialtiesLabel": "Tor ixtisosliklaringiz (vergul bilan) *",
+      "specialtiesPlaceholder": "Germaniyada ordinatura, Klinik tajriba",
+      "bioLabel": "O'zingiz va tajribangiz haqida *",
+      "bioPlaceholder": "Qaysi sohada qancha vaqt ishlagansiz, yoshlarga qanday savollar bo'yicha yordam bera olasiz?",
+      "telegramLabel": "Telegram username *",
+      "telegramPlaceholder": "@username",
+      "phoneLabel": "Telefon raqam *",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "emailLabel": "Elektron pochta (Email) *",
+      "emailPlaceholder": "ism@domain.com",
+      "standardPriceLabel": "Standart sessiya narxi (UZS)",
+      "premiumPriceLabel": "Premium sessiya narxi (UZS)",
+      "submitting": "Ariza topshirilmoqda...",
+      "submit": "Rahnamo sifatida topshirish"
+    },
+    "validation": {
+      "fullName": "Ism va familiyangizni kiriting.",
+      "headline": "Lavozim va sohangizni yozing (masalan: Senior Architect | Ex-Ankara).",
+      "specialties": "Tor ixtisosliklaringizni vergul bilan kiriting.",
+      "bio": "Tajribangiz haqida biroz batafsil yozing (kamida 20 ta belgi).",
+      "telegram": "Telegram username-ingizni kiriting.",
+      "email": "To'g'ri email kiriting.",
+      "phone": "Telefon raqamingizni to'liq kiriting."
+    },
+    "submitError": "Arizani yuborishda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling."
+  },
+  "counselorProfile": {
+    "notFound": "Rahnamo topilmadi.",
+    "backToCatalog": "Barcha Rahnamolar ro'yxatiga qaytish",
+    "reviewsCountSuffix": "{count} ta baho",
+    "responseTimeSuffix": "{time} javob",
+    "sessionsCountSuffix": "{count} ta qabul",
+    "aboutHeading": "Rahnamo haqida",
+    "outcomesHeading": "Natijalar & Yutuqlar",
+    "specialtiesHeading": "Yo'nalishlar",
+    "whyWorkWithMeHeading": "Nima uchun men bilan ishlashingiz kerak",
+    "reviewsHeading": "Talabalar sharhlari",
+    "reviewsLoading": "Yuklanmoqda...",
+    "reviewsEmptyTitle": "Hozircha sharhlar yo'q.",
+    "reviewsEmptyBody": "Birinchi bo'lib qabul o'tkazing va fikringizni bildiring!",
+    "ticket": {
+      "title": "Qabul Tasdiqlandi!",
+      "subtitle": "Rahnamo rasmiy qabul chiptasi",
+      "copiedNotice": "Chipta kodi nusxalandi!",
+      "studentLabel": "Talaba:",
+      "counselorLabel": "Rahnamo:",
+      "slotLabel": "Belgilangan vaqt:",
+      "tierPaymentLabel": "Sessiya & To'lov:",
+      "readyTitle": "Qabul chiptangiz tayyor!",
+      "emailNotice": "Elektron pochtangizga (<b>{email}</b>) va tizimimizga uchrashuv ma'lumotlari kiritildi.",
+      "sendReceiptPrefix": "To'lov skrinshotini",
+      "sendReceiptMiddle": "ga ushbu qabul raqami bilan yuboring:",
+      "copiedShort": "Nusxalandi!",
+      "videoPendingNotice": "Video havola to'lov tasdiqlangandan so'ng shu yerda va emailingizda ko'rinadi.",
+      "telegramCta": "💬 Telegram'da chipta bildirishnomasini olish",
+      "viewBookingsCta": "Mening Qabullarim sahifasiga o'tish",
+      "viewInMyBookings": "Mening qabullarim bo'limida ko'rish"
+    },
+    "form": {
+      "step1Heading": "1. Qabul turini tanlang",
+      "tierStandardDuration": "20-30 daqiqa yo'l-yo'riq",
+      "tierPremiumDuration": "45-60 daqiqa chuqur tahlil",
+      "step2Heading": "2. O'zingizga qulay vaqtni tanlang",
+      "step3Heading": "3. Ma'lumotlaringizni to'ldiring",
+      "fullNameLabel": "Ism va Familiyangiz *",
+      "fullNamePlaceholder": "Masalan: Sardor Alimov",
+      "emailLabel": "Elektron pochta (Email) *",
+      "emailPlaceholder": "ism@domain.com",
+      "phoneLabel": "Telefon raqam *",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "telegramLabel": "Telegram foydalanuvchi nomi (@username) *",
+      "telegramPlaceholder": "@username",
+      "educationLabel": "Hozirgi mashg'ulotingiz / Ta'lim bosqichingiz *",
+      "educationPlaceholder": "Masalan: Tibbiyot instituti 4-kurs talabasi",
+      "questionLabel": "Rahnamoga asosiy savolingiz yoki maqsadingiz nima? *",
+      "questionPlaceholder": "Masalan: Germaniyada ordinaturaga topshirish tartibi va klinik tajriba bo'yicha maslahat olmoqchiman.",
+      "step4Heading": "4. To'lov usulini tanlang",
+      "securePayment": "Xavfsiz to'lov",
+      "paymeSubLabel": "Uzcard / Humo",
+      "clickSubLabel": "Click Up / Karta",
+      "uzumSubLabel": "Uzum kartasi",
+      "submit": "To'lovni amalga oshirish ({price} UZS)"
+    },
+    "validation": {
+      "slot": "Iltimos, uchrashuv vaqtini tanlang.",
+      "fullName": "Ism va familiyangizni to'liq kiriting (kamida 3 ta belgi).",
+      "email": "To'g'ri elektron pochta manzilini kiriting (masalan: ism@domain.com).",
+      "telegramRequired": "Telegram foydalanuvchi nomingizni kiriting.",
+      "telegramInvalid": "Telegram username to'g'ri kiritilishi kerak (masalan: @username).",
+      "phone": "O'zbekiston telefon raqamini to'liq 9 xonali formatda kiriting (+998 90 123 45 67).",
+      "education": "Hozirgi kasbingiz yoki ta'lim bosqichingizni kiriting.",
+      "question": "Savolingizni biroz batafsilroq yozing."
+    },
+    "staleBuildError": "Sahifa eski versiyada ishlamoqda. Iltimos, sahifani yangilang (F5) va qaytadan urinib ko'ring.",
+    "bookingInsertError": "Qabulni saqlashda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling.",
+    "modal": {
+      "providerSystem": "{provider} to'lov tizimi",
+      "secureGateway": "Xavfsiz to'lov shlyuziga ulanish",
+      "serviceLabel": "Xizmat:",
+      "serviceValue": "{name} (1-ga-1 sessiya)",
+      "timeLabel": "Vaqt:",
+      "totalLabel": "Jami to'lov:",
+      "cardBoxLabel": "Rahnamo Markaziy Platforma Kartasi (Uzcard / Humo)",
+      "copyButton": "Nusxalash",
+      "copiedButton": "Nusxalandi! ✓",
+      "cardOwnerLabel": "Egasining ismi: Rahnamo Platform Inc.",
+      "receiptLabel": "To'lov Cheki / Tranzaksiya Raqami (Chek ID)",
+      "receiptPlaceholder": "Masalan: 89420194 yoki Karta oxirgi 4 raqami",
+      "receiptHint": "Payme / Click chekidagi ID raqamini kiriting. Administratorimiz imkon qadar tezroq tasdiqlaydi.",
+      "cardNumberLabel": "Sizning Karta Raqamingiz (Tekshirish uchun)",
+      "cardNumberPlaceholder": "8600 0000 0000 0000",
+      "cardError": "Karta raqami to'liq 16 xonali bo'lishi kerak (Uzcard / Humo / Visa).",
+      "processing": "To'lov amalga oshirilmoqda...",
+      "confirm": "To'lovni tasdiqlash"
+    }
+  },
+  "myBookings": {
+    "backToCatalog": "Barcha Rahnamolar ro'yxatiga qaytish",
+    "headerBadge": "Mening Boshqaruv Panelim",
+    "heading": "Mening qabullarim va sessiyalarim",
+    "tabs": {
+      "all": "Barcha ({count})",
+      "upcoming": "Kutilmoqda",
+      "completed": "Yakunlangan"
+    },
+    "loading": "Qabullar yuklanmoqda...",
+    "emptyTitle": "Sizda hali qabullar yo'q",
+    "emptyBody": "Katalogdan o'zingizga ma'qul bo'lgan Rahnamoni tanlang va 1-ga-1 konsultatsiya uchun vaqt belgilang.",
+    "paymentConfirmed": "To'langan & Tasdiqlangan",
+    "paymentPending": "To'lov tekshirilmoqda",
+    "contactLabel": "Bog'lanish: {telegram}",
+    "joinVideoRoom": "Video xonaga kirish",
+    "videoLocked": "Video havola to'lov tasdiqlangandan so'ng ko'rinadi",
+    "review": {
+      "ratingError": "Iltimos, 1 dan 5 gacha baho tanlang.",
+      "textError": "Sharhingizni biroz batafsilroq yozing (kamida 10 belgi).",
+      "counselorMissingError": "Bu qabul uchun Rahnamo aniqlanmadi.",
+      "saveError": "Sharhni saqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
+      "placeholder": "Rahnamo bilan sessiyangiz haqida fikringizni yozing...",
+      "submitting": "Yuborilmoqda...",
+      "submit": "Sharhni joylash",
+      "cancel": "Bekor qilish",
+      "leaveReview": "Sharh qoldirish",
+      "thankYou": "Sharhingiz uchun rahmat!",
+      "defaultStudentName": "Talaba"
+    }
+  },
+  "forum": {
+    "badge": "Rahnamodan So'rang",
+    "heading": "Kasbiy savollaringizga ochiq javoblar",
+    "subheading": "Savolingizni yozing — istalgan Rahnamo unga ommaviy javob beradi, va javob hamma uchun ko'rinadi. Ro'yxatdan o'tish shart emas.",
+    "anonymousName": "Anonim",
+    "defaultResponderName": "Rahnamo",
+    "askForm": {
+      "heading": "Savol berish",
+      "titleLabel": "Savol sarlavhasi *",
+      "titlePlaceholder": "Masalan: Germaniyada ordinaturaga qanday hujjatlar kerak?",
+      "categoryLabel": "Yo'nalish *",
+      "bodyLabel": "Savolingiz *",
+      "bodyPlaceholder": "Vaziyatingizni va aniq nimani bilmoqchi ekaningizni yozing...",
+      "anonymousLabel": "Anonim postlash",
+      "nameLabel": "Ismingiz *",
+      "namePlaceholder": "Masalan: Sardor",
+      "emailLabel": "Elektron pochta *",
+      "emailPlaceholder": "ism@domain.com",
+      "emailPrivacyNote": "Faqat moderatsiya uchun — hech qachon ommaviy ko'rsatilmaydi.",
+      "submitting": "Yuborilmoqda...",
+      "submit": "Savolni joylash",
+      "successNote": "Savolingiz joylandi! Rahnamolar tez orada javob berishadi."
+    },
+    "validation": {
+      "title": "Savol sarlavhasini kiriting (kamida 5 ta belgi).",
+      "body": "Savolingizni biroz batafsilroq yozing.",
+      "name": "Ismingizni kiriting yoki anonim postlashni tanlang.",
+      "email": "To'g'ri elektron pochta manzilini kiriting."
+    },
+    "submitError": "Savolni joylashda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring.",
+    "recentQuestionsHeading": "So'nggi savollar",
+    "loadingQuestions": "Yuklanmoqda...",
+    "emptyTitle": "Hali savollar yo'q",
+    "emptyBody": "Birinchi bo'lib savol bering!",
+    "answer": {
+      "selectCounselorPlaceholder": "Rahnamoni tanlang...",
+      "bodyPlaceholder": "Javobingizni yozing...",
+      "passcodePlaceholder": "Rahnamo maxfiy kodi",
+      "submit": "Javobni joylash",
+      "cancel": "Bekor qilish",
+      "cta": "Rahnamo sifatida javob berish",
+      "validationError": "Rahnamoni tanlang va javobingizni yozing (kamida 5 ta belgi).",
+      "invalidPasscode": "Rahnamo kodi noto'g'ri. Kodni Rahnamo hamkorlik shartnomasidan tekshiring.",
+      "saveError": "Javobni saqlashda xatolik yuz berdi. Qayta urinib ko'ring."
+    }
+  },
+  "emails": {
+    "footerNote": "Savollaringiz bo'lsa @rahnamo_admin ga murojaat qiling.",
+    "details": {
+      "ticketId": "Chipta ID:",
+      "student": "Talaba:",
+      "counselor": "Rahnamo:",
+      "scheduledTime": "Belgilangan vaqt:",
+      "packageAndPayment": "Paket & To'lov:"
+    },
+    "meetLink": {
+      "label": "🔗 Video Uchrashuv Havolasi:",
+      "button": "Video Xonasiga Kirish",
+      "reminder": "Uchrashuv boshlanishidan 10 daqiqa oldin xonaga ulanishingiz so'raladi."
+    },
+    "pendingPayment": "⏳ To'lov tekshirilmoqda. Video uchrashuv havolasi to'lovingiz tasdiqlangandan so'ng shu manzilga va \"Mening qabullarim\" sahifasiga yuboriladi.",
+    "bookingCreated": {
+      "subject": "[Rahnamo] Qabul Tasdiqlandi — Chipta {id}",
+      "title": "🐪 Rahnamo — Qabul Tasdiqlandi",
+      "subtitle": "Rasmiy 1-ga-1 konsultatsiya chiptasi"
+    },
+    "paymentConfirmed": {
+      "subject": "[Rahnamo] To'lovingiz tasdiqlandi — Sessiya {id}",
+      "title": "✅ Rahnamo — To'lov Tasdiqlandi",
+      "subtitle": "Sessiyangiz endi rasman belgilandi"
+    }
+  },
+  "home": {
+    "sortLabel": "Saralash:",
+    "sortOptions": {
+      "rating": "Eng yuqori baholangan",
+      "popular": "Eng ko'p sessiya o'tkazgan",
+      "priceLow": "Narx: Arzonroq",
+      "priceHigh": "Narx: Qimmatroq"
+    },
+    "companyLabel": "Kompaniya:",
+    "allCompanies": "Barcha kompaniyalar",
+    "selectedHeading": "Saralangan Rahnamolar",
+    "selectedSubheading": "Markaziy Osiyoning yetakchi mutaxassislaridan 1-ga-1 konsultatsiya qabullari",
+    "emptyTitle": "Hech qanday Rahnamo topilmadi",
+    "emptyBody": "Qidiruv so'zini o'zgartiring yoki boshqa sohani tanlab ko'ring.",
+    "emptyReset": "Barcha Rahnamolarni ko'rsatish",
+    "howItWorks": {
+      "badge": "3 ta oddiy qadam",
+      "heading": "Rahnamo platformasi qanday ishlaydi?",
+      "subheading": "Markaziy Osiyoning eng yaxshi ekspertlaridan 1-ga-1 konsultatsiya olish tartibi",
+      "step1Title": "Rahnamoni va vaqtni tanlang",
+      "step1Body": "Katalogdan o'zingizga ma'qul bo'lgan mutaxassisni tanlang, Standart yoki Premium paketni ko'rsatib, mos keladigan vaqtni belgilang.",
+      "step2Title": "To'lov va ma'lumotlarni to'ldirish",
+      "step2Body": "Payme, Click yoki Uzum Bank orqali xavfsiz to'lovni amalga oshiring. Rahnamoga beriladigan asosiy savolingizni yozing.",
+      "step3Title": "1-ga-1 Video muloqot",
+      "step3Body": "Chipta va video uchrashuv havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang."
+    },
+    "faq": {
+      "heading": "Tez-tez beriladigan savollar",
+      "items": [
+        {
+          "q": "Konsultatsiya bekor qilinsa yoki vaqt ko'chirilsa nima bo'ladi?",
+          "a": "Suhbat boshlanishidan 12 soat oldin administratorimizga murojaat qilsangiz, to'lov 100% qaytariladi yoki uchrashuv vaqti sizga qulay boshqa vaqtga ko'chiriladi."
+        },
+        {
+          "q": "Suhbat qaysi dastur orqali o'tkaziladi?",
+          "a": "Barcha 1-ga-1 konsultatsiyalar video havola orqali o'tkaziladi (ro'yxatdan o'tish talab qilinmaydi). Sizga xonaga ulanish havolasi elektron pochta va Telegram orqali yuboriladi."
+        },
+        {
+          "q": "Rahnamolar ro'yxatiga qanday qo'shilish mumkin?",
+          "a": "Agar siz ham o'z sohangizda tajribali bo'lsangiz, menyudagi 'Rahnamo bo'lish' tugmasini bosib anketani to'ldirishingiz mumkin. 24 soat ichida profilingiz tasdiqlanadi."
+        }
+      ]
+    }
+  }
+}

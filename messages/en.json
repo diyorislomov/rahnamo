@@ -1,0 +1,381 @@
+{
+  "common": {
+    "catalog": "Rahnamo Catalog",
+    "howItWorks": "How it works?",
+    "myBookings": "My bookings",
+    "becomeCounselor": "Become a Rahnamo",
+    "becomeCounselorJoin": "Join as a Rahnamo",
+    "forum": "Forum",
+    "verifiedBadge": "Verified Rahnamo",
+    "viewCounselors": "View Rahnamo",
+    "responseTimeLabel": "Response: {time}",
+    "backToHome": "Home",
+    "returnHome": "Return to homepage",
+    "standard": "Standard",
+    "premium": "Premium"
+  },
+  "navbar": {
+    "banner": "The Silk Road career counseling and 1-on-1 mentorship platform",
+    "toggleMenuAriaLabel": "Toggle navigation menu"
+  },
+  "footer": {
+    "tagline": "Silk Road career counseling. A personal 1-on-1 mentorship platform connecting Central Asian youth with experienced professionals.",
+    "verifiedBadge": "100% Official and Guaranteed",
+    "platformHeading": "Platform",
+    "adminPanel": "Admin Panel",
+    "specialtiesHeading": "Specialties",
+    "specialtiesList": [
+      "Medicine & Residency (Germany / Turkey)",
+      "Fulbright & International Grants",
+      "Architecture & Portfolio Review",
+      "International Law & Corporate Career",
+      "Programming & Systems Architecture"
+    ],
+    "contactHeading": "Contact & Support",
+    "contactBlurb": "Have questions? Contact our administrator:",
+    "telegramSupport": "Telegram Support (@rahnamo_admin)",
+    "copyright": "© {year} Rahnamo. Silk Road Career Counselors platform.",
+    "madeWithPrefix": "Made with",
+    "madeWithSuffix": "for the youth of Central Asia."
+  },
+  "hero": {
+    "badge": "Silk Road career platform",
+    "title": "Build your future with Central Asia's <strong>strongest experts</strong>.",
+    "subtitle": "Get personal 1-on-1 advice from verified Rahnamo in Medicine, Law, Architecture, Programming, and International Grants.",
+    "viewProfile": "View profile",
+    "nextSlotLabel": "Next available slot: {slot}",
+    "statLabelLine1": "Verified",
+    "statLabelLine2": "Rahnamo"
+  },
+  "catalogIntro": {
+    "eyebrow": "Personal 1-on-1 mentorship",
+    "heading": "Talk directly with a real expert in your field.",
+    "subheading": "Choose from verified Rahnamo, book a time, and hold your first consultation within a week.",
+    "ctaSecondary": "Browse by specialty",
+    "searchPlaceholder": "Search by name, specialty, or keyword (e.g. Fulbright, Legal)...",
+    "clearSearch": "Clear",
+    "disciplineHeading": "Choose a specialty",
+    "countSuffix": "{count} Rahnamo"
+  },
+  "statsBand": {
+    "counselors": "Rahnamo",
+    "specialtyCategories": "Specialties",
+    "specialties": "Areas of expertise"
+  },
+  "counselorCard": {
+    "sessionsCount": "{count} sessions",
+    "priceLabel": "Session price",
+    "priceUnit": "UZS / 30m",
+    "selectTime": "Select time"
+  },
+  "specialties": {
+    "All": "All specialties",
+    "Medicine & Healthcare": "Medicine & Healthcare",
+    "Architecture & Design": "Architecture & Design",
+    "Law & Legal Practice": "Law & Legal Practice",
+    "Study Abroad": "International Grants",
+    "Agriculture & Trade": "Agriculture & Trade",
+    "Engineering & Tech": "Engineering & Tech"
+  },
+  "becomeCounselor": {
+    "badge": "A MentorCruise-level platform",
+    "heroTitle": "Become a Rahnamo and earn on your own schedule",
+    "heroSubtitle": "Guide talented young people across Central Asia 1-on-1, build your personal brand, and earn income in your spare time.",
+    "calculator": {
+      "badge": "Earnings calculator",
+      "heading": "How much could you earn?",
+      "subheading": "How many hours a week can you offer for consultations?",
+      "weeklyLabel": "Sessions per week:",
+      "sessionsCount": "{count} sessions",
+      "sliderMin": "1 session",
+      "sliderMax": "20 sessions",
+      "monthlyLabel": "Estimated monthly income",
+      "perMonth": "UZS / month",
+      "commissionNote": "*After platform commission"
+    },
+    "perks": {
+      "flexibleTitle": "100% Flexible Schedule",
+      "flexibleBody": "You decide when and at what hours to offer consultations. Just 30 minutes on a weekend or evening is enough.",
+      "remoteTitle": "Remote Communication",
+      "remoteBody": "Hold 1-on-1 conversations over a video link, no matter where in the world you are.",
+      "brandTitle": "Personal Brand & Status",
+      "brandBody": "Become recognized in your field and gain official mentor status for the youth of Central Asia.",
+      "guaranteedTitle": "Guaranteed Payment",
+      "guaranteedBody": "Students pay in advance. Payment is transferred to your card for every completed session."
+    },
+    "success": {
+      "title": "Your application has been received!",
+      "body": "Thank you, <b>{name}</b>! Our platform administrator will contact you within 24 hours via Telegram <b>{telegram}</b> and confirm your profile."
+    },
+    "form": {
+      "heading": "Become-a-Rahnamo application",
+      "fullNameLabel": "Full name *",
+      "fullNamePlaceholder": "E.g. Dr. Jasur Mansurov",
+      "headlineLabel": "Short headline *",
+      "headlinePlaceholder": "E.g. Lead Architect & Studio Founder | Ex-Ankara",
+      "categoryLabel": "Your primary specialty *",
+      "categoryHint": "Students will find you in the catalog by filtering on this specialty.",
+      "specialtiesLabel": "Narrow specialties (comma-separated) *",
+      "specialtiesPlaceholder": "Residency in Germany, clinical experience",
+      "bioLabel": "About you and your experience *",
+      "bioPlaceholder": "What field have you worked in and for how long, what kinds of questions can you help young people with?",
+      "telegramLabel": "Telegram username *",
+      "telegramPlaceholder": "@username",
+      "phoneLabel": "Phone number *",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "emailLabel": "Email *",
+      "emailPlaceholder": "name@domain.com",
+      "standardPriceLabel": "Standard session price (UZS)",
+      "premiumPriceLabel": "Premium session price (UZS)",
+      "submitting": "Submitting application...",
+      "submit": "Submit as a Rahnamo"
+    },
+    "validation": {
+      "fullName": "Enter your full name.",
+      "headline": "Write your title and field (e.g. Senior Architect | Ex-Ankara).",
+      "specialties": "Enter your narrow specialties, separated by commas.",
+      "bio": "Write a bit more about your experience (at least 20 characters).",
+      "telegram": "Enter your Telegram username.",
+      "email": "Enter a valid email.",
+      "phone": "Enter your full phone number."
+    },
+    "submitError": "There was an error submitting your application. Check your internet connection and try again, or contact @rahnamo_admin."
+  },
+  "counselorProfile": {
+    "notFound": "Rahnamo not found.",
+    "backToCatalog": "Back to all Rahnamo",
+    "reviewsCountSuffix": "{count} ratings",
+    "responseTimeSuffix": "Response: {time}",
+    "sessionsCountSuffix": "{count} sessions",
+    "aboutHeading": "About the Rahnamo",
+    "outcomesHeading": "Results & Achievements",
+    "specialtiesHeading": "Specialties",
+    "whyWorkWithMeHeading": "Why work with me",
+    "reviewsHeading": "Student reviews",
+    "reviewsLoading": "Loading...",
+    "reviewsEmptyTitle": "No reviews yet.",
+    "reviewsEmptyBody": "Be the first to have a session and share your thoughts!",
+    "ticket": {
+      "title": "Booking Confirmed!",
+      "subtitle": "Official Rahnamo booking ticket",
+      "copiedNotice": "Ticket code copied!",
+      "studentLabel": "Student:",
+      "counselorLabel": "Rahnamo:",
+      "slotLabel": "Scheduled time:",
+      "tierPaymentLabel": "Package & Payment:",
+      "readyTitle": "Your booking ticket is ready!",
+      "emailNotice": "Meeting details have been sent to your email (<b>{email}</b>) and saved in our system.",
+      "sendReceiptPrefix": "Send your payment screenshot to",
+      "sendReceiptMiddle": "with this booking number:",
+      "copiedShort": "Copied!",
+      "videoPendingNotice": "The video link will appear here and in your email once payment is confirmed.",
+      "telegramCta": "💬 Get your ticket notification on Telegram",
+      "viewBookingsCta": "Go to My Bookings",
+      "viewInMyBookings": "View in My Bookings"
+    },
+    "form": {
+      "step1Heading": "1. Choose your session type",
+      "tierStandardDuration": "20-30 minute guidance session",
+      "tierPremiumDuration": "45-60 minute in-depth session",
+      "step2Heading": "2. Choose a time that works for you",
+      "step3Heading": "3. Fill in your details",
+      "fullNameLabel": "Full name *",
+      "fullNamePlaceholder": "E.g. Sardor Alimov",
+      "emailLabel": "Email *",
+      "emailPlaceholder": "name@domain.com",
+      "phoneLabel": "Phone number *",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "telegramLabel": "Telegram username (@username) *",
+      "telegramPlaceholder": "@username",
+      "educationLabel": "Current occupation / education level *",
+      "educationPlaceholder": "E.g. 4th-year medical student",
+      "questionLabel": "What's your main question or goal for the Rahnamo? *",
+      "questionPlaceholder": "E.g. I'd like advice on the residency application process in Germany and clinical experience.",
+      "step4Heading": "4. Choose a payment method",
+      "securePayment": "Secure payment",
+      "paymeSubLabel": "Uzcard / Humo",
+      "clickSubLabel": "Click Up / Card",
+      "uzumSubLabel": "Uzum card",
+      "submit": "Complete payment ({price} UZS)"
+    },
+    "validation": {
+      "slot": "Please choose a meeting time.",
+      "fullName": "Enter your full name (at least 3 characters).",
+      "email": "Enter a valid email address (e.g. name@domain.com).",
+      "telegramRequired": "Enter your Telegram username.",
+      "telegramInvalid": "Enter a valid Telegram username (e.g. @username).",
+      "phone": "Enter a full 9-digit Uzbekistan phone number (+998 90 123 45 67).",
+      "education": "Enter your current occupation or education level.",
+      "question": "Describe your question in a bit more detail."
+    },
+    "staleBuildError": "This page is running an outdated version. Please refresh the page (F5) and try again.",
+    "bookingInsertError": "There was an error saving your booking. Check your internet connection and try again, or contact @rahnamo_admin.",
+    "modal": {
+      "providerSystem": "{provider} payment system",
+      "secureGateway": "Connecting to secure payment gateway",
+      "serviceLabel": "Service:",
+      "serviceValue": "{name} (1-on-1 session)",
+      "timeLabel": "Time:",
+      "totalLabel": "Total:",
+      "cardBoxLabel": "Rahnamo Central Platform Card (Uzcard / Humo)",
+      "copyButton": "Copy",
+      "copiedButton": "Copied! ✓",
+      "cardOwnerLabel": "Cardholder name: Rahnamo Platform Inc.",
+      "receiptLabel": "Payment Receipt / Transaction Number (Receipt ID)",
+      "receiptPlaceholder": "E.g. 89420194 or last 4 digits of your card",
+      "receiptHint": "Enter the ID number from your Payme/Click receipt. Our administrator will confirm as soon as possible.",
+      "cardNumberLabel": "Your Card Number (for verification)",
+      "cardNumberPlaceholder": "8600 0000 0000 0000",
+      "cardError": "The card number must be a full 16 digits (Uzcard / Humo / Visa).",
+      "processing": "Processing payment...",
+      "confirm": "Confirm payment"
+    }
+  },
+  "myBookings": {
+    "backToCatalog": "Back to all Rahnamo",
+    "headerBadge": "My Personal Dashboard",
+    "heading": "My bookings and sessions",
+    "tabs": {
+      "all": "All ({count})",
+      "upcoming": "Upcoming",
+      "completed": "Completed"
+    },
+    "loading": "Loading bookings...",
+    "emptyTitle": "You don't have any bookings yet",
+    "emptyBody": "Choose a Rahnamo that fits you from the catalog and book a time for a 1-on-1 consultation.",
+    "paymentConfirmed": "Paid & Confirmed",
+    "paymentPending": "Payment being verified",
+    "contactLabel": "Contact: {telegram}",
+    "joinVideoRoom": "Join video room",
+    "videoLocked": "The video link will appear once payment is confirmed",
+    "review": {
+      "ratingError": "Please choose a rating from 1 to 5.",
+      "textError": "Write a bit more in your review (at least 10 characters).",
+      "counselorMissingError": "The Rahnamo for this booking could not be determined.",
+      "saveError": "There was an error saving your review. Please try again.",
+      "placeholder": "Write your thoughts about your session with the Rahnamo...",
+      "submitting": "Submitting...",
+      "submit": "Post review",
+      "cancel": "Cancel",
+      "leaveReview": "Leave a review",
+      "thankYou": "Thank you for your review!",
+      "defaultStudentName": "Student"
+    }
+  },
+  "forum": {
+    "badge": "Ask a Rahnamo",
+    "heading": "Open answers to your career questions",
+    "subheading": "Write your question — any Rahnamo can give a public answer to it, and the answer is visible to everyone. No registration required.",
+    "anonymousName": "Anonymous",
+    "defaultResponderName": "Rahnamo",
+    "askForm": {
+      "heading": "Ask a question",
+      "titleLabel": "Question title *",
+      "titlePlaceholder": "E.g. What documents are needed for a residency in Germany?",
+      "categoryLabel": "Specialty *",
+      "bodyLabel": "Your question *",
+      "bodyPlaceholder": "Describe your situation and exactly what you'd like to know...",
+      "anonymousLabel": "Post anonymously",
+      "nameLabel": "Your name *",
+      "namePlaceholder": "E.g. Sardor",
+      "emailLabel": "Email *",
+      "emailPlaceholder": "name@domain.com",
+      "emailPrivacyNote": "For moderation only — never shown publicly.",
+      "submitting": "Submitting...",
+      "submit": "Post question",
+      "successNote": "Your question has been posted! Rahnamo will answer it soon."
+    },
+    "validation": {
+      "title": "Enter a question title (at least 5 characters).",
+      "body": "Describe your question in a bit more detail.",
+      "name": "Enter your name or choose to post anonymously.",
+      "email": "Enter a valid email address."
+    },
+    "submitError": "There was an error posting your question. Check your internet connection and try again.",
+    "recentQuestionsHeading": "Recent questions",
+    "loadingQuestions": "Loading...",
+    "emptyTitle": "No questions yet",
+    "emptyBody": "Be the first to ask a question!",
+    "answer": {
+      "selectCounselorPlaceholder": "Choose a Rahnamo...",
+      "bodyPlaceholder": "Write your answer...",
+      "passcodePlaceholder": "Rahnamo secret code",
+      "submit": "Post answer",
+      "cancel": "Cancel",
+      "cta": "Answer as a Rahnamo",
+      "validationError": "Choose a Rahnamo and write your answer (at least 5 characters).",
+      "invalidPasscode": "Incorrect Rahnamo code. Check the code from your Rahnamo partnership agreement.",
+      "saveError": "There was an error saving the answer. Please try again."
+    }
+  },
+  "emails": {
+    "footerNote": "If you have any questions, contact @rahnamo_admin.",
+    "details": {
+      "ticketId": "Ticket ID:",
+      "student": "Student:",
+      "counselor": "Rahnamo:",
+      "scheduledTime": "Scheduled time:",
+      "packageAndPayment": "Package & Payment:"
+    },
+    "meetLink": {
+      "label": "🔗 Video Meeting Link:",
+      "button": "Join the Video Room",
+      "reminder": "Please join the room 10 minutes before the meeting starts."
+    },
+    "pendingPayment": "⏳ Payment is being verified. The video meeting link will be sent to this address and to the \"My Bookings\" page once your payment is confirmed.",
+    "bookingCreated": {
+      "subject": "[Rahnamo] Booking Confirmed — Ticket {id}",
+      "title": "🐪 Rahnamo — Booking Confirmed",
+      "subtitle": "Official 1-on-1 consultation ticket"
+    },
+    "paymentConfirmed": {
+      "subject": "[Rahnamo] Your payment is confirmed — Session {id}",
+      "title": "✅ Rahnamo — Payment Confirmed",
+      "subtitle": "Your session is now officially scheduled"
+    }
+  },
+  "home": {
+    "sortLabel": "Sort:",
+    "sortOptions": {
+      "rating": "Highest rated",
+      "popular": "Most sessions held",
+      "priceLow": "Price: low to high",
+      "priceHigh": "Price: high to low"
+    },
+    "companyLabel": "Company:",
+    "allCompanies": "All companies",
+    "selectedHeading": "Featured Rahnamo",
+    "selectedSubheading": "1-on-1 consultations from Central Asia's leading professionals",
+    "emptyTitle": "No Rahnamo found",
+    "emptyBody": "Try changing your search term or choosing a different specialty.",
+    "emptyReset": "Show all Rahnamo",
+    "howItWorks": {
+      "badge": "3 simple steps",
+      "heading": "How does the Rahnamo platform work?",
+      "subheading": "How to get a 1-on-1 consultation from Central Asia's top experts",
+      "step1Title": "Choose a Rahnamo and a time",
+      "step1Body": "Pick the specialist that fits you from the catalog, choose the Standard or Premium package, and book a time that works.",
+      "step2Title": "Pay and fill in your details",
+      "step2Body": "Make a secure payment via Payme, Click, or Uzum Bank. Write the main question you'd like to ask your Rahnamo.",
+      "step3Title": "1-on-1 video call",
+      "step3Body": "Your ticket and video meeting link are sent immediately to your email and Telegram. Start the conversation at the scheduled time."
+    },
+    "faq": {
+      "heading": "Frequently asked questions",
+      "items": [
+        {
+          "q": "What happens if a consultation is cancelled or rescheduled?",
+          "a": "If you contact our administrator at least 12 hours before the session starts, you'll receive a 100% refund, or your session will be moved to another time that works for you."
+        },
+        {
+          "q": "What platform is the session held on?",
+          "a": "All 1-on-1 consultations are held over a video link (no registration required). The room link is sent to you by email and Telegram."
+        },
+        {
+          "q": "How can I join the list of Rahnamo?",
+          "a": "If you're also an experienced professional in your field, you can fill out the application by clicking \"Become a Rahnamo\" in the menu. Your profile will be reviewed within 24 hours."
+        }
+      ]
+    }
+  }
+}

@@ -86,5 +86,9 @@ export interface BookingTicketData {
   paymentStatus?: PaymentStatus;
   paymentReceipt?: string;
   status?: 'confirmed' | 'completed';
+  // Captured once, at submission time, from the student's own browser --
+  // never re-derived from whoever's request later triggers an email (e.g.
+  // an admin confirming payment days afterward, from their own session).
+  locale?: string;
   createdAt?: string;
 }

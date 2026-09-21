@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
@@ -31,6 +32,7 @@ function mergeCounselors(mock: Counselor[], live: Counselor[]): Counselor[] {
 }
 
 export default function Home() {
+  const t = useTranslations('home');
   const [counselors, setCounselors] = useState<Counselor[]>(INITIAL_COUNSELORS);
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [selectedCompany, setSelectedCompany] = useState<string>(ALL_COMPANIES);
@@ -111,16 +113,16 @@ export default function Home() {
               looking at. */}
           <section id="rahnamolar" className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm my-8 space-y-5 scroll-mt-24">
             <div className="flex items-center justify-end gap-2 text-xs font-semibold">
-              <span className="text-stone-500 whitespace-nowrap">Saralash:</span>
+              <span className="text-stone-500 whitespace-nowrap">{t('sortLabel')}</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
                 className="bg-amber-50/80 border border-amber-900/15 text-amber-950 font-bold py-3 px-3.5 rounded-2xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
               >
-                <option value="rating">Eng yuqori baholangan</option>
-                <option value="popular">Eng ko'p sessiya o'tkazgan</option>
-                <option value="price-low">Narx: Arzonroq</option>
-                <option value="price-high">Narx: Qimmatroq</option>
+                <option value="rating">{t('sortOptions.rating')}</option>
+                <option value="popular">{t('sortOptions.popular')}</option>
+                <option value="price-low">{t('sortOptions.priceLow')}</option>
+                <option value="price-high">{t('sortOptions.priceHigh')}</option>
               </select>
             </div>
 
@@ -128,7 +130,7 @@ export default function Home() {
             {COMPANIES.length > 1 && (
               <div className="flex flex-wrap gap-2 pt-3 border-t border-amber-900/10">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 self-center pr-1">
-                  Kompaniya:
+                  {t('companyLabel')}
                 </span>
                 {COMPANIES.map((name) => {
                   const isSelected = selectedCompany === name;
@@ -142,7 +144,7 @@ export default function Home() {
                           : 'bg-white text-stone-600 border-amber-900/15 hover:bg-amber-50/60'
                       }`}
                     >
-                      {name === ALL_COMPANIES ? 'Barcha kompaniyalar' : name}
+                      {name === ALL_COMPANIES ? t('allCompanies') : name}
                     </button>
                   );
                 })}
@@ -155,13 +157,13 @@ export default function Home() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="font-serif font-bold text-xl sm:text-2xl text-amber-950 flex items-center gap-2">
-                  <span>Saralangan Rahnamolar</span>
+                  <span>{t('selectedHeading')}</span>
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 font-mono">
                     {sortedCounselors.length}
                   </span>
                 </h2>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  Markaziy Osiyoning yetakchi mutaxassislaridan 1-ga-1 konsultatsiya qabullari
+                  {t('selectedSubheading')}
                 </p>
               </div>
             </div>
@@ -171,9 +173,9 @@ export default function Home() {
                 <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center mx-auto mb-3">
                   <Search className="w-8 h-8 text-amber-800" />
                 </div>
-                <h4 className="font-serif font-bold text-lg text-amber-950">Hech qanday Rahnamo topilmadi</h4>
+                <h4 className="font-serif font-bold text-lg text-amber-950">{t('emptyTitle')}</h4>
                 <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
-                  Qidiruv so'zini o'zgartiring yoki boshqa sohani tanlab ko'ring.
+                  {t('emptyBody')}
                 </p>
                 <button
                   onClick={() => {
@@ -183,7 +185,7 @@ export default function Home() {
                   }}
                   className="mt-4 bg-amber-900 text-amber-50 font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-amber-800 transition-all cursor-pointer"
                 >
-                  Barcha Rahnamolarni ko'rsatish
+                  {t('emptyReset')}
                 </button>
               </div>
             ) : (
@@ -203,13 +205,13 @@ export default function Home() {
             <div className="text-center max-w-2xl mx-auto mb-12 relative z-10">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-semibold mb-3">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>3 ta oddiy qadam</span>
+                <span>{t('howItWorks.badge')}</span>
               </div>
               <h2 className="font-serif font-bold text-2xl sm:text-4xl text-amber-100">
-                Rahnamo platformasi qanday ishlaydi?
+                {t('howItWorks.heading')}
               </h2>
               <p className="text-xs sm:text-sm text-amber-200/70 mt-2">
-                Markaziy Osiyoning eng yaxshi ekspertlaridan 1-ga-1 konsultatsiya olish tartibi
+                {t('howItWorks.subheading')}
               </p>
             </div>
 
@@ -218,9 +220,9 @@ export default function Home() {
                 <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
                   1
                 </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">Rahnamoni va vaqtni tanlang</h3>
+                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step1Title')}</h3>
                 <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  Katalogdan o'zingizga ma'qul bo'lgan mutaxassisni tanlang, Standart yoki Premium paketni ko'rsatib, mos keladigan vaqtni belgilang.
+                  {t('howItWorks.step1Body')}
                 </p>
               </div>
 
@@ -228,9 +230,9 @@ export default function Home() {
                 <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
                   2
                 </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">To'lov va ma'lumotlarni to'ldirish</h3>
+                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step2Title')}</h3>
                 <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  Payme, Click yoki Uzum Bank orqali xavfsiz to'lovni amalga oshiring. Rahnamoga beriladigan asosiy savolingizni yozing.
+                  {t('howItWorks.step2Body')}
                 </p>
               </div>
 
@@ -238,9 +240,9 @@ export default function Home() {
                 <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
                   3
                 </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">1-ga-1 Video muloqot</h3>
+                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step3Title')}</h3>
                 <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  Chipta va video uchrashuv havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang.
+                  {t('howItWorks.step3Body')}
                 </p>
               </div>
             </div>
@@ -249,23 +251,10 @@ export default function Home() {
           {/* FAQ Accordion Section (Interactive Expand/Collapse Accordion) */}
           <section className="max-w-3xl mx-auto my-16">
             <h2 className="font-serif font-bold text-2xl text-center text-amber-950 mb-6">
-              Tez-tez beriladigan savollar
+              {t('faq.heading')}
             </h2>
             <div className="space-y-3">
-              {[
-                {
-                  q: "Konsultatsiya bekor qilinsa yoki vaqt ko'chirilsa nima bo'ladi?",
-                  a: "Suhbat boshlanishidan 12 soat oldin administratorimizga murojaat qilsangiz, to'lov 100% qaytariladi yoki uchrashuv vaqti sizga qulay boshqa vaqtga ko'chiriladi.",
-                },
-                {
-                  q: "Suhbat qaysi dastur orqali o'tkaziladi?",
-                  a: "Barcha 1-ga-1 konsultatsiyalar video havola orqali o'tkaziladi (ro'yxatdan o'tish talab qilinmaydi). Sizga xonaga ulanish havolasi elektron pochta va Telegram orqali yuboriladi.",
-                },
-                {
-                  q: "Rahnamolar ro'yxatiga qanday qo'shilish mumkin?",
-                  a: "Agar siz ham o'z sohangizda tajribali bo'lsangiz, menyudagi 'Rahnamo bo'lish' tugmasini bosib anketani to'ldirishingiz mumkin. 24 soat ichida profilingiz tasdiqlanadi.",
-                },
-              ].map((faq, idx) => {
+              {(t.raw('faq.items') as { q: string; a: string }[]).map((faq, idx) => {
                 const isOpen = openFaq === idx;
                 return (
                   <div

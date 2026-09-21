@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Counselor } from '@/types';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 
@@ -16,6 +17,7 @@ interface StatsBandProps {
  * than shown.
  */
 export default function StatsBand({ counselors }: StatsBandProps) {
+  const t = useTranslations('statsBand');
   const stats = useMemo(() => {
     const counselorCount = counselors.length;
 
@@ -27,12 +29,12 @@ export default function StatsBand({ counselors }: StatsBandProps) {
     const distinctSpecialties = new Set(counselors.flatMap((c) => c.specialties)).size;
 
     const entries: { value: number; label: string }[] = [];
-    if (counselorCount > 0) entries.push({ value: counselorCount, label: 'Rahnamolar' });
-    if (coveredCategories > 0) entries.push({ value: coveredCategories, label: "Yo'nalishlar" });
-    if (distinctSpecialties > 0) entries.push({ value: distinctSpecialties, label: 'Ixtisoslik sohalari' });
+    if (counselorCount > 0) entries.push({ value: counselorCount, label: t('counselors') });
+    if (coveredCategories > 0) entries.push({ value: coveredCategories, label: t('specialtyCategories') });
+    if (distinctSpecialties > 0) entries.push({ value: distinctSpecialties, label: t('specialties') });
 
     return entries;
-  }, [counselors]);
+  }, [counselors, t]);
 
   if (stats.length === 0) return null;
 

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import StaleBuildWatcher from "@/components/StaleBuildWatcher";
 import "./globals.css";
 
@@ -18,15 +20,20 @@ export const metadata: Metadata = {
   description: "Yo'lingizni o'z sohasining yetuk ustozlari bilan toping",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     <html
-      lang="uz"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <StaleBuildWatcher />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+          <StaleBuildWatcher />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

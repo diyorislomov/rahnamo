@@ -107,6 +107,7 @@ export default function AdminDashboardPage() {
             paymentStatus: b.payment_status || 'pending',
             paymentReceipt: b.payment_receipt || '',
             status: b.status || 'confirmed',
+            locale: b.locale || 'uz',
             createdAt: b.created_at,
           }));
 
@@ -330,6 +331,7 @@ export default function AdminDashboardPage() {
           paymentMethod: booking.paymentMethod,
           email: booking.email,
           meetLink: booking.meetLink,
+          locale: booking.locale || 'uz',
         }),
       });
       const emailData = await emailRes.json();

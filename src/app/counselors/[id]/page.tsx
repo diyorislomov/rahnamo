@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { Tier, Review, Counselor } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -39,6 +40,11 @@ interface BookingTicketData {
   paymentStatus?: 'pending' | 'confirmed' | 'rejected';
   paymentReceipt?: string;
   createdAt: string;
+  // Captured once, here, from this browser's own active locale -- never
+  // re-derived later from whichever session's cookie eventually triggers
+  // the payment-confirmed email (that's the admin's browser, not the
+  // student's, and often much later).
+  locale: string;
 }
 
 interface ReviewRow {
@@ -52,6 +58,9 @@ interface ReviewRow {
 }
 
 export default function CounselorPage() {
+  const t = useTranslations('counselorProfile');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const params = useParams();
   const router = useRouter();
   
@@ -157,9 +166,9 @@ export default function CounselorPage() {
     }
     return (
       <div className="min-h-screen bg-[#FAF6EE] p-12 text-center text-amber-950 font-serif">
-        <p className="text-xl font-bold">Rahnamo topilmadi.</p>
+        <p className="text-xl font-bold">{t('notFound')}</p>
         <Link href="/" className="text-amber-800 underline text-sm mt-3 inline-block">
-          Bosh sahifaga qaytish
+          {tCommon('returnHome')}
         </Link>
       </div>
     );
@@ -169,41 +178,41 @@ export default function CounselorPage() {
     const newErrors: { [key: string]: string } = {};
 
     if (!selectedSlot) {
-      newErrors.slot = "Iltimos, uchrashuv vaqtini tanlang.";
+      newErrors.slot = t('validation.slot');
     }
 
     if (!fullName.trim() || fullName.trim().length < 3) {
-      newErrors.fullName = "Ism va familiyangizni to'liq kiriting (kamida 3 ta belgi).";
+      newErrors.fullName = t('validation.fullName');
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
-      newErrors.email = "To'g'ri elektron pochta manzilini kiriting (masalan: ism@domain.com).";
+      newErrors.email = t('validation.email');
     }
 
     let cleanedTelegram = telegram.trim().replace(/^https?:\/\/t\.me\//, '');
     if (!cleanedTelegram) {
-      newErrors.telegram = "Telegram foydalanuvchi nomingizni kiriting.";
+      newErrors.telegram = t('validation.telegramRequired');
     } else {
       if (!cleanedTelegram.startsWith('@')) {
         cleanedTelegram = '@' + cleanedTelegram;
       }
       if (cleanedTelegram.length < 3) {
-        newErrors.telegram = "Telegram username to'g'ri kiritilishi kerak (masalan: @username).";
+        newErrors.telegram = t('validation.telegramInvalid');
       }
     }
 
     const phoneDigits = phone.replace(/\D/g, '').replace(/^998/, '');
     if (phoneDigits.length !== 9) {
-      newErrors.phone = "O'zbekiston telefon raqamini to'liq 9 xonali formatda kiriting (+998 90 123 45 67).";
+      newErrors.phone = t('validation.phone');
     }
 
     if (!education.trim()) {
-      newErrors.education = "Hozirgi kasbingiz yoki ta'lim bosqichingizni kiriting.";
+      newErrors.education = t('validation.education');
     }
 
     if (!question.trim() || question.trim().length < 5) {
-      newErrors.question = "Savolingizni biroz batafsilroq yozing.";
+      newErrors.question = t('validation.question');
     }
 
     setErrors(newErrors);
@@ -237,7 +246,7 @@ export default function CounselorPage() {
   const handleConfirmPayment = async () => {
     const rawCardDigits = cardNumber.replace(/\D/g, '');
     if (rawCardDigits.length !== 16) {
-      setCardError("Karta raqami to'liq 16 xonali bo'lishi kerak (Uzcard / Humo / Visa).");
+      setCardError(t('modal.cardError'));
       return;
     }
 
@@ -253,9 +262,7 @@ export default function CounselorPage() {
     if (await isRunningStaleBuild()) {
       announceStaleBuild();
       setIsProcessingPayment(false);
-      setCardError(
-        "Sahifa eski versiyada ishlamoqda. Iltimos, sahifani yangilang (F5) va qaytadan urinib ko'ring."
-      );
+      setCardError(t('staleBuildError'));
       return;
     }
 
@@ -288,6 +295,7 @@ export default function CounselorPage() {
       paymentStatus: 'pending',
       paymentReceipt: receiptRef.trim() || cardNumber.trim() || 'KARTA_OTKAZMASI',
       createdAt: new Date().toISOString(),
+      locale,
     };
 
     // Save to LocalStorage immediately
@@ -339,6 +347,7 @@ export default function CounselorPage() {
         telegram: newBooking.telegram,
         question: newBooking.question,
         meetLink: newBooking.meetLink || meetLink,
+        locale: newBooking.locale,
       }),
     }).catch((err) => console.warn('Email receipt error:', err));
 
@@ -366,6 +375,7 @@ export default function CounselorPage() {
         education: newBooking.education,
         question: newBooking.question,
         meet_link: newBooking.meetLink,
+        locale: newBooking.locale,
       });
 
       if (error) {
@@ -383,9 +393,7 @@ export default function CounselorPage() {
           console.error(err);
         }
         setIsProcessingPayment(false);
-        setCardError(
-          "Qabulni saqlashda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling."
-        );
+        setCardError(t('bookingInsertError'));
         return;
       }
     }
@@ -436,7 +444,7 @@ export default function CounselorPage() {
           href="/"
           className="inline-flex items-center gap-2 text-xs font-bold text-amber-900 hover:text-amber-700 bg-amber-100 px-3.5 py-2 rounded-xl border border-amber-300/60 shadow-xs"
         >
-          <ArrowLeft className="w-4 h-4" /> Barcha Rahnamolar ro'yxatiga qaytish
+          <ArrowLeft className="w-4 h-4" /> {t('backToCatalog')}
         </Link>
       </div>
 
@@ -457,7 +465,7 @@ export default function CounselorPage() {
             <div className="flex items-center justify-center gap-1 mt-2 text-xs font-semibold text-amber-800">
               <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
               <span>{counselor.rating}</span>
-              <span className="text-stone-400 font-normal">({counselor.reviewsCount} ta baho)</span>
+              <span className="text-stone-400 font-normal">({t('reviewsCountSuffix', { count: counselor.reviewsCount })})</span>
             </div>
           </div>
 
@@ -466,26 +474,26 @@ export default function CounselorPage() {
             {counselor.responseTime && (
               <div className="bg-emerald-50/80 p-2 rounded-xl border border-emerald-200 text-emerald-900 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
-                <span>{counselor.responseTime} javob</span>
+                <span>{t('responseTimeSuffix', { time: counselor.responseTime })}</span>
               </div>
             )}
             {counselor.totalSessions && (
               <div className="bg-amber-50/80 p-2 rounded-xl border border-amber-200 text-amber-900 flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                <span>{counselor.totalSessions} ta qabul</span>
+                <span>{t('sessionsCountSuffix', { count: counselor.totalSessions })}</span>
               </div>
             )}
           </div>
 
           <div className="mt-4 pt-4 border-t border-amber-900/10">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Rahnamo haqida</h4>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">{t('aboutHeading')}</h4>
             <p className="text-xs text-stone-600 mt-2 leading-relaxed">{counselor.bio}</p>
           </div>
 
           {/* Student Outcomes */}
           {counselor.outcomes && counselor.outcomes.length > 0 && (
             <div className="mt-4 pt-4 border-t border-amber-900/10">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Natijalar & Yutuqlar</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">{t('outcomesHeading')}</h4>
               <div className="space-y-1.5 mt-2">
                 {counselor.outcomes.map((out) => (
                   <div key={out} className="flex items-center gap-1.5 text-[11px] font-medium text-amber-950 bg-amber-50 p-2 rounded-xl border border-amber-200/60">
@@ -498,7 +506,7 @@ export default function CounselorPage() {
           )}
 
           <div className="mt-4 pt-4 border-t border-amber-900/10">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">Yo'nalishlar</h4>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">{t('specialtiesHeading')}</h4>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {counselor.specialties.map((s) => (
                 <span key={s} className="bg-amber-50 border border-amber-200/70 text-amber-900 text-[10px] font-medium px-2 py-0.5 rounded-md">
@@ -512,7 +520,7 @@ export default function CounselorPage() {
           {counselor.whyWorkWithMe && (
             <div className="mt-4 pt-4 border-t border-amber-900/10">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">
-                Nima uchun men bilan ishlashingiz kerak
+                {t('whyWorkWithMeHeading')}
               </h4>
               <p className="text-xs text-stone-600 mt-2 leading-relaxed">{counselor.whyWorkWithMe}</p>
             </div>
@@ -523,16 +531,16 @@ export default function CounselorPage() {
           <div className="mt-4 pt-4 border-t border-amber-900/10">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70 flex items-center gap-1.5">
               <MessageCircleHeart className="w-3.5 h-3.5 text-amber-700" />
-              Talabalar sharhlari
+              {t('reviewsHeading')}
             </h4>
 
             {reviewsLoading ? (
-              <p className="text-[11px] text-stone-400 mt-2">Yuklanmoqda...</p>
+              <p className="text-[11px] text-stone-400 mt-2">{t('reviewsLoading')}</p>
             ) : reviews.length === 0 ? (
               <div className="mt-2 bg-amber-50/60 border border-amber-900/10 rounded-xl p-3 text-center">
-                <p className="text-[11px] font-semibold text-stone-500">Hozircha sharhlar yo'q.</p>
+                <p className="text-[11px] font-semibold text-stone-500">{t('reviewsEmptyTitle')}</p>
                 <p className="text-[10px] text-stone-400 mt-0.5">
-                  Birinchi bo'lib qabul o'tkazing va fikringizni bildiring!
+                  {t('reviewsEmptyBody')}
                 </p>
               </div>
             ) : (
@@ -569,8 +577,8 @@ export default function CounselorPage() {
                     <CamelIcon className="w-5 h-5 fill-amber-100" />
                   </div>
                   <div>
-                    <h3 className="font-serif font-bold text-lg text-amber-950">Qabul Tasdiqlandi!</h3>
-                    <p className="text-[11px] text-stone-500">Rahnamo rasmiy qabul chiptasi</p>
+                    <h3 className="font-serif font-bold text-lg text-amber-950">{t('ticket.title')}</h3>
+                    <p className="text-[11px] text-stone-500">{t('ticket.subtitle')}</p>
                   </div>
                 </div>
                 <button
@@ -583,23 +591,23 @@ export default function CounselorPage() {
                 </button>
               </div>
 
-              {copied && <p className="text-[11px] text-emerald-600 font-semibold text-right mt-1">Chipta kodi nusxalandi!</p>}
+              {copied && <p className="text-[11px] text-emerald-600 font-semibold text-right mt-1">{t('ticket.copiedNotice')}</p>}
 
               <div className="grid grid-cols-2 gap-4 my-6 text-xs bg-amber-50/60 p-4 rounded-2xl border border-amber-900/10">
                 <div>
-                  <span className="text-stone-500 block">Talaba:</span>
+                  <span className="text-stone-500 block">{t('ticket.studentLabel')}</span>
                   <span className="font-bold text-amber-950 text-sm">{bookingTicket.studentName}</span>
                 </div>
                 <div>
-                  <span className="text-stone-500 block">Rahnamo:</span>
+                  <span className="text-stone-500 block">{t('ticket.counselorLabel')}</span>
                   <span className="font-bold text-amber-950 text-sm">{bookingTicket.counselorName}</span>
                 </div>
                 <div>
-                  <span className="text-stone-500 block">Belgilangan vaqt:</span>
+                  <span className="text-stone-500 block">{t('ticket.slotLabel')}</span>
                   <span className="font-bold text-amber-900">{bookingTicket.slot}</span>
                 </div>
                 <div>
-                  <span className="text-stone-500 block">Sessiya & To'lov:</span>
+                  <span className="text-stone-500 block">{t('ticket.tierPaymentLabel')}</span>
                   <span className="font-bold text-amber-900 uppercase">
                     {bookingTicket.tier} ({bookingTicket.price.toLocaleString()} UZS via {bookingTicket.paymentMethod.toUpperCase()})
                   </span>
@@ -609,10 +617,13 @@ export default function CounselorPage() {
               <div className="space-y-3 bg-emerald-50/80 p-5 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
                 <div className="flex items-center gap-2 font-bold text-emerald-900 text-sm">
                   <CheckCircle2 className="w-4.5 h-4.5 text-emerald-700" />
-                  Qabul chiptangiz tayyor!
+                  {t('ticket.readyTitle')}
                 </div>
                 <p className="leading-relaxed">
-                  Elektron pochtangizga (<span className="font-bold">{bookingTicket.email}</span>) va tizimimizga uchrashuv ma'lumotlari kiritildi.
+                  {t.rich('ticket.emailNotice', {
+                    email: bookingTicket.email,
+                    b: (chunks) => <span className="font-bold">{chunks}</span>,
+                  })}
                 </p>
 
                 {/* The single most important next action -- called out on its
@@ -622,7 +633,7 @@ export default function CounselorPage() {
                 <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3.5 flex items-start gap-2.5">
                   <Send className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
                   <p className="text-amber-950 leading-relaxed">
-                    To&apos;lov skrinshotini{' '}
+                    {t('ticket.sendReceiptPrefix')}{' '}
                     <a
                       href={`https://t.me/rahnamo_admin?start=${bookingTicket.id}`}
                       target="_blank"
@@ -631,7 +642,7 @@ export default function CounselorPage() {
                     >
                       @rahnamo_admin
                     </a>{' '}
-                    ga ushbu qabul raqami bilan yuboring:{' '}
+                    {t('ticket.sendReceiptMiddle')}{' '}
                     <button
                       type="button"
                       onClick={copyBookingId}
@@ -640,7 +651,7 @@ export default function CounselorPage() {
                       <span>{bookingTicket.id}</span>
                       <Copy className="w-3 h-3" />
                     </button>
-                    {copied && <span className="ml-2 text-[11px] text-emerald-600 font-semibold">Nusxalandi!</span>}
+                    {copied && <span className="ml-2 text-[11px] text-emerald-600 font-semibold">{t('ticket.copiedShort')}</span>}
                   </p>
                 </div>
 
@@ -650,7 +661,7 @@ export default function CounselorPage() {
                     the honest state right now, not a placeholder. */}
                 <div className="flex items-center gap-2 text-stone-600 bg-white/70 border border-stone-200 rounded-xl p-3">
                   <Lock className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
-                  <span>Video havola to&apos;lov tasdiqlangandan so&apos;ng shu yerda va emailingizda ko&apos;rinadi.</span>
+                  <span>{t('ticket.videoPendingNotice')}</span>
                 </div>
 
                 <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap gap-2">
@@ -660,13 +671,13 @@ export default function CounselorPage() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
                   >
-                    <span>💬 Telegram'da chipta bildirishnomasini olish</span>
+                    <span>{t('ticket.telegramCta')}</span>
                   </a>
                   <Link
                     href="/my-bookings"
                     className="inline-flex items-center gap-1 bg-emerald-800 hover:bg-emerald-900 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
                   >
-                    <span>Mening Qabullarim sahifasiga o'tish</span>
+                    <span>{t('ticket.viewBookingsCta')}</span>
                   </Link>
                 </div>
               </div>
@@ -676,13 +687,13 @@ export default function CounselorPage() {
                   href="/my-bookings"
                   className="flex-1 text-center bg-amber-900 hover:bg-amber-800 text-amber-50 font-semibold text-xs py-3 rounded-xl transition-all shadow-xs"
                 >
-                  Mening qabullarim bo'limida ko'rish
+                  {t('ticket.viewInMyBookings')}
                 </Link>
                 <Link
                   href="/"
                   className="flex-1 text-center bg-white border border-amber-900/20 text-stone-800 hover:bg-amber-50 font-semibold text-xs py-3 rounded-xl transition-all"
                 >
-                  Bosh sahifaga qaytish
+                  {tCommon('returnHome')}
                 </Link>
               </div>
             </div>
@@ -690,7 +701,7 @@ export default function CounselorPage() {
             <form onSubmit={handleInitiatePayment} className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-6">
               {/* 1. Tier Selection */}
               <div>
-                <h3 className="font-serif text-lg font-bold text-amber-950">1. Qabul turini tanlang</h3>
+                <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step1Heading')}</h3>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <label
                     className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
@@ -708,10 +719,10 @@ export default function CounselorPage() {
                       className="mt-1 accent-amber-800 cursor-pointer"
                     />
                     <div>
-                      <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block">Standart</span>
+                      <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block">{tCommon('standard')}</span>
                       <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{counselor.standardPrice.toLocaleString()} UZS</div>
                       <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-700" /> 20-30 daqiqa yo'l-yo'riq
+                        <Clock className="w-3 h-3 text-amber-700" /> {t('form.tierStandardDuration')}
                       </p>
                     </div>
                   </label>
@@ -732,10 +743,10 @@ export default function CounselorPage() {
                       className="mt-1 accent-amber-800 cursor-pointer"
                     />
                     <div>
-                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">Premium</span>
+                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">{tCommon('premium')}</span>
                       <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{counselor.premiumPrice.toLocaleString()} UZS</div>
                       <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-700" /> 45-60 daqiqa chuqur tahlil
+                        <Clock className="w-3 h-3 text-amber-700" /> {t('form.tierPremiumDuration')}
                       </p>
                     </div>
                   </label>
@@ -745,7 +756,7 @@ export default function CounselorPage() {
               {/* 2. Slot Selection */}
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-serif text-lg font-bold text-amber-950">2. O'zingizga qulay vaqtni tanlang</h3>
+                  <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step2Heading')}</h3>
                   {errors.slot && (
                     <span className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5" /> {errors.slot}
@@ -781,12 +792,12 @@ export default function CounselorPage() {
 
               {/* 3. Validated Intake Questions */}
               <div className="space-y-4 pt-4 border-t border-amber-900/10">
-                <h3 className="font-serif text-lg font-bold text-amber-950">3. Ma'lumotlaringizni to'ldiring</h3>
+                <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step3Heading')}</h3>
 
                 {/* Name */}
                 <div>
                   <label htmlFor="student-fullname" className="text-xs font-semibold text-stone-700 block">
-                    Ism va Familiyangiz *
+                    {t('form.fullNameLabel')}
                   </label>
                   <input
                     id="student-fullname"
@@ -796,7 +807,7 @@ export default function CounselorPage() {
                       setFullName(e.target.value);
                       if (errors.fullName) setErrors({ ...errors, fullName: '' });
                     }}
-                    placeholder="Masalan: Sardor Alimov"
+                    placeholder={t('form.fullNamePlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                       errors.fullName ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                     }`}
@@ -807,7 +818,7 @@ export default function CounselorPage() {
                 {/* Email */}
                 <div>
                   <label htmlFor="student-email" className="text-xs font-semibold text-stone-700 flex items-center gap-1">
-                    <Mail className="w-3 h-3 text-stone-500" /> Elektron pochta (Email) *
+                    <Mail className="w-3 h-3 text-stone-500" /> {t('form.emailLabel')}
                   </label>
                   <input
                     id="student-email"
@@ -817,7 +828,7 @@ export default function CounselorPage() {
                       setEmail(e.target.value);
                       if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
                     }}
-                    placeholder="ism@domain.com"
+                    placeholder={t('form.emailPlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                       errors.email ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                     }`}
@@ -828,14 +839,14 @@ export default function CounselorPage() {
                 {/* Phone */}
                 <div>
                   <label htmlFor="student-phone" className="text-xs font-semibold text-stone-700 flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-stone-500" /> Telefon raqam *
+                    <Phone className="w-3 h-3 text-stone-500" /> {t('form.phoneLabel')}
                   </label>
                   <input
                     id="student-phone"
                     type="text"
                     value={phone}
                     onChange={handlePhoneChange}
-                    placeholder="+998 90 123 45 67"
+                    placeholder={t('form.phonePlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                       errors.phone ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                     }`}
@@ -846,7 +857,7 @@ export default function CounselorPage() {
                 {/* Telegram */}
                 <div>
                   <label htmlFor="student-telegram" className="text-xs font-semibold text-stone-700 block">
-                    Telegram foydalanuvchi nomi (@username) *
+                    {t('form.telegramLabel')}
                   </label>
                   <input
                     id="student-telegram"
@@ -856,7 +867,7 @@ export default function CounselorPage() {
                       setTelegram(e.target.value);
                       if (errors.telegram) setErrors((prev) => ({ ...prev, telegram: '' }));
                     }}
-                    placeholder="@username"
+                    placeholder={t('form.telegramPlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                       errors.telegram ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                     }`}
@@ -867,7 +878,7 @@ export default function CounselorPage() {
                 {/* Current Status */}
                 <div>
                   <label htmlFor="student-education" className="text-xs font-semibold text-stone-700 block">
-                    Hozirgi mashg'ulotingiz / Ta'lim bosqichingiz *
+                    {t('form.educationLabel')}
                   </label>
                   <input
                     id="student-education"
@@ -877,7 +888,7 @@ export default function CounselorPage() {
                       setEducation(e.target.value);
                       if (errors.education) setErrors((prev) => ({ ...prev, education: '' }));
                     }}
-                    placeholder="Masalan: Tibbiyot instituti 4-kurs talabasi"
+                    placeholder={t('form.educationPlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                       errors.education ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                     }`}
@@ -888,7 +899,7 @@ export default function CounselorPage() {
                 {/* Question */}
                 <div>
                   <label htmlFor="student-question" className="text-xs font-semibold text-stone-700 block">
-                    Rahnamoga asosiy savolingiz yoki maqsadingiz nima? *
+                    {t('form.questionLabel')}
                   </label>
                   <textarea
                     id="student-question"
@@ -898,7 +909,7 @@ export default function CounselorPage() {
                       setQuestion(e.target.value);
                       if (errors.question) setErrors((prev) => ({ ...prev, question: '' }));
                     }}
-                    placeholder="Masalan: Germaniyada ordinaturaga topshirish tartibi va klinik tajriba bo'yicha maslahat olmoqchiman."
+                    placeholder={t('form.questionPlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
                       errors.question ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
                     }`}
@@ -910,9 +921,9 @@ export default function CounselorPage() {
               {/* 4. Payment Gateway Selection Step */}
               <div className="space-y-3 pt-4 border-t border-amber-900/10">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-serif text-lg font-bold text-amber-950">4. To'lov usulini tanlang</h3>
+                  <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step4Heading')}</h3>
                   <span className="text-[11px] text-stone-500 flex items-center gap-1">
-                    <Lock className="w-3 h-3 text-emerald-700" /> Xavfsiz to'lov
+                    <Lock className="w-3 h-3 text-emerald-700" /> {t('form.securePayment')}
                   </span>
                 </div>
 
@@ -933,7 +944,7 @@ export default function CounselorPage() {
                       className="sr-only"
                     />
                     <span className="font-bold text-xs text-amber-950 block">Payme</span>
-                    <span className="text-[10px] text-stone-500">Uzcard / Humo</span>
+                    <span className="text-[10px] text-stone-500">{t('form.paymeSubLabel')}</span>
                   </label>
 
                   <label
@@ -952,7 +963,7 @@ export default function CounselorPage() {
                       className="sr-only"
                     />
                     <span className="font-bold text-xs text-amber-950 block">Click</span>
-                    <span className="text-[10px] text-stone-500">Click Up / Karta</span>
+                    <span className="text-[10px] text-stone-500">{t('form.clickSubLabel')}</span>
                   </label>
 
                   <label
@@ -971,7 +982,7 @@ export default function CounselorPage() {
                       className="sr-only"
                     />
                     <span className="font-bold text-xs text-amber-950 block">Uzum Bank</span>
-                    <span className="text-[10px] text-stone-500">Uzum kartasi</span>
+                    <span className="text-[10px] text-stone-500">{t('form.uzumSubLabel')}</span>
                   </label>
                 </div>
               </div>
@@ -980,7 +991,9 @@ export default function CounselorPage() {
                 type="submit"
                 className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
               >
-                To'lovni amalga oshirish ({selectedTier === 'standard' ? counselor.standardPrice.toLocaleString() : counselor.premiumPrice.toLocaleString()} UZS)
+                {t('form.submit', {
+                  price: (selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString(),
+                })}
               </button>
             </form>
           )}
@@ -1004,29 +1017,29 @@ export default function CounselorPage() {
                 {getProviderName()[0]}
               </div>
               <div>
-                <h3 className="font-serif font-bold text-base text-amber-950">{getProviderName()} to'lov tizimi</h3>
-                <p className="text-xs text-stone-500">Xavfsiz to'lov shlyuziga ulanish</p>
+                <h3 className="font-serif font-bold text-base text-amber-950">{t('modal.providerSystem', { provider: getProviderName() })}</h3>
+                <p className="text-xs text-stone-500">{t('modal.secureGateway')}</p>
               </div>
             </div>
 
             <div className="my-5 p-4 bg-amber-50/70 rounded-2xl border border-amber-900/10 space-y-1.5 text-xs">
               <div className="flex justify-between text-stone-600">
-                <span>Xizmat:</span>
-                <span className="font-semibold text-stone-900">{counselor.fullName} (1-ga-1 sessiya)</span>
+                <span>{t('modal.serviceLabel')}</span>
+                <span className="font-semibold text-stone-900">{t('modal.serviceValue', { name: counselor.fullName })}</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>Vaqt:</span>
+                <span>{t('modal.timeLabel')}</span>
                 <span className="font-semibold text-stone-900">{selectedSlot}</span>
               </div>
               <div className="flex justify-between text-amber-950 font-bold text-sm pt-2 border-t border-amber-900/10">
-                <span>Jami to'lov:</span>
+                <span>{t('modal.totalLabel')}</span>
                 <span>{(selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString()} UZS</span>
               </div>
             </div>
 
             {/* Central Platform Payment Box */}
             <div className="my-4 p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
-              <span className="text-[10px] uppercase font-bold text-amber-900 block">Rahnamo Markaziy Platforma Kartasi (Uzcard / Humo)</span>
+              <span className="text-[10px] uppercase font-bold text-amber-900 block">{t('modal.cardBoxLabel')}</span>
               <div className="flex items-center justify-between">
                 <span className="font-mono font-extrabold text-sm text-amber-950">8600 5555 4444 3333</span>
                 <button
@@ -1040,39 +1053,39 @@ export default function CounselorPage() {
                   }}
                   className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer"
                 >
-                  {copiedCard ? 'Nusxalandi! ✓' : 'Nusxalash'}
+                  {copiedCard ? t('modal.copiedButton') : t('modal.copyButton')}
                 </button>
               </div>
-              <span className="text-[10px] text-stone-600 block">Egasining ismi: Rahnamo Platform Inc.</span>
+              <span className="text-[10px] text-stone-600 block">{t('modal.cardOwnerLabel')}</span>
             </div>
 
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-stone-700 block mb-1">
-                  To'lov Cheki / Tranzaksiya Raqami (Chek ID)
+                  {t('modal.receiptLabel')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Masalan: 89420194 yoki Karta oxirgi 4 raqami"
+                  placeholder={t('modal.receiptPlaceholder')}
                   value={receiptRef}
                   onChange={(e) => setReceiptRef(e.target.value)}
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
                 />
                 <span className="text-[10px] text-stone-500 block mt-1">
-                  Payme / Click chekidagi ID raqamini kiriting. Administratorimiz imkon qadar tezroq tasdiqlaydi.
+                  {t('modal.receiptHint')}
                 </span>
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-stone-700 block mb-1">
-                  Sizning Karta Raqamingiz (Tekshirish uchun)
+                  {t('modal.cardNumberLabel')}
                 </label>
                 <div className="relative">
                   <CreditCard className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
                   <input
                     type="text"
                     maxLength={19}
-                    placeholder="8600 0000 0000 0000"
+                    placeholder={t('modal.cardNumberPlaceholder')}
                     value={cardNumber}
                     onChange={handleCardChange}
                     className={`w-full pl-9 pr-3 py-2.5 bg-stone-50 border rounded-xl text-xs outline-none transition-all ${
@@ -1092,12 +1105,12 @@ export default function CounselorPage() {
                 {isProcessingPayment ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-amber-200" />
-                    <span>To'lov amalga oshirilmoqda...</span>
+                    <span>{t('modal.processing')}</span>
                   </>
                 ) : (
                   <>
                     <Lock className="w-3.5 h-3.5" />
-                    <span>To'lovni tasdiqlash</span>
+                    <span>{t('modal.confirm')}</span>
                   </>
                 )}
               </button>

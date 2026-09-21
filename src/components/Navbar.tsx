@@ -2,18 +2,22 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import RahnamoLogo from '@/components/RahnamoLogo';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { Menu, X, CalendarCheck, UserCheck, Compass, Sparkles } from 'lucide-react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslations('common');
+  const tNav = useTranslations('navbar');
 
   return (
     <header className="sticky top-0 z-40 border-b bg-[#FAF6EE]/90 backdrop-blur-md border-amber-900/15">
       {/* Top Banner Notice */}
       <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 text-amber-100 text-[11px] font-medium py-1.5 px-4 text-center flex items-center justify-center gap-2 shadow-inner">
         <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" />
-        <span>Buyuk Ipak Yo&apos;li karyera konsultatsiyasi va 1-ga-1 mentorlik platformasi</span>
+        <span>{tNav('banner')}</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -28,38 +32,39 @@ export default function Navbar() {
             href="/"
             className="transition-colors flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60"
           >
-            <Compass className="w-4 h-4 text-amber-800" /> Rahnamolar Katalogi
+            <Compass className="w-4 h-4 text-amber-800" /> {t('catalog')}
           </Link>
           <Link
             href="/#how-it-works"
             className="transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60"
           >
-            Qanday ishlaydi?
+            {t('howItWorks')}
           </Link>
           <Link href="/forum" className="transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60">
-            Forum
+            {t('forum')}
           </Link>
           <Link
             href="/my-bookings"
             className="flex items-center gap-1.5 transition-all bg-amber-100/80 hover:bg-amber-200/80 text-amber-950 px-3.5 py-2 rounded-xl border border-amber-300/80 shadow-2xs"
           >
             <CalendarCheck className="w-4 h-4 text-amber-800" />
-            Mening qabullarim
+            {t('myBookings')}
           </Link>
           <Link
             href="/become-counselor"
             className="flex items-center gap-1.5 transition-all bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 px-4 py-2 rounded-xl shadow-sm border border-amber-700/50"
           >
             <UserCheck className="w-4 h-4" />
-            Rahnamo bo&apos;lish
+            {t('becomeCounselor')}
           </Link>
+          <LanguageSwitcher />
         </nav>
 
         {/* Mobile Hamburger */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="md:hidden p-2 focus:outline-none rounded-xl transition-colors text-amber-950 hover:text-amber-700 bg-amber-100/60"
-          aria-label="Toggle navigation menu"
+          aria-label={tNav('toggleMenuAriaLabel')}
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -73,36 +78,39 @@ export default function Navbar() {
             onClick={() => setIsOpen(false)}
             className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
           >
-            Rahnamolar katalogi
+            {t('catalog')}
           </Link>
           <Link
             href="/#how-it-works"
             onClick={() => setIsOpen(false)}
             className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
           >
-            Qanday ishlaydi?
+            {t('howItWorks')}
           </Link>
           <Link
             href="/forum"
             onClick={() => setIsOpen(false)}
             className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
           >
-            Forum
+            {t('forum')}
           </Link>
           <Link
             href="/my-bookings"
             onClick={() => setIsOpen(false)}
             className="block text-sm font-semibold text-amber-950 px-3 py-2.5 bg-amber-100/80 rounded-xl border border-amber-300/60"
           >
-            Mening qabullarim
+            {t('myBookings')}
           </Link>
           <Link
             href="/become-counselor"
             onClick={() => setIsOpen(false)}
             className="block text-center text-xs font-bold text-amber-50 bg-amber-900 px-4 py-3 rounded-xl shadow-xs"
           >
-            Rahnamo bo&apos;lib qo&apos;shilish
+            {t('becomeCounselorJoin')}
           </Link>
+          <div className="pt-1">
+            <LanguageSwitcher className="w-full justify-center" />
+          </div>
         </div>
       )}
     </header>

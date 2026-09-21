@@ -1,12 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Star, ShieldCheck, ArrowRight, CheckCircle2, Zap, Building2 } from 'lucide-react';
 import { Counselor } from '@/types';
 import { useTilt } from '@/hooks/useTilt';
 
 export default function CounselorCard({ counselor }: { counselor: Counselor }) {
   const { ref, tiltProps } = useTilt<HTMLDivElement>();
+  const t = useTranslations('counselorCard');
+  const tCommon = useTranslations('common');
 
   return (
     <div
@@ -28,13 +31,13 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
         <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-amber-900/10">
           <div className="flex items-center gap-1.5 bg-amber-100/70 text-amber-950 text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-amber-300/50">
             <ShieldCheck className="w-3.5 h-3.5 text-amber-700 fill-amber-100" />
-            <span>Tasdiqlangan Rahnamo</span>
+            <span>{tCommon('verifiedBadge')}</span>
           </div>
 
           {counselor.responseTime && (
             <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
               <Zap className="w-3 h-3 text-emerald-600 fill-emerald-600" />
-              <span>Javob: {counselor.responseTime}</span>
+              <span>{tCommon('responseTimeLabel', { time: counselor.responseTime })}</span>
             </div>
           )}
         </div>
@@ -70,7 +73,7 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
               </div>
               {counselor.totalSessions && (
                 <span className="text-[10px] text-stone-500 font-normal truncate">
-                  • {counselor.totalSessions} ta qabul
+                  • {t('sessionsCount', { count: counselor.totalSessions })}
                 </span>
               )}
             </div>
@@ -114,10 +117,10 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
           how tall the content above ends up being. */}
       <div className="relative mt-auto pt-4 border-t border-amber-900/10 flex items-center justify-between">
         <div>
-          <span className="text-[10px] uppercase font-bold text-stone-400 block">Sessiya narxi</span>
+          <span className="text-[10px] uppercase font-bold text-stone-400 block">{t('priceLabel')}</span>
           <div className="text-sm font-serif font-extrabold text-amber-950">
             {counselor.standardPrice.toLocaleString()}{' '}
-            <span className="text-[10px] font-normal text-stone-500">UZS / 30m</span>
+            <span className="text-[10px] font-normal text-stone-500">{t('priceUnit')}</span>
           </div>
         </div>
 
@@ -125,7 +128,7 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
           href={`/counselors/${counselor.id}`}
           className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition-all group-hover:gap-2"
         >
-          <span>Vaqt tanlash</span>
+          <span>{t('selectTime')}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>

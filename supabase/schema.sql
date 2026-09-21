@@ -178,6 +178,14 @@ CREATE TABLE IF NOT EXISTS public.survey_responses (
 -- affects a fresh install). Safe to run repeatedly (IF NOT EXISTS).
 ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'payme' CHECK (payment_method IN ('payme', 'click', 'uzum'));
 
+-- Captured once, client-side, at the moment the student submits the
+-- booking (their own browser's locale at that instant) -- never re-derived
+-- later from whichever session's cookie happens to trigger a follow-up
+-- email. The payment-confirmed email is sent from the ADMIN's own browser
+-- session, often much later, so reading a cookie at send-time would pick
+-- the ADMIN's language, not the student's.
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS locale TEXT NOT NULL DEFAULT 'uz';
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.counselors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
