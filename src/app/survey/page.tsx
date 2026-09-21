@@ -41,11 +41,11 @@ const INTEREST_LEVEL_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const PRICE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Under 10,000', label: "10,000 so'mdan kam" },
-  { value: '10,000-30,000', label: "10,000 - 30,000 so'm" },
-  { value: '30,000-50,000', label: "30,000 - 50,000 so'm" },
-  { value: '50,000-100,000', label: "50,000 - 100,000 so'm" },
-  { value: '100,000+', label: "100,000 so'mdan ko'p" },
+  { value: 'Under 30,000', label: "30,000 so'mgacha" },
+  { value: '30,000-100,000', label: "30,000 - 100,000 so'm" },
+  { value: '100,000-300,000', label: "100,000 - 300,000 so'm" },
+  { value: '300,000-600,000', label: "300,000 - 600,000 so'm" },
+  { value: '600,000+', label: "600,000 so'mdan yuqori" },
 ];
 
 const FORMAT_OPTIONS: { value: string; label: string }[] = [
