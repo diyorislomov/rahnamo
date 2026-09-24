@@ -1,5 +1,47 @@
 -- Rahnamo Supabase Database Schema
 
+-- =============================================================================
+-- STANDING RULE -- read this before adding any new CREATE TABLE below.
+--
+-- Supabase stops auto-granting Data API access to new tables in the public
+-- schema on 2026-10-30 (rolling out to all existing projects that day --
+-- confirmed directly against Supabase's own changelog, "Breaking Change:
+-- Tables not exposed to Data and GraphQL API automatically", not just taken
+-- on faith from the general announcement). Today, creating a table
+-- automatically grants SELECT/INSERT/UPDATE/DELETE to anon, authenticated,
+-- and service_role; after the cutover, a table created with no explicit
+-- GRANT is invisible to PostgREST/supabase-js -- "permission denied" no
+-- matter how correct its RLS policies are, since GRANT and RLS are two
+-- separate authorization layers (GRANT decides if a role can touch the
+-- table at all; RLS decides which rows it sees once it's in).
+--
+-- Confirmed this needs NO action on any table already in this file: per
+-- the same changelog, "Existing tables are not affected in your project,
+-- they keep their current grants and stay reachable." This only bites a
+-- CREATE TABLE that runs on or after 2026-10-30 with no explicit grant --
+-- i.e. every table added to this file from now on.
+--
+-- So: every future CREATE TABLE in this file must be immediately followed
+-- by explicit grants, scoped to whichever roles that table actually needs
+-- -- e.g. a public read-only table only needs `anon` SELECT (see the
+-- existing bookings/counselors RLS policies below for that exact
+-- read/write split), not a blanket grant of all four privileges to every
+-- role. Template:
+--
+--   GRANT SELECT ON public.your_table TO anon;
+--   GRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO authenticated;
+--   GRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO service_role;
+--
+-- This project has no Supabase Auth login anywhere today -- every table
+-- below is read/written entirely as `anon`, gated by RLS policies, not by
+-- an `authenticated` session -- so in practice a new table here will
+-- usually only need an `anon` grant matching whatever RLS policies it
+-- gets (see each table's own POLICY comments for the actual public
+-- read/write shape to mirror). The `authenticated`/`service_role` lines
+-- above are included for completeness in case that ever changes, not
+-- because they're exercised by any table in this file yet.
+-- =============================================================================
+
 -- 1. Counselors Table
 CREATE TABLE IF NOT EXISTS public.counselors (
     id TEXT PRIMARY KEY,
