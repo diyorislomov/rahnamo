@@ -131,6 +131,11 @@
       "emailPlaceholder": "name@domain.com",
       "standardPriceLabel": "Standard session price (UZS)",
       "premiumPriceLabel": "Premium session price (UZS)",
+      "pricePerQuestionLabel": "Price per question (optional, UZS)",
+      "pricePerQuestionPlaceholder": "E.g. 15000",
+      "softCapLabel": "Question cap (optional)",
+      "softCapPlaceholder": "E.g. 10",
+      "pricePerQuestionHint": "Leave this blank if you don't want to offer \"Text Q&A\".",
       "submitting": "Submitting application...",
       "submit": "Submit as a Rahnamo"
     },
@@ -148,6 +153,8 @@
   "counselorProfile": {
     "notFound": "Rahnamo not found.",
     "backToCatalog": "Back to all Rahnamo",
+    "videoModeLabel": "Video consultation",
+    "textQaModeLabel": "Text Q&A",
     "reviewsCountSuffix": "{count} ratings",
     "responseTimeSuffix": "Response: {time}",
     "sessionsCountSuffix": "{count} sessions",
@@ -251,6 +258,8 @@
     "paymentPending": "Payment being verified",
     "contactLabel": "Contact: {telegram}",
     "joinVideoRoom": "Join video room",
+    "textQaLabel": "Text Q&A",
+    "goToThread": "Go to conversation",
     "videoLocked": "The video link will appear once payment is confirmed",
     "review": {
       "ratingError": "Please choose a rating from 1 to 5.",
@@ -310,6 +319,54 @@
       "validationError": "Choose a Rahnamo and write your answer (at least 5 characters).",
       "invalidPasscode": "Incorrect Rahnamo code. Check the code from your Rahnamo partnership agreement.",
       "saveError": "There was an error saving the answer. Please try again."
+    }
+  },
+  "textQa": {
+    "start": {
+      "loading": "Loading...",
+      "priceLabel": "Price per question",
+      "capLabel": "Question cap",
+      "noCapNote": "No cap — you can ask as many questions as you like",
+      "ageCheckboxLabel": "I confirm that I am over 18 years old",
+      "ageRequiredError": "You must confirm your age to continue.",
+      "beginButton": "Start the conversation",
+      "startFailed": "There was an error starting the conversation. Please try again.",
+      "authFailed": "There was an error confirming you (anonymous sign-in failed). Please try again."
+    },
+    "thread": {
+      "questionsLabel": "Questions: {used}",
+      "questionsLabelWithCap": "Questions: {used} / {cap}",
+      "totalLabel": "Total: {amount} UZS",
+      "askPlaceholder": "Write your question...",
+      "askButton": "Send",
+      "askFailedEmpty": "Enter a question.",
+      "askFailedGeneric": "There was an error sending your question. Please try again.",
+      "awaitingPaymentNotice": "You've reached the question cap. Please make a payment to continue.",
+      "closedNotice": "This conversation is closed. Start a new one to ask more questions.",
+      "startNewButton": "Start a new conversation",
+      "studentLabel": "You",
+      "counselorLabel": "Rahnamo",
+      "noMessagesYet": "No messages yet. Write your first question!"
+    },
+    "payment": {
+      "cardBoxLabel": "Rahnamo Central Platform Card (Uzcard / Humo)",
+      "cardOwnerLabel": "Cardholder name: Rahnamo Platform Inc.",
+      "copyButton": "Copy",
+      "copiedButton": "Copied! ✓",
+      "receiptLabel": "Payment Receipt / Transaction Number (Receipt ID)",
+      "receiptPlaceholder": "E.g. 89420194",
+      "submitButton": "I've paid",
+      "submittedNotice": "Thank you! Our administrator is verifying the payment."
+    },
+    "inbox": {
+      "title": "Reply as a Rahnamo",
+      "passcodeLabel": "Rahnamo secret code",
+      "unlockButton": "Unlock",
+      "invalidPasscode": "Incorrect code.",
+      "noThreads": "No active conversations yet.",
+      "replyPlaceholder": "Write your reply...",
+      "replyButton": "Send",
+      "replyFailed": "There was an error sending the reply."
     }
   },
   "emails": {
@@ -428,6 +485,25 @@
       "premiumPriceLabel": "Premium price",
       "ratingLabel": "Rating: {rating} ({count} reviews)",
       "joinedLabel": "Joined: {date}"
+    },
+    "threads": {
+      "tabLabel": "Text Q&A ({count})",
+      "emptyTitle": "No text Q&A threads yet",
+      "emptyBody": "This will show up here once a student starts a text consultation with a Rahnamo.",
+      "colStudent": "Student",
+      "colCounselor": "Rahnamo",
+      "colQuestions": "Questions",
+      "colTotal": "Total",
+      "colStatus": "Status",
+      "colActions": "Actions",
+      "statusActive": "ACTIVE",
+      "statusAwaitingPayment": "AWAITING PAYMENT",
+      "statusClosed": "CLOSED",
+      "flagButton": "Flag for payment",
+      "confirmPaymentButton": "Confirm payment",
+      "flagFailed": "There was an error flagging this for payment. Please try again.",
+      "confirmFailed": "There was an error confirming payment. Please try again.",
+      "networkError": "A network error occurred. Please try again."
     }
   },
   "home": {

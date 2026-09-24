@@ -41,6 +41,12 @@ export default function BecomeCounselorPage() {
   const [phone, setPhone] = useState('+998 ');
   const [standardPrice, setStandardPrice] = useState('45000');
   const [premiumPrice, setPremiumPrice] = useState('130000');
+  // Both optional and empty by default -- a mentor who leaves these blank
+  // simply doesn't offer "Matnli maslahat" at all (NULL price_per_question
+  // on the resulting counselor row, checked by a DB trigger before any
+  // thread can ever be created against them).
+  const [pricePerQuestion, setPricePerQuestion] = useState('');
+  const [softCap, setSoftCap] = useState('');
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
@@ -122,6 +128,8 @@ export default function BecomeCounselorPage() {
       phone,
       expected_standard_price: parseInt(standardPrice, 10) || 45000,
       expected_premium_price: parseInt(premiumPrice, 10) || 130000,
+      expected_price_per_question: pricePerQuestion.trim() ? parseInt(pricePerQuestion, 10) || null : null,
+      expected_soft_cap: softCap.trim() ? parseInt(softCap, 10) || null : null,
     };
 
     // Save locally (fallback store, independent of the outcome below)
@@ -496,6 +504,35 @@ export default function BecomeCounselorPage() {
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-stone-700 block">{t('form.pricePerQuestionLabel')}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={pricePerQuestion}
+                    onChange={(e) => setPricePerQuestion(e.target.value)}
+                    placeholder={t('form.pricePerQuestionPlaceholder')}
+                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-stone-700 block">{t('form.softCapLabel')}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={softCap}
+                    onChange={(e) => setSoftCap(e.target.value)}
+                    placeholder={t('form.softCapPlaceholder')}
+                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-stone-400 -mt-2">
+                {t('form.pricePerQuestionHint')}
+              </p>
 
               {submitError && (
                 <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-300 rounded-xl px-3.5 py-2.5">

@@ -10,7 +10,7 @@ import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { mapCounselorRow } from '@/lib/counselors';
 import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users } from 'lucide-react';
+import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users, MessagesSquare, Flag } from 'lucide-react';
 
 interface CounselorApp {
   id?: string;
@@ -31,7 +31,25 @@ interface CounselorApp {
   linkedin?: string;
   expected_standard_price: number;
   expected_premium_price: number;
+  expected_price_per_question?: number | null;
+  expected_soft_cap?: number | null;
   status?: 'pending' | 'approved' | 'rejected';
+}
+
+interface AdminThread {
+  id: string;
+  booking_id: string;
+  counselor_id: string;
+  price_per_question: number;
+  soft_cap: number | null;
+  questions_used: number;
+  total_owed: number;
+  payment_status: 'active' | 'awaiting_payment' | 'closed';
+  payment_receipt: string | null;
+  created_at: string;
+  closed_at: string | null;
+  booking: { student_name: string; email: string; telegram: string } | null;
+  counselor: { full_name: string; headline: string } | null;
 }
 
 // Shared by reject/approve/delete below -- all three need to patch the same
@@ -58,13 +76,16 @@ export default function AdminDashboardPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum' | 'survey' | 'counselors'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum' | 'survey' | 'counselors' | 'threads'>('bookings');
   const [bookings, setBookings] = useState<BookingTicketData[]>([]);
   const [applications, setApplications] = useState<CounselorApp[]>([]);
   const [forumQuestions, setForumQuestions] = useState<ForumQuestion[]>([]);
   const [forumAnswers, setForumAnswers] = useState<ForumAnswer[]>([]);
   const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [counselors, setCounselors] = useState<Counselor[]>([]);
+  const [threads, setThreads] = useState<AdminThread[]>([]);
+  const [threadActionId, setThreadActionId] = useState<string | null>(null);
+  const [threadActionErrors, setThreadActionErrors] = useState<{ [id: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -191,6 +212,20 @@ export default function AdminDashboardPage() {
           .select('*')
           .order('joined_at', { ascending: false });
         setCounselors((supaCounselors || []).map(mapCounselorRow));
+
+        // 6. Text Q&A threads -- goes through the admin API route, not a
+        // direct anon-key query, since anon has no grant on
+        // question_threads.payment_status at all (by design -- see
+        // schema.sql). This route uses service_role behind the admin
+        // session cookie instead.
+        try {
+          const threadsRes = await fetch('/api/admin/threads');
+          const threadsData = await threadsRes.json();
+          setThreads(threadsData.success ? threadsData.threads : []);
+        } catch (err) {
+          console.warn('Threads fetch error:', err);
+          setThreads([]);
+        }
       } catch (err) {
         console.warn('Supabase fetch error:', err);
         setBookings(localBookings);
@@ -395,6 +430,46 @@ export default function AdminDashboardPage() {
     setBookingActionId(null);
   };
 
+  // Both actions go through /api/admin/threads (service_role behind the
+  // admin session cookie) -- anon has no grant on payment_status, so a
+  // direct supabase.from('question_threads').update(...) the way bookings
+  // does it would just silently fail RLS the same way admin's "confirm
+  // payment" button used to before that got a real UPDATE policy.
+  const handleThreadAction = async (threadId: string, action: 'flag' | 'confirm_payment') => {
+    setThreadActionId(threadId);
+    setThreadActionErrors((prev) => ({ ...prev, [threadId]: '' }));
+
+    try {
+      const res = await fetch('/api/admin/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId, action }),
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        console.error('[THREAD_ACTION_FAILED]', action, threadId, data.error);
+        setThreadActionErrors((prev) => ({
+          ...prev,
+          [threadId]: action === 'flag' ? t('threads.flagFailed') : t('threads.confirmFailed'),
+        }));
+        setThreadActionId(null);
+        return;
+      }
+
+      setThreads((prev) =>
+        prev.map((th) => (th.id === threadId ? { ...th, payment_status: data.thread.payment_status } : th))
+      );
+    } catch (err) {
+      console.error('[THREAD_ACTION_FAILED]', action, threadId, err);
+      setThreadActionErrors((prev) => ({
+        ...prev,
+        [threadId]: t('threads.networkError'),
+      }));
+    }
+    setThreadActionId(null);
+  };
+
   const handleApproveApplication = (app: CounselorApp) => {
     const appKey = app.id || app.email;
     setApplications((prev) =>
@@ -432,6 +507,8 @@ export default function AdminDashboardPage() {
         // is a follow-up feature, not this one.
         available_slots: ['Dushanba, 19:00 - 19:30', 'Chorshanba, 19:00 - 19:30', 'Shanba, 12:00 - 12:30'],
         company: app.company || null,
+        price_per_question: app.expected_price_per_question || null,
+        soft_cap: app.expected_soft_cap || null,
       })
     )
       .then(({ error }) => {
@@ -649,6 +726,18 @@ export default function AdminDashboardPage() {
           >
             <Users className="w-4 h-4" />
             <span>{t('tabs.counselors', { count: counselors.length })}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('threads')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'threads'
+                ? 'bg-amber-900 text-amber-50 shadow-sm'
+                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
+            }`}
+          >
+            <MessagesSquare className="w-4 h-4" />
+            <span>{t('threads.tabLabel', { count: threads.length })}</span>
           </button>
         </div>
 
@@ -1073,6 +1162,116 @@ export default function AdminDashboardPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 6: Text Q&A threads. The only actions here go through
+            /api/admin/threads (service_role behind this page's own admin
+            session) -- see handleThreadAction above for why a direct
+            supabase.from(...).update() the way bookings does it wouldn't
+            work for this table. */}
+        {activeTab === 'threads' && (
+          <div className="space-y-6">
+            {threads.length === 0 ? (
+              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
+                <MessagesSquare className="w-12 h-12 text-stone-400 mx-auto mb-3" />
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('threads.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('threads.emptyBody')}</p>
+              </div>
+            ) : (
+              <div className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-amber-50/80 border-b border-amber-900/10 text-amber-950 font-serif font-bold">
+                        <th className="p-4">{t('threads.colStudent')}</th>
+                        <th className="p-4">{t('threads.colCounselor')}</th>
+                        <th className="p-4">{t('threads.colQuestions')}</th>
+                        <th className="p-4">{t('threads.colTotal')}</th>
+                        <th className="p-4">{t('threads.colStatus')}</th>
+                        <th className="p-4">{t('threads.colActions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-900/10">
+                      {threads.map((th) => (
+                        <tr key={th.id} className="hover:bg-amber-50/30 transition-colors">
+                          <td className="p-4">
+                            <div className="font-bold text-stone-900">{th.booking?.student_name || '—'}</div>
+                            <div className="text-[11px] text-stone-500">{th.booking?.email}</div>
+                            <div className="text-[10px] text-amber-800 font-semibold">{th.booking?.telegram}</div>
+                          </td>
+                          <td className="p-4">
+                            <div className="font-bold text-amber-950">{th.counselor?.full_name || th.counselor_id}</div>
+                            <div className="text-[10px] text-stone-500 line-clamp-1">{th.counselor?.headline}</div>
+                          </td>
+                          <td className="p-4 font-mono">
+                            {th.questions_used}
+                            {th.soft_cap ? ` / ${th.soft_cap}` : ''}
+                          </td>
+                          <td className="p-4 font-mono font-bold text-amber-900">
+                            {th.total_owed.toLocaleString()} UZS
+                          </td>
+                          <td className="p-4">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                th.payment_status === 'closed'
+                                  ? 'bg-stone-200 text-stone-700 border border-stone-300'
+                                  : th.payment_status === 'awaiting_payment'
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                  : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              }`}
+                            >
+                              {th.payment_status === 'closed' ? (
+                                <CheckCircle className="w-3 h-3" />
+                              ) : th.payment_status === 'awaiting_payment' ? (
+                                <Clock className="w-3 h-3" />
+                              ) : (
+                                <MessagesSquare className="w-3 h-3" />
+                              )}
+                              {th.payment_status === 'closed'
+                                ? t('threads.statusClosed')
+                                : th.payment_status === 'awaiting_payment'
+                                ? t('threads.statusAwaitingPayment')
+                                : t('threads.statusActive')}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="space-y-1.5">
+                              {threadActionErrors[th.id] && (
+                                <div className="flex items-start gap-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-300 rounded-lg px-2 py-1.5 max-w-[200px]">
+                                  <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                  <span>{threadActionErrors[th.id]}</span>
+                                </div>
+                              )}
+                              {th.payment_status === 'active' && !th.soft_cap && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleThreadAction(th.id, 'flag')}
+                                  disabled={threadActionId === th.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-700 hover:bg-amber-800 text-amber-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                                >
+                                  <Flag className="w-3 h-3" /> {t('threads.flagButton')}
+                                </button>
+                              )}
+                              {th.payment_status === 'awaiting_payment' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleThreadAction(th.id, 'confirm_payment')}
+                                  disabled={threadActionId === th.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                                >
+                                  <CheckCircle className="w-3 h-3" /> {t('threads.confirmPaymentButton')}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

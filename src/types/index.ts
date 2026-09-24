@@ -1,5 +1,7 @@
-export type Tier = 'standard' | 'premium';
+export type Tier = 'standard' | 'premium' | 'text_qa';
 export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
+export type ThreadPaymentStatus = 'active' | 'awaiting_payment' | 'closed';
+export type ThreadSenderRole = 'student' | 'counselor';
 
 export interface Counselor {
   id: string;
@@ -20,6 +22,34 @@ export interface Counselor {
   whyWorkWithMe?: string;
   joinedAt?: string;
   commissionFreeUntil?: string;
+  // Null means this mentor doesn't offer "Matnli maslahat" at all.
+  pricePerQuestion?: number | null;
+  softCap?: number | null;
+}
+
+export interface QuestionThread {
+  id: string;
+  bookingId: string;
+  counselorId: string;
+  studentAuthId: string;
+  deviceId: string;
+  pricePerQuestion: number;
+  softCap: number | null;
+  questionsUsed: number;
+  totalOwed: number;
+  paymentStatus: ThreadPaymentStatus;
+  paymentReceipt?: string | null;
+  ageConfirmedAt: string;
+  createdAt: string;
+  closedAt?: string | null;
+}
+
+export interface ThreadMessage {
+  id: string;
+  threadId: string;
+  senderRole: ThreadSenderRole;
+  body: string;
+  createdAt: string;
 }
 
 export interface Review {

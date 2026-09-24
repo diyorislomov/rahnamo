@@ -17,6 +17,8 @@ import Link from 'next/link';
 import { generateMeetLink } from '@/lib/meeting';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
+import TextQaPanel from '@/components/TextQaPanel';
+import MentorInboxPanel from '@/components/MentorInboxPanel';
 
 type PaymentMethod = 'payme' | 'click' | 'uzum';
 
@@ -125,6 +127,10 @@ export default function CounselorPage() {
   }, [counselor, reviewsLoading]);
 
   const [selectedTier, setSelectedTier] = useState<Tier>('standard');
+  // Only meaningful when the counselor actually offers text Q&A
+  // (pricePerQuestion set) -- switches the whole right column between the
+  // existing video booking flow and TextQaPanel below.
+  const [viewMode, setViewMode] = useState<'video' | 'text_qa'>('video');
   // Derived, not stateful -- so it stays correct if the live Supabase fetch
   // above changes counselor.availableSlots after this component already
   // mounted (e.g. the mock had no match but the live row does).
@@ -568,7 +574,32 @@ export default function CounselorPage() {
 
         {/* Right Column: Form or Digital Ticket */}
         <div className="md:col-span-2">
-          {bookingTicket ? (
+          {counselor.pricePerQuestion != null && !bookingTicket && (
+            <div className="flex gap-2 mb-4 bg-amber-100/60 p-1.5 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => setViewMode('video')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'video' ? 'bg-amber-900 text-amber-50 shadow-xs' : 'text-stone-700 hover:text-amber-950'
+                }`}
+              >
+                {t('videoModeLabel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('text_qa')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'text_qa' ? 'bg-amber-900 text-amber-50 shadow-xs' : 'text-stone-700 hover:text-amber-950'
+                }`}
+              >
+                {t('textQaModeLabel')}
+              </button>
+            </div>
+          )}
+
+          {!bookingTicket && viewMode === 'text_qa' && counselor.pricePerQuestion != null ? (
+            <TextQaPanel counselor={counselor} />
+          ) : bookingTicket ? (
             /* Digital Rahnamo Ticket */
             <div className="bg-white/95 rounded-3xl border-2 border-amber-900/20 p-6 md:p-8 shadow-md">
               <div className="flex items-center justify-between border-b border-dashed border-amber-900/20 pb-4">
@@ -1116,6 +1147,12 @@ export default function CounselorPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {counselor.pricePerQuestion != null && (
+        <div className="max-w-4xl mx-auto px-6 mb-16">
+          <MentorInboxPanel counselor={counselor} />
         </div>
       )}
 

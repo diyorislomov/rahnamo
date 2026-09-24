@@ -18,6 +18,8 @@ interface CounselorRow {
   why_work_with_me: string | null;
   joined_at: string | null;
   commission_free_until: string | null;
+  price_per_question: number | null;
+  soft_cap: number | null;
 }
 
 // Live Supabase rows never carry responseTime/totalSessions/outcomes -- those
@@ -40,5 +42,7 @@ export function mapCounselorRow(r: CounselorRow): Counselor {
     whyWorkWithMe: r.why_work_with_me || undefined,
     joinedAt: r.joined_at || undefined,
     commissionFreeUntil: r.commission_free_until || undefined,
+    pricePerQuestion: r.price_per_question,
+    softCap: r.soft_cap,
   };
 }

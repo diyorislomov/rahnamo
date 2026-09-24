@@ -131,6 +131,11 @@
       "emailPlaceholder": "ism@domain.com",
       "standardPriceLabel": "Standart sessiya narxi (UZS)",
       "premiumPriceLabel": "Premium sessiya narxi (UZS)",
+      "pricePerQuestionLabel": "Bitta savol narxi (ixtiyoriy, so'm)",
+      "pricePerQuestionPlaceholder": "Masalan: 15000",
+      "softCapLabel": "Savollar chegarasi (ixtiyoriy)",
+      "softCapPlaceholder": "Masalan: 10",
+      "pricePerQuestionHint": "Bo'sh qoldirsangiz, \"Matnli maslahat\" xizmatini taklif qilmaysiz.",
       "submitting": "Ariza topshirilmoqda...",
       "submit": "Rahnamo sifatida topshirish"
     },
@@ -148,6 +153,8 @@
   "counselorProfile": {
     "notFound": "Rahnamo topilmadi.",
     "backToCatalog": "Barcha Rahnamolar ro'yxatiga qaytish",
+    "videoModeLabel": "Video konsultatsiya",
+    "textQaModeLabel": "Matnli maslahat",
     "reviewsCountSuffix": "{count} ta baho",
     "responseTimeSuffix": "{time} javob",
     "sessionsCountSuffix": "{count} ta qabul",
@@ -251,6 +258,8 @@
     "paymentPending": "To'lov tekshirilmoqda",
     "contactLabel": "Bog'lanish: {telegram}",
     "joinVideoRoom": "Video xonaga kirish",
+    "textQaLabel": "Matnli maslahat",
+    "goToThread": "Suhbatga o'tish",
     "videoLocked": "Video havola to'lov tasdiqlangandan so'ng ko'rinadi",
     "review": {
       "ratingError": "Iltimos, 1 dan 5 gacha baho tanlang.",
@@ -310,6 +319,54 @@
       "validationError": "Rahnamoni tanlang va javobingizni yozing (kamida 5 ta belgi).",
       "invalidPasscode": "Rahnamo kodi noto'g'ri. Kodni Rahnamo hamkorlik shartnomasidan tekshiring.",
       "saveError": "Javobni saqlashda xatolik yuz berdi. Qayta urinib ko'ring."
+    }
+  },
+  "textQa": {
+    "start": {
+      "loading": "Yuklanmoqda...",
+      "priceLabel": "Bitta savol narxi",
+      "capLabel": "Savollar chegarasi",
+      "noCapNote": "Chegara yo'q — istalgancha savol berishingiz mumkin",
+      "ageCheckboxLabel": "Men 18 yoshdan katta ekanligimni tasdiqlayman",
+      "ageRequiredError": "Davom etish uchun yoshingizni tasdiqlashingiz kerak.",
+      "beginButton": "Suhbatni boshlash",
+      "startFailed": "Suhbatni boshlashda xatolik yuz berdi. Qayta urinib ko'ring.",
+      "authFailed": "Tasdiqlashda xatolik yuz berdi (anonim kirish ishlamadi). Qayta urinib ko'ring."
+    },
+    "thread": {
+      "questionsLabel": "Savollar: {used}",
+      "questionsLabelWithCap": "Savollar: {used} / {cap}",
+      "totalLabel": "Jami: {amount} so'm",
+      "askPlaceholder": "Savolingizni yozing...",
+      "askButton": "Yuborish",
+      "askFailedEmpty": "Savolni kiriting.",
+      "askFailedGeneric": "Savolni yuborishda xatolik yuz berdi. Qayta urinib ko'ring.",
+      "awaitingPaymentNotice": "Savollar chegarasiga yetdingiz. Davom etish uchun to'lovni amalga oshiring.",
+      "closedNotice": "Bu suhbat yopilgan. Yangi savol berish uchun yangi suhbat boshlang.",
+      "startNewButton": "Yangi suhbat boshlash",
+      "studentLabel": "Siz",
+      "counselorLabel": "Rahnamo",
+      "noMessagesYet": "Hali xabar yo'q. Birinchi savolingizni yozing!"
+    },
+    "payment": {
+      "cardBoxLabel": "Rahnamo Markaziy Platforma Kartasi (Uzcard / Humo)",
+      "cardOwnerLabel": "Egasining ismi: Rahnamo Platform Inc.",
+      "copyButton": "Nusxalash",
+      "copiedButton": "Nusxalandi! ✓",
+      "receiptLabel": "To'lov Cheki / Tranzaksiya Raqami (Chek ID)",
+      "receiptPlaceholder": "Masalan: 89420194",
+      "submitButton": "To'lovni yubordim",
+      "submittedNotice": "Rahmat! Administratorimiz to'lovni tekshiryapti."
+    },
+    "inbox": {
+      "title": "Rahnamo sifatida javob berish",
+      "passcodeLabel": "Rahnamo maxfiy kodi",
+      "unlockButton": "Kirish",
+      "invalidPasscode": "Kod noto'g'ri.",
+      "noThreads": "Hozircha faol suhbatlar yo'q.",
+      "replyPlaceholder": "Javobingizni yozing...",
+      "replyButton": "Yuborish",
+      "replyFailed": "Javobni yuborishda xatolik yuz berdi."
     }
   },
   "emails": {
@@ -428,6 +485,25 @@
       "premiumPriceLabel": "Premium narx",
       "ratingLabel": "Reyting: {rating} ({count} sharh)",
       "joinedLabel": "Qo'shildi: {date}"
+    },
+    "threads": {
+      "tabLabel": "Matnli Maslahatlar ({count})",
+      "emptyTitle": "Hali matnli maslahat ochilmagan",
+      "emptyBody": "Talaba mentordan matnli maslahat so'raganda shu yerda ko'rinadi.",
+      "colStudent": "Talaba",
+      "colCounselor": "Rahnamo",
+      "colQuestions": "Savollar",
+      "colTotal": "Jami",
+      "colStatus": "Holat",
+      "colActions": "Amallar",
+      "statusActive": "FAOL",
+      "statusAwaitingPayment": "TO'LOV KUTILMOQDA",
+      "statusClosed": "YOPILGAN",
+      "flagButton": "To'lovga belgilash",
+      "confirmPaymentButton": "To'lovni tasdiqlash",
+      "flagFailed": "To'lov uchun belgilashda xatolik yuz berdi. Qayta urinib ko'ring.",
+      "confirmFailed": "To'lovni tasdiqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
+      "networkError": "Tarmoq xatoligi yuz berdi. Qayta urinib ko'ring."
     }
   },
   "home": {

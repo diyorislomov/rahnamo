@@ -131,6 +131,11 @@
       "emailPlaceholder": "ism@domain.com",
       "standardPriceLabel": "Стоимость Стандарт-сессии (UZS)",
       "premiumPriceLabel": "Стоимость Премиум-сессии (UZS)",
+      "pricePerQuestionLabel": "Цена одного вопроса (необязательно, сум)",
+      "pricePerQuestionPlaceholder": "Например: 15000",
+      "softCapLabel": "Лимит вопросов (необязательно)",
+      "softCapPlaceholder": "Например: 10",
+      "pricePerQuestionHint": "Если оставить пустым, вы не будете предлагать услугу «Текстовая консультация».",
       "submitting": "Отправка заявки...",
       "submit": "Отправить как Рахнамо"
     },
@@ -148,6 +153,8 @@
   "counselorProfile": {
     "notFound": "Рахнамо не найден.",
     "backToCatalog": "Вернуться ко всем Рахнамо",
+    "videoModeLabel": "Видеоконсультация",
+    "textQaModeLabel": "Текстовая консультация",
     "reviewsCountSuffix": "{count} оценок",
     "responseTimeSuffix": "Ответ: {time}",
     "sessionsCountSuffix": "{count} консультаций",
@@ -251,6 +258,8 @@
     "paymentPending": "Оплата проверяется",
     "contactLabel": "Связь: {telegram}",
     "joinVideoRoom": "Войти в видеокомнату",
+    "textQaLabel": "Текстовая консультация",
+    "goToThread": "Перейти к консультации",
     "videoLocked": "Ссылка на видео появится после подтверждения оплаты",
     "review": {
       "ratingError": "Пожалуйста, выберите оценку от 1 до 5.",
@@ -310,6 +319,54 @@
       "validationError": "Выберите Рахнамо и напишите ответ (минимум 5 символов).",
       "invalidPasscode": "Неверный код Рахнамо. Проверьте код в договоре о сотрудничестве с Рахнамо.",
       "saveError": "Ошибка при сохранении ответа. Попробуйте снова."
+    }
+  },
+  "textQa": {
+    "start": {
+      "loading": "Загрузка...",
+      "priceLabel": "Стоимость одного вопроса",
+      "capLabel": "Лимит вопросов",
+      "noCapNote": "Лимита нет — можете задавать сколько угодно вопросов",
+      "ageCheckboxLabel": "Подтверждаю, что мне больше 18 лет",
+      "ageRequiredError": "Для продолжения нужно подтвердить возраст.",
+      "beginButton": "Начать консультацию",
+      "startFailed": "Ошибка при начале консультации. Попробуйте снова.",
+      "authFailed": "Ошибка при подтверждении (анонимный вход не сработал). Попробуйте снова."
+    },
+    "thread": {
+      "questionsLabel": "Вопросы: {used}",
+      "questionsLabelWithCap": "Вопросы: {used} / {cap}",
+      "totalLabel": "Итого: {amount} сум",
+      "askPlaceholder": "Напишите ваш вопрос...",
+      "askButton": "Отправить",
+      "askFailedEmpty": "Введите вопрос.",
+      "askFailedGeneric": "Ошибка при отправке вопроса. Попробуйте снова.",
+      "awaitingPaymentNotice": "Вы достигли лимита вопросов. Для продолжения произведите оплату.",
+      "closedNotice": "Эта консультация закрыта. Начните новую, чтобы задать ещё вопросы.",
+      "startNewButton": "Начать новую консультацию",
+      "studentLabel": "Вы",
+      "counselorLabel": "Рахнамо",
+      "noMessagesYet": "Сообщений пока нет. Напишите свой первый вопрос!"
+    },
+    "payment": {
+      "cardBoxLabel": "Центральная платёжная карта Rahnamo (Uzcard / Humo)",
+      "cardOwnerLabel": "Имя владельца: Rahnamo Platform Inc.",
+      "copyButton": "Скопировать",
+      "copiedButton": "Скопировано! ✓",
+      "receiptLabel": "Чек об оплате / номер транзакции (ID чека)",
+      "receiptPlaceholder": "Например: 89420194",
+      "submitButton": "Я оплатил",
+      "submittedNotice": "Спасибо! Наш администратор проверяет оплату."
+    },
+    "inbox": {
+      "title": "Ответить как Рахнамо",
+      "passcodeLabel": "Секретный код Рахнамо",
+      "unlockButton": "Войти",
+      "invalidPasscode": "Неверный код.",
+      "noThreads": "Пока нет активных консультаций.",
+      "replyPlaceholder": "Напишите ваш ответ...",
+      "replyButton": "Отправить",
+      "replyFailed": "Ошибка при отправке ответа."
     }
   },
   "emails": {
@@ -428,6 +485,25 @@
       "premiumPriceLabel": "Премиум цена",
       "ratingLabel": "Рейтинг: {rating} ({count} отзывов)",
       "joinedLabel": "Присоединился: {date}"
+    },
+    "threads": {
+      "tabLabel": "Текстовые консультации ({count})",
+      "emptyTitle": "Пока нет открытых текстовых консультаций",
+      "emptyBody": "Появится здесь, когда студент начнёт текстовую консультацию с Рахнамо.",
+      "colStudent": "Студент",
+      "colCounselor": "Рахнамо",
+      "colQuestions": "Вопросы",
+      "colTotal": "Итого",
+      "colStatus": "Статус",
+      "colActions": "Действия",
+      "statusActive": "АКТИВНО",
+      "statusAwaitingPayment": "ОЖИДАЕТ ОПЛАТЫ",
+      "statusClosed": "ЗАКРЫТО",
+      "flagButton": "Отметить для оплаты",
+      "confirmPaymentButton": "Подтвердить оплату",
+      "flagFailed": "Ошибка при отметке для оплаты. Попробуйте снова.",
+      "confirmFailed": "Ошибка при подтверждении оплаты. Попробуйте снова.",
+      "networkError": "Произошла ошибка сети. Попробуйте снова."
     }
   },
   "home": {

@@ -277,6 +277,42 @@ export default function MyBookingsPage() {
                 const isReviewing = reviewingId === b.id;
                 const draft = reviewDrafts[b.id] || { rating: 0, text: '' };
 
+                // "Matnli maslahat" bookings are just a history entry --
+                // the live thread (running total, messages, payment) lives
+                // on the counselor's own profile page via TextQaPanel, not
+                // duplicated here.
+                if (b.tier === 'text_qa') {
+                  return (
+                    <div
+                      key={b.id}
+                      className="bg-white/95 rounded-3xl p-6 border border-amber-900/15 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={avatar}
+                          alt={name}
+                          className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-200 shadow-xs"
+                        />
+                        <div>
+                          <span className="text-[10px] font-bold px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-md uppercase font-mono">
+                            {b.id}
+                          </span>
+                          <h3 className="font-serif font-bold text-base text-amber-950 mt-1">{name}</h3>
+                          <p className="text-xs text-stone-500">{t('textQaLabel')}</p>
+                        </div>
+                      </div>
+                      {b.counselorId || b.counselor_id ? (
+                        <Link
+                          href={`/counselors/${b.counselorId || b.counselor_id}`}
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 bg-amber-900 hover:bg-amber-800 text-amber-50 text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all"
+                        >
+                          {t('goToThread')}
+                        </Link>
+                      ) : null}
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={b.id}

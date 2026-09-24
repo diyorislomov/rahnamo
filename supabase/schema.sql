@@ -313,3 +313,242 @@ UPDATE public.counselors SET company = v.company FROM (VALUES
   ('c6', 'Ex-Senior Architect')
 ) AS v(id, company)
 WHERE public.counselors.id = v.id AND public.counselors.company IS NULL;
+
+-- 8. "Matnli maslahat" (Text Q&A) -- a running-tab text consultation
+-- alongside the existing Standard/Premium video tiers. Full design writeup
+-- lived in the planning conversation; the short version of what's below:
+--
+--   * price_per_question / soft_cap are mentor-set, alongside the existing
+--     standard_price / premium_price -- NULL price_per_question means that
+--     mentor doesn't offer this tier at all.
+--   * A thread's own price_per_question/soft_cap are a SNAPSHOT taken from
+--     the counselor row at thread-creation time (via a trigger, not client
+--     input -- see trg_snapshot_thread_pricing below), so a client can
+--     never set its own price, and a later price change by the mentor
+--     never retroactively changes an already-open thread.
+--   * Real per-student privacy (not just app-layer filtering by device_id,
+--     the way `bookings` works today) requires real identity, which this
+--     project has never had before. Students get one via Supabase
+--     Anonymous Auth (`supabase.auth.signInAnonymously()`, called lazily
+--     client-side only when starting a thread) -- `student_auth_id` is
+--     that session's real `auth.uid()`, and RLS below checks it directly.
+--     This needs "Allow anonymous sign-ins" enabled once in the Supabase
+--     dashboard (Authentication -> Sign In / Providers) -- without it,
+--     thread creation fails outright, loudly, not silently.
+--   * Mentors have no per-counselor auth (same accepted gap as forum
+--     replies, gated by the same shared COUNSELOR_PASSCODE) -- but unlike
+--     forum, that passcode check is backed by real enforcement here: no
+--     RLS policy on either table below grants a `sender_role = 'counselor'`
+--     insert at all, so the only way a counselor reply reaches the table is
+--     through /api/threads/reply using the service_role key server-side,
+--     never the anon key. The passcode check happening first is what makes
+--     it "gated"; the missing counselor-insert policy is what makes that
+--     gate not just cosmetic.
+--   * questions_used/total_owed are the only columns a student can write
+--     directly (via ask_thread_question below, which still runs under
+--     their own RLS as SECURITY INVOKER, not a bypass) -- they have no
+--     grant on payment_status, price_per_question, or soft_cap, so there's
+--     no path for a student to un-cap or re-open their own thread.
+--   * Reaching soft_cap is auto-detected by a BEFORE UPDATE trigger
+--     (trg_enforce_thread_soft_cap) that flips payment_status when
+--     questions_used crosses it -- not by the student's own update
+--     containing that column, since they have no grant on it.
+
+ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS price_per_question INTEGER;
+ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS soft_cap INTEGER;
+
+ALTER TABLE public.counselor_applications ADD COLUMN IF NOT EXISTS expected_price_per_question INTEGER;
+ALTER TABLE public.counselor_applications ADD COLUMN IF NOT EXISTS expected_soft_cap INTEGER;
+
+-- Widens the existing tier check rather than replacing bookings wholesale --
+-- a "Matnli maslahat" thread still creates a real bookings row (price 0,
+-- since nothing is prepaid) purely so it shows up in /my-bookings the same
+-- way a video session does, with no separate history UI needed.
+ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_tier_check;
+ALTER TABLE public.bookings ADD CONSTRAINT bookings_tier_check CHECK (tier IN ('standard', 'premium', 'text_qa'));
+
+CREATE TABLE IF NOT EXISTS public.question_threads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id TEXT NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    counselor_id TEXT NOT NULL REFERENCES public.counselors(id) ON DELETE CASCADE,
+    -- The real, enforced identity (see the writeup above) -- device_id is
+    -- kept alongside purely for display/debug parity with bookings, and is
+    -- never referenced by any RLS policy on this table.
+    student_auth_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    device_id TEXT NOT NULL,
+    -- Snapshotted from counselors at INSERT time by
+    -- trg_snapshot_thread_pricing below -- never trust a client-supplied
+    -- value for either of these two.
+    price_per_question INTEGER NOT NULL,
+    soft_cap INTEGER,
+    questions_used INTEGER NOT NULL DEFAULT 0,
+    total_owed INTEGER NOT NULL DEFAULT 0,
+    payment_status TEXT NOT NULL DEFAULT 'active' CHECK (payment_status IN ('active', 'awaiting_payment', 'closed')),
+    payment_receipt TEXT,
+    -- Persisted, not just a UI gate that's forgotten the moment the
+    -- checkbox unmounts -- a real record that 18+ self-attestation
+    -- actually happened, and when.
+    age_confirmed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    closed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS public.thread_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    thread_id UUID NOT NULL REFERENCES public.question_threads(id) ON DELETE CASCADE,
+    sender_role TEXT NOT NULL CHECK (sender_role IN ('student', 'counselor')),
+    body TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.question_threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.thread_messages ENABLE ROW LEVEL SECURITY;
+
+-- Real, per-student RLS -- unlike every other table in this file, this is
+-- NOT `USING (true)`. Only the student who created a thread (their real
+-- signed-in-anonymously auth.uid(), not a spoofable device_id) can read or
+-- create it. No policy anywhere grants a counselor or the public `anon`
+-- role read access -- that happens exclusively through service_role in the
+-- admin/counselor server routes, deliberately outside RLS, not by loosening
+-- these policies.
+CREATE POLICY "Students can read their own threads" ON public.question_threads
+  FOR SELECT USING (auth.uid() = student_auth_id);
+CREATE POLICY "Students can create their own threads" ON public.question_threads
+  FOR INSERT WITH CHECK (auth.uid() = student_auth_id);
+CREATE POLICY "Students can update their own thread progress" ON public.question_threads
+  FOR UPDATE USING (auth.uid() = student_auth_id) WITH CHECK (auth.uid() = student_auth_id);
+
+CREATE POLICY "Students can read messages in their own threads" ON public.thread_messages
+  FOR SELECT USING (
+    thread_id IN (SELECT id FROM public.question_threads WHERE student_auth_id = auth.uid())
+  );
+-- Deliberately only ever inserts as 'student' -- there is no policy here
+-- (or anywhere else on this table) that permits a 'counselor' row via the
+-- anon/authenticated roles. See the writeup above for why that's the real
+-- enforcement, not the passcode check in /api/threads/reply.
+CREATE POLICY "Students can ask questions in their own threads" ON public.thread_messages
+  FOR INSERT WITH CHECK (
+    sender_role = 'student'
+    AND thread_id IN (SELECT id FROM public.question_threads WHERE student_auth_id = auth.uid())
+  );
+
+-- Column-scoped on purpose: `authenticated` (which is what a
+-- signed-in-anonymously student actually is) gets a real grant on
+-- question_threads, but only ever on the columns that are safe for a
+-- student to touch themselves. No grant at all on payment_status,
+-- price_per_question, or soft_cap -- ask_thread_question below is the only
+-- path that advances questions_used/total_owed, and the soft-cap trigger
+-- (not the student) is what flips payment_status.
+GRANT SELECT ON public.question_threads TO anon, authenticated;
+GRANT INSERT (id, booking_id, counselor_id, student_auth_id, device_id, age_confirmed_at) ON public.question_threads TO authenticated;
+GRANT UPDATE (questions_used, total_owed, payment_receipt) ON public.question_threads TO authenticated;
+GRANT ALL ON public.question_threads TO service_role;
+
+GRANT SELECT ON public.thread_messages TO anon, authenticated;
+GRANT INSERT (id, thread_id, sender_role, body) ON public.thread_messages TO authenticated;
+GRANT ALL ON public.thread_messages TO service_role;
+
+-- Overwrites whatever (if anything) a client sends for these two columns
+-- with the counselor's own current values -- the only place a thread's
+-- price is ever allowed to come from. Also the enforcement point for "this
+-- mentor doesn't offer text Q&A at all" (NULL price_per_question).
+CREATE OR REPLACE FUNCTION public.snapshot_thread_pricing()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_price INTEGER;
+  v_cap INTEGER;
+BEGIN
+  SELECT price_per_question, soft_cap INTO v_price, v_cap
+  FROM public.counselors WHERE id = NEW.counselor_id;
+
+  IF v_price IS NULL THEN
+    RAISE EXCEPTION 'Counselor % does not offer text Q&A (no price_per_question set)', NEW.counselor_id;
+  END IF;
+
+  NEW.price_per_question := v_price;
+  NEW.soft_cap := v_cap;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_snapshot_thread_pricing ON public.question_threads;
+CREATE TRIGGER trg_snapshot_thread_pricing
+  BEFORE INSERT ON public.question_threads
+  FOR EACH ROW EXECUTE FUNCTION public.snapshot_thread_pricing();
+
+-- Auto-detects reaching soft_cap and flips payment_status accordingly.
+-- Runs as a BEFORE UPDATE trigger mutating NEW directly (not issuing a
+-- second statement of its own), so it isn't subject to the invoking role's
+-- column-grant list the way a second UPDATE statement would be -- the
+-- standard Postgres pattern for "derive column B from column A the caller
+-- doesn't have write access to." Only ever transitions FROM 'active', so it
+-- can't fight with an admin's own 'closed'/'awaiting_payment' write.
+CREATE OR REPLACE FUNCTION public.enforce_thread_soft_cap()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.soft_cap IS NOT NULL
+     AND NEW.questions_used >= NEW.soft_cap
+     AND OLD.payment_status = 'active' THEN
+    NEW.payment_status := 'awaiting_payment';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_enforce_thread_soft_cap ON public.question_threads;
+CREATE TRIGGER trg_enforce_thread_soft_cap
+  BEFORE UPDATE ON public.question_threads
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_thread_soft_cap();
+
+-- The only path a student uses to ask a question. SECURITY INVOKER (the
+-- default, stated explicitly) -- this is not a privilege-escalation
+-- bypass, it runs under the caller's own RLS and column grants the whole
+-- way through; it exists purely to make "insert the message + increment
+-- the counter + recompute the total" one atomic statement, so two
+-- near-simultaneous questions near soft_cap can't both slip through.
+CREATE OR REPLACE FUNCTION public.ask_thread_question(p_thread_id UUID, p_body TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY INVOKER
+AS $$
+DECLARE
+  v_thread public.question_threads;
+  v_new_count INTEGER;
+  v_new_total INTEGER;
+BEGIN
+  SELECT * INTO v_thread FROM public.question_threads WHERE id = p_thread_id;
+
+  IF v_thread IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'not_found');
+  END IF;
+
+  IF v_thread.payment_status <> 'active' THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'awaiting_payment');
+  END IF;
+
+  IF p_body IS NULL OR trim(p_body) = '' THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'empty_body');
+  END IF;
+
+  INSERT INTO public.thread_messages (thread_id, sender_role, body)
+  VALUES (p_thread_id, 'student', trim(p_body));
+
+  v_new_count := v_thread.questions_used + 1;
+  v_new_total := v_new_count * v_thread.price_per_question;
+
+  UPDATE public.question_threads
+  SET questions_used = v_new_count,
+      total_owed = v_new_total
+  WHERE id = p_thread_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'questions_used', v_new_count,
+    'total_owed', v_new_total,
+    'awaiting_payment', (v_thread.soft_cap IS NOT NULL AND v_new_count >= v_thread.soft_cap)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.ask_thread_question(UUID, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.ask_thread_question(UUID, TEXT) TO authenticated;
