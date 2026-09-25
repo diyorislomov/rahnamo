@@ -12,16 +12,20 @@
     "open": "Menyuni ochish",
     "close": "Menyuni yopish",
     "skip": "Asosiy mazmunga o‘tish",
-    "language": "Til"
+    "language": "Til",
+    "mobileMentors": "Ustozlar",
+    "mobileBookings": "Qabullarim",
+    "help": "Yordam",
+    "helpDescription": "Telegram orqali yordam — yangi oynada ochiladi"
   },
   "hero": {
     "eyebrow": "To‘g‘ri maslahat. Aniqroq yo‘l.",
-    "title": "Keyingi qadamingizni ustoz bilan toping.",
-    "body": "O‘qish, karyera yoki yangi imkoniyatlar bo‘yicha yo‘l ko‘rsata oladigan ustozlarni tanlang."
+    "title": "Sizga mos ustozni toping",
+    "body": "O‘qish va karyera bo‘yicha yordam oling. Ustoz va narxni tanlashdan boshlang."
   },
   "search": {
     "label": "Qaysi yo‘nalishda yordam kerak?",
-    "placeholder": "Masalan: grantlar, tibbiyot yoki dasturlash",
+    "placeholder": "Grantlar, tibbiyot, dasturlash…",
     "clear": "Qidiruvni tozalash",
     "category": "Qiziqish sohasi",
     "sort": "Saralash",
@@ -31,10 +35,12 @@
     "company": "Tashkilot",
     "allCompanies": "Barcha tashkilotlar",
     "reset": "Filtrlarni tozalash",
-    "filters": "Ustozlarni saralash"
+    "filters": "Ustozlarni saralash",
+    "toggle": "Filtrlar",
+    "active": "{count} ta faol filtr"
   },
   "results": {
-    "title": "Ustozingizni toping",
+    "title": "Ustozlar",
     "count": "{count} ta ustoz",
     "loading": "Ustozlar yuklanmoqda…",
     "errorTitle": "Ustozlarni yuklay olmadik",
@@ -44,8 +50,8 @@
     "emptyBody": "Boshqa so‘z bilan qidiring yoki kengroq sohani tanlang.",
     "noneTitle": "Ustozlar shu yerda ko‘rinadi",
     "noneBody": "Hozircha katalogda profillar yo‘q. Keyinroq qayta tekshiring.",
-    "demoTitle": "Namuna katalogini ko‘ryapsiz",
-    "demoBody": "Bu profillar platformani sinab ko‘rish uchun berilgan. Haqiqiy vaqtlar va qabul uchun xizmat ulangan bo‘lishi kerak."
+    "demoTitle": "Demo katalog.",
+    "demoBody": "Profillar va qabullar namuna uchun. Haqiqiy to‘lov olinmaydi."
   },
   "card": {
     "video": "Video maslahat",

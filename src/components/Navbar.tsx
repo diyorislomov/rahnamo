@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Menu, X } from 'lucide-react';
+import { CalendarDays, Menu, MessageCircle, UsersRound, X } from 'lucide-react';
 import RahnamoLogo from './RahnamoLogo';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -16,6 +16,7 @@ export default function Navbar() {
   const headerRef = useRef<HTMLElement>(null);
   const links = [{ href: '/', label: t('mentors') }, { href: '/my-bookings', label: t('bookings') }, { href: '/forum', label: t('forum') }];
   const active = (href: string) => href === '/' ? pathname === '/' || pathname.startsWith('/counselors/') : pathname.startsWith(href);
+  const isProfile = pathname.startsWith('/counselors/');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -34,8 +35,8 @@ export default function Navbar() {
     <>
       <a href="#main-content" className="ui-skip-link">{t('skip')}</a>
       <header ref={headerRef} className="sticky top-0 z-40 border-b border-[#e7ddd0] bg-[#faf6ee]/95 backdrop-blur-sm">
-        <div className="ui-container flex min-h-[76px] items-center justify-between gap-4">
-          <Link href="/" aria-label="Rahnamo" onClick={() => setIsOpen(false)}><RahnamoLogo /></Link>
+        <div className="ui-container flex min-h-16 items-center justify-between gap-4 lg:min-h-[76px]">
+          <Link href="/" aria-label="Rahnamo" className="inline-flex min-h-11 items-center" onClick={() => setIsOpen(false)}><RahnamoLogo /></Link>
           <nav className="hidden items-center gap-1 lg:flex" aria-label={t('label')}>
             {links.map((link) => <Link key={link.href} href={link.href} className="ui-nav-link" aria-current={active(link.href) ? 'page' : undefined}>{link.label}</Link>)}
             <Link href="/become-counselor" className="ui-nav-link" aria-current={pathname === '/become-counselor' ? 'page' : undefined}>{t('become')}</Link>
@@ -46,12 +47,25 @@ export default function Navbar() {
             {isOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
           </button>
         </div>
-        {isOpen && <nav id="mobile-navigation" aria-label={t('label')} className="ui-container max-h-[calc(100dvh-76px)] overflow-y-auto border-t border-[#e7ddd0] pb-5 pt-3 lg:hidden">
+        {isOpen && <nav id="mobile-navigation" aria-label={t('label')} className="ui-container max-h-[calc(100dvh-64px)] overflow-y-auto border-t border-[#e7ddd0] pb-5 pt-3 lg:hidden">
           <div className="grid gap-1">{links.map((link) => <Link key={link.href} href={link.href} className="ui-nav-link" aria-current={active(link.href) ? 'page' : undefined} onClick={() => setIsOpen(false)}>{link.label}</Link>)}
             <Link href="/become-counselor" className="ui-nav-link" aria-current={pathname === '/become-counselor' ? 'page' : undefined} onClick={() => setIsOpen(false)}>{t('become')}</Link>
           </div><div className="mt-3 border-t border-[#e7ddd0] pt-3"><LanguageSwitcher /></div>
         </nav>}
       </header>
+      {!isProfile && !isOpen && <nav className="ui-mobile-dock" aria-label={t('label')}>
+        <div className="ui-container grid grid-cols-3 gap-2">
+          <Link href="/" className="ui-mobile-nav-link" aria-current={active('/') ? 'page' : undefined}>
+            <UsersRound size={21} aria-hidden="true" /><span>{t('mobileMentors')}</span>
+          </Link>
+          <Link href="/my-bookings" className="ui-mobile-nav-link" aria-current={active('/my-bookings') ? 'page' : undefined}>
+            <CalendarDays size={21} aria-hidden="true" /><span>{t('mobileBookings')}</span>
+          </Link>
+          <a href="https://t.me/rahnamo_admin" target="_blank" rel="noreferrer" className="ui-mobile-nav-link" aria-label={t('helpDescription')}>
+            <MessageCircle size={21} aria-hidden="true" /><span>{t('help')}</span>
+          </a>
+        </div>
+      </nav>}
       <div id="main-content" tabIndex={-1} className="ui-main-anchor" />
     </>
   );

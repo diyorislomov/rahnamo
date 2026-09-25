@@ -76,6 +76,9 @@ button, a, input, select, textarea, summary { -webkit-tap-highlight-color: trans
 .ui-filter-chip[aria-pressed="true"] { border-color: #8b431b; background: #8b431b; color: #fff; }
 .ui-nav-link { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: 8px; color: #66584a; font-size: 14px; font-weight: 500; }
 .ui-nav-link:hover, .ui-nav-link[aria-current="page"] { background: #efe5d5; color: #713614; }
+.ui-mobile-dock { display: none; }
+.ui-mobile-nav-link { display: flex; min-height: 52px; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 5px 2px; border-radius: 10px; color: #6d6259; font-size: 12px; line-height: 1.3; font-weight: 600; text-align: center; }
+.ui-mobile-nav-link:hover, .ui-mobile-nav-link[aria-current="page"] { background: #efe5d5; color: #713614; }
 .ui-avatar { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; overflow: hidden; border-radius: 14px; background: #eee1cc; color: #805129; border: 1px solid #e4d6c0; font-family: Georgia, "Times New Roman", serif; font-size: 24px; }
 .ui-faq summary { cursor: pointer; padding: 20px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
 .ui-faq summary::-webkit-details-marker { display: none; }
@@ -83,6 +86,14 @@ button, a, input, select, textarea, summary { -webkit-tap-highlight-color: trans
 .ui-faq[open] summary::after { content: "−"; }
 .ui-faq { border-bottom: 1px solid var(--border); }
 
+@media (max-width: 1023px) {
+  html { scroll-padding-top: 5rem; scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  .ui-page { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  .ui-mobile-dock { display: block; position: fixed; inset: auto 0 0; z-index: 40; border-top: 1px solid var(--border); background: #fff; box-shadow: 0 -3px 18px #52371008; padding: 12px max(0px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(0px, env(safe-area-inset-left, 0px)); }
+  /* Keep fixed controls away from the on-screen keyboard while editing. */
+  body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]):focus, textarea:focus, select:focus, [contenteditable="true"]:focus) .ui-mobile-dock { display: none; }
+  body:has(#mobile-navigation) .ui-mobile-dock { display: none; }
+}
 @media (max-width: 639px) {
   .ui-container { width: calc(100% - 32px); }
 }

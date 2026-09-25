@@ -14,6 +14,7 @@ import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
 import { supabase } from '@/lib/supabase';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import { Counselor } from '@/types';
+import { getCounselorContent } from '@/lib/counselor-content';
 
 function Discovery() {
   const t = useTranslations('discovery');
@@ -65,41 +66,32 @@ function Discovery() {
 
   const normalizedQuery = query.trim().toLocaleLowerCase(locale);
   const filtered = counselors.filter((c) => {
+    const content = getCounselorContent(c, locale, !configured);
     const labels = c.specialties.map((s) => Object.hasOwn(SPECIALTY_CONFIG, s) ? tSpecialties(s) : s);
-    const searchable = [c.fullName, c.headline, c.bio, ...c.specialties, ...labels].join(' ').toLocaleLowerCase(locale);
+    const searchable = [c.fullName, c.headline, c.bio, content.headline, content.bio, content.help, content.company, ...c.specialties, ...labels].join(' ').toLocaleLowerCase(locale);
     return (category === 'All' || c.specialties.includes(category)) && (!company || c.company === company) && searchable.includes(normalizedQuery);
   }).sort((a, b) => sort === 'price-low' ? a.standardPrice - b.standardPrice : sort === 'price-high' ? b.standardPrice - a.standardPrice : a.fullName.localeCompare(b.fullName, locale));
-  const companies = Array.from(new Set(counselors.map((c) => c.company).filter((c): c is string => !!c))).sort();
+  // Keep the original stable company-value order: ICU versions disagree on
+  // Uzbek digraphs in translated labels, which would change hydration order.
+  const companies = Array.from(new Map(counselors.filter((c) => !!c.company).map((c) => [c.company!, {
+    value: c.company!, label: getCounselorContent(c, locale, !configured).company || c.company!,
+  }])).values()).sort((a, b) => a.value < b.value ? -1 : a.value > b.value ? 1 : 0);
   const hasFilters = !!query || category !== 'All' || !!company || sort !== 'name';
 
   return (
     <>
       <CleanHero />
-      <CatalogIntro searchQuery={query} setSearchQuery={(value) => updateFilter('q', value)} selectedTag={category} setSelectedTag={(value) => updateFilter('category', value)} />
-      <section id="rahnamolar" className="ui-container pb-12 pt-6 sm:pb-16 sm:pt-8" aria-labelledby="results-title">
-        {!configured && <div className="ui-alert mb-5" role="note"><p className="font-semibold">{t('results.demoTitle')}</p><p className="mt-1">{t('results.demoBody')}</p></div>}
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-          <div>
+      <CatalogIntro searchQuery={query} setSearchQuery={(value) => updateFilter('q', value)} selectedTag={category} setSelectedTag={(value) => updateFilter('category', value)}
+        companies={companies} selectedCompany={company} setSelectedCompany={(value) => updateFilter('company', value)} selectedSort={sort} setSelectedSort={(value) => updateFilter('sort', value)} />
+      <section id="rahnamolar" className="ui-container pb-10 pt-3 sm:pb-16 sm:pt-6" aria-labelledby="results-title">
+        {!configured && <div className="mb-3 rounded-lg bg-[#f4eee5] px-3 py-2 text-xs leading-relaxed text-[#65533f]" role="note"><span className="font-semibold">{t('results.demoTitle')}</span>{' '}{t('results.demoBody')}</div>}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 sm:mb-5">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 id="results-title" className="text-xl font-semibold tracking-tight">{t('results.title')}</h2>
-            <p className="ui-muted mt-1 text-sm" role="status" aria-live="polite">{status === 'loading' ? t('results.loading') : status === 'ready' ? t('results.count', { count: filtered.length }) : t('results.errorTitle')}</p>
+            <p className="ui-muted text-sm" role="status" aria-live="polite">{status === 'loading' ? t('results.loading') : status === 'ready' ? t('results.count', { count: filtered.length }) : t('results.errorTitle')}</p>
           </div>
-          <div className="flex w-full flex-wrap items-end gap-3 sm:w-auto">
-            {companies.length > 1 && <div className="min-w-0 flex-1 sm:w-48 sm:flex-none">
-              <label htmlFor="company-filter" className="ui-label">{t('search.company')}</label>
-              <select id="company-filter" className="ui-input" value={company} onChange={(e) => updateFilter('company', e.target.value)}>
-                <option value="">{t('search.allCompanies')}</option>
-                {companies.map((name) => <option key={name} value={name}>{name}</option>)}
-              </select>
-            </div>}
-            <div className="min-w-0 flex-1 sm:w-48 sm:flex-none">
-              <label htmlFor="mentor-sort" className="ui-label">{t('search.sort')}</label>
-              <select id="mentor-sort" className="ui-input" value={sort} onChange={(e) => updateFilter('sort', e.target.value)}>
-                <option value="name">{t('search.name')}</option><option value="price-low">{t('search.low')}</option><option value="price-high">{t('search.high')}</option>
-              </select>
-            </div>
-          </div>
+          {hasFilters && <button type="button" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#8b431b] underline underline-offset-4" onClick={resetFilters}>{t('search.reset')}<RefreshCw size={14} aria-hidden="true" /></button>}
         </div>
-        {hasFilters && <button type="button" className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#8b431b] underline underline-offset-4" onClick={resetFilters}>{t('search.reset')}<RefreshCw size={14} aria-hidden="true" /></button>}
         {status === 'loading' ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">{[1, 2, 3].map((id) => <div key={id} className="ui-panel min-h-72 p-6"><div className="h-16 w-16 rounded-xl bg-[#f0e8dc]" /><div className="mt-5 h-4 w-3/4 rounded bg-[#f0e8dc]" /><div className="mt-3 h-4 w-full rounded bg-[#f0e8dc]" /><div className="mt-3 h-4 w-2/3 rounded bg-[#f0e8dc]" /></div>)}</div> : status === 'error' ? (
           <div className="ui-panel px-6 py-10 text-center" role="alert">
             <h3 className="text-lg font-semibold">{t('results.errorTitle')}</h3><p className="ui-muted mx-auto mt-2 max-w-md">{t('results.errorBody')}</p>

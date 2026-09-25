@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { chromium } = require('playwright');
+const { chromium, webkit } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const base = process.env.QA_BASE_URL || 'http://127.0.0.1:3217';
 (async () => {
- const browser = await chromium.launch({channel:'chrome',headless:true});
+ const browser = process.env.QA_BROWSER === 'webkit' ? await webkit.launch({headless:true}) : await chromium.launch({channel:'chrome',headless:true});
  try {
   const context=await browser.newContext({viewport:{width:390,height:844}});
   // Match plain IP:port previews even when this test targets trusted localhost.
@@ -16,7 +16,7 @@ const base = process.env.QA_BASE_URL || 'http://127.0.0.1:3217';
   page.on('pageerror',e=>errors.push(e.message));
   page.on('request',r=>{if(r.method()==='POST' && r.url().includes('/api/'))writes.push(r.url());});
   await page.goto(base);
-  await page.getByText('You are viewing a demo catalog',{exact:true}).waitFor();
+  await page.getByRole('note').filter({hasText: 'Demo'}).first().waitFor();
   assert.equal(await page.getByText('Example profile',{exact:true}).count(),6);
   await page.goto(base+'/counselors/c1');
   await page.getByRole('heading',{name:'Dr. Jasur Mansurov',exact:true}).waitFor();

@@ -48,7 +48,7 @@ Email and Telegram notifications happen after save. Delivery failures display a 
 npm run lint
 npm run typecheck
 npm test
-npm run build -- --webpack
+npm run build
 ```
 
 The database suite uses isolated PGlite PostgreSQL, including fresh/repeated installation and upgrade from the original schema. It exercises grants, RLS, transaction behavior, idempotency and payment/review rules. PGlite does not reproduce separate concurrent PostgreSQL backend sessions; real staging load/concurrency testing remains part of deployment acceptance.
@@ -56,7 +56,7 @@ The database suite uses isolated PGlite PostgreSQL, including fresh/repeated ins
 Browser tests use installed Google Chrome through Playwright and synthetic data. To reproduce the live UI tests without contacting a Supabase project, build/start with a local dummy public URL:
 
 ```sh
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54329 NEXT_PUBLIC_SUPABASE_ANON_KEY=test-anon-key npm run build -- --webpack
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54329 NEXT_PUBLIC_SUPABASE_ANON_KEY=test-anon-key npm run build
 npm run start -- --hostname 127.0.0.1 --port 3217
 # In another terminal:
 npm run test:browser
@@ -66,4 +66,6 @@ The suites mock data and writes and cover all seven pages at 320, 390, 768 and 1
 
 Before production, apply the migration to staging, configure real credentials and transfer details, enable anonymous Auth, test real owned records and administrator/mentor access with test accounts, and verify a test notification. No production migration or deployment is performed by these local scripts.
 
-For demo-only checks, rebuild with both public Supabase variables empty, restart the preview, then run `npm run test:demo`.
+For demo-only checks, rebuild with both public Supabase variables empty, restart the preview, then run `npm run test:demo` and `npm run test:mobile`. Set `QA_BASE_URL` when using a port other than 3217. The mobile suite measures usable first-screen actions, bottom navigation, filter persistence, form focus and optional details at 320, 390, 768 and 1440 pixels in all three languages.
+
+To run the same demo/mobile checks with Safari's engine, install Playwright WebKit (`npx playwright install webkit`) and set `QA_BROWSER=webkit`. These tests emulate viewports and input focus; they do not open a physical phone keyboard or replace tests with real users. Database upgrade tests require the repository's Git history, including commit `0c21b95`.

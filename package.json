@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/security.cjs tests/api.cjs tests/database.mjs",
+    "test": "node --test tests/security.cjs tests/api.cjs tests/database.mjs tests/mobile-content.cjs",
     "test:browser": "node tests/platform-browser.cjs && node tests/journeys-browser.cjs && node tests/support-browser.cjs",
-    "test:demo": "node tests/demo-browser.cjs"
+    "test:demo": "node tests/demo-browser.cjs",
+    "test:mobile": "node tests/mobile-browser.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

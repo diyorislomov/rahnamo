@@ -88,7 +88,7 @@ const visible = async (locator) => locator.waitFor({state:'visible',timeout:2000
   await page.getByRole('button',{name:'Save booking request',exact:true}).click();
   await visible(page.getByText('We could not confirm that your booking was saved.',{exact:false}));
   await page.getByRole('button',{name:'Save booking request',exact:true}).click();
-  await visible(page.getByText('Your next step is booked in',{exact:true}));
+  await visible(page.getByText('Your booking request is saved',{exact:true}));
   assert.equal(submitted.length,2); assert.equal(submitted[0].id,submitted[1].id,'Retry reuses booking UUID');
   await page.getByLabel('Transfer or receipt reference',{exact:true}).fill('TEST-RECEIPT-001');
   await page.getByRole('button',{name:'Submit transfer reference',exact:true}).click();

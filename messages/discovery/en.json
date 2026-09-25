@@ -12,16 +12,20 @@
     "open": "Open menu",
     "close": "Close menu",
     "skip": "Skip to content",
-    "language": "Language"
+    "language": "Language",
+    "mobileMentors": "Mentors",
+    "mobileBookings": "Bookings",
+    "help": "Help",
+    "helpDescription": "Telegram support — opens a new window"
   },
   "hero": {
     "eyebrow": "A little guidance. A clearer direction.",
-    "title": "Your next step, with the right mentor.",
-    "body": "Explore people who can help with your studies, career, or next opportunity."
+    "title": "Find the right mentor for you",
+    "body": "Get help with your studies or career. Start with a mentor and a price that suit you."
   },
   "search": {
     "label": "What would you like help with?",
-    "placeholder": "Try scholarships, medicine, or programming",
+    "placeholder": "Scholarships, medicine, coding…",
     "clear": "Clear search",
     "category": "Field of interest",
     "sort": "Sort by",
@@ -31,10 +35,12 @@
     "company": "Organization",
     "allCompanies": "All organizations",
     "reset": "Reset filters",
-    "filters": "Filter mentors"
+    "filters": "Filter mentors",
+    "toggle": "Filters",
+    "active": "{count, plural, one {# active filter} other {# active filters}}"
   },
   "results": {
-    "title": "Find your mentor",
+    "title": "Mentors",
     "count": "{count, plural, one {# mentor} other {# mentors}}",
     "loading": "Loading mentors…",
     "errorTitle": "We could not load the mentors",
@@ -44,13 +50,13 @@
     "emptyBody": "Try another keyword or broaden your field of interest.",
     "noneTitle": "Mentors will appear here",
     "noneBody": "The catalog has no available profiles yet. Please check back later.",
-    "demoTitle": "You are viewing a demo catalog",
-    "demoBody": "These example profiles are for exploring the experience. Real availability and bookings require the live service."
+    "demoTitle": "Demo catalog.",
+    "demoBody": "Profiles and bookings are examples. No real payment is taken."
   },
   "card": {
     "video": "Video consultation",
     "text": "Text Q&A",
-    "from": "Video session from",
+    "from": "Video consultation",
     "questionPrice": "Per question",
     "currency": "UZS",
     "profile": "View profile",
