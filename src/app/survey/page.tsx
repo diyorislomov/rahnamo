@@ -1,383 +1,79 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { ArrowRight, CheckCircle2, Send } from 'lucide-react';
 import RahnamoLogo from '@/components/RahnamoLogo';
-import { supabase } from '@/lib/supabase';
-import { isSupabaseConfigured } from '@/lib/counselors';
-import { ClipboardList, CheckCircle2, Sparkles } from 'lucide-react';
-
-const AGE_RANGES = ["18 dan kichik", '18-24', '25-34', '35-44', "45 va undan katta"];
-
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'student', label: 'Talaba' },
-  { value: 'graduate', label: "Bitirgan (universitetni tugatgan)" },
-  { value: 'working', label: 'Ishlayapman' },
-  { value: 'other', label: 'Boshqa' },
-];
-
-const INTEREST_AREA_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Medicine', label: 'Tibbiyot' },
-  { value: 'Law', label: 'Huquq' },
-  { value: 'Architecture', label: 'Arxitektura' },
-  { value: 'IT/Programming', label: "IT / Dasturlash" },
-  { value: 'Grants & Scholarships', label: "Xalqaro Grantlar va Stipendiyalar" },
-  { value: 'Agriculture', label: "Qishloq xo'jaligi" },
-  { value: 'Business', label: 'Biznes' },
-  { value: 'Other', label: 'Boshqa' },
-];
-
-const ADVICE_SOURCE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Friends', label: "Do'stlar" },
-  { value: 'Family', label: 'Oila' },
-  { value: 'Internet forums', label: 'Internet forumlar' },
-  { value: 'No one', label: 'Hech kim' },
-  { value: 'Other', label: 'Boshqa' },
-];
-
-const INTEREST_LEVEL_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Yes definitely', label: 'Ha, albatta' },
-  { value: 'Maybe', label: 'Balki' },
-  { value: 'Not interested', label: 'Qiziqmayman' },
-];
-
-const PRICE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Under 30,000', label: "30,000 so'mgacha" },
-  { value: '30,000-100,000', label: "30,000 - 100,000 so'm" },
-  { value: '100,000-300,000', label: "100,000 - 300,000 so'm" },
-  { value: '300,000-600,000', label: "300,000 - 600,000 so'm" },
-  { value: '600,000+', label: "600,000 so'mdan yuqori" },
-];
-
-const FORMAT_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Text chat', label: 'Matnli chat' },
-  { value: 'Video call', label: "Video qo'ng'iroq" },
-];
-
-const inputClass =
-  'w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700';
-const labelClass = 'text-xs font-semibold text-stone-700 block';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { Field, Notice, SupportHeader, SupportApiError, supportRequest } from '@/components/SupportUI';
 
 export default function SurveyPage() {
-  const [ageRange, setAgeRange] = useState('');
-  const [status, setStatus] = useState('');
-  const [fieldOfStudy, setFieldOfStudy] = useState('');
-  const [interestArea, setInterestArea] = useState('');
-  const [interestAreaOther, setInterestAreaOther] = useState('');
-  const [biggestChallenge, setBiggestChallenge] = useState('');
-  const [priorAdviceSource, setPriorAdviceSource] = useState('');
-  const [priorAdviceSourceOther, setPriorAdviceSourceOther] = useState('');
-  const [interestedInService, setInterestedInService] = useState('');
-  const [priceWillingness, setPriceWillingness] = useState('');
-  const [preferredFormat, setPreferredFormat] = useState('');
-  const [contactInfo, setContactInfo] = useState('');
-  const [willingToRefer, setWillingToRefer] = useState(false);
-
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const t = useTranslations('support.survey');
+  const c = useTranslations('support.common');
+  const configured = isSupabaseConfigured();
+  const [interest, setInterest] = useState('');
+  const [advice, setAdvice] = useState('');
+  const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [error, setError] = useState('');
 
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!interestedInService) {
-      newErrors.interestedInService = 'Iltimos, javob tanlang.';
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || !configured) return;
+    const data = new FormData(event.currentTarget);
+    const value = (key: string) => String(data.get(key) || '').trim();
+    const contact = value('contact_info');
+    if (!value('interested_in_service') || !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact) || /^@?[a-zA-Z][\w]{4,31}$/.test(contact))) {
+      setError(t('requiredError')); return;
     }
-    if (!contactInfo.trim()) {
-      newErrors.contactInfo = "Telegram username yoki emailingizni kiriting.";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setBusy(true); setError('');
+    try {
+      await supportRequest('/api/survey', {
+        age_range: value('age_range') || null, status: value('status') || null,
+        field_of_study: value('field_of_study') || null,
+        interest_area: (interest === 'Other' ? value('interest_other') : interest) || null,
+        biggest_challenge: value('biggest_challenge') || null,
+        prior_advice_source: (advice === 'Other' ? value('advice_other') : advice) || null,
+        interested_in_service: value('interested_in_service'), price_willingness: value('price_willingness') || null,
+        preferred_format: value('preferred_format') || null, contact_info: contact,
+        willing_to_refer: data.get('willing_to_refer') === 'on',
+      });
+      setSubmitted(true);
+    } catch (err) { setError(err instanceof SupportApiError && err.status === 429 ? c('rateLimit') : c('error')); }
+    finally { setBusy(false); }
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setIsSubmitting(true);
-    setSubmitError('');
+  const select = (name: string, label: string, options: [string,string][], required = false, onChange?: (value: string) => void) => <Field id={name} label={label}><select id={name} name={name} className="ui-input" required={required} defaultValue="" onChange={onChange ? e => onChange(e.target.value) : undefined}><option value="">{c('choose')}</option>{options.map(([value,key]) => <option key={value} value={value}>{t(key)}</option>)}</select></Field>;
 
-    // No localStorage fallback here on purpose -- unlike the booking and
-    // application forms (which predate a reliable Supabase connection and
-    // carry a local-cache fallback for that reason), this is a brand-new
-    // form with no such history. A real error is shown on failure instead
-    // of a fallback that could quietly mask one.
-    if (!isSupabaseConfigured()) {
-      setIsSubmitting(false);
-      setSubmitError("So'rovnoma hozircha ishlamayapti. Birozdan so'ng qayta urinib ko'ring.");
-      return;
-    }
-
-    const { error } = await supabase.from('survey_responses').insert({
-      age_range: ageRange || null,
-      status: status || null,
-      field_of_study: fieldOfStudy.trim() || null,
-      interest_area: interestArea === 'Other' ? interestAreaOther.trim() || 'Other' : interestArea || null,
-      biggest_challenge: biggestChallenge.trim() || null,
-      prior_advice_source:
-        priorAdviceSource === 'Other' ? priorAdviceSourceOther.trim() || 'Other' : priorAdviceSource || null,
-      interested_in_service: interestedInService,
-      price_willingness: priceWillingness || null,
-      preferred_format: preferredFormat || null,
-      contact_info: contactInfo.trim(),
-      willing_to_refer: willingToRefer,
-    });
-
-    if (error) {
-      console.error('[SURVEY_INSERT_FAILED]', error);
-      setIsSubmitting(false);
-      setSubmitError(
-        "So'rovnomani yuborishda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring."
-      );
-      return;
-    }
-
-    setIsSubmitting(false);
-    setSubmitted(true);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200 flex flex-col justify-between">
-      <div>
-        <header className="border-b border-amber-900/15 bg-[#FAF6EE]/90">
-          <div className="max-w-3xl mx-auto px-6 h-16 flex items-center">
-            <RahnamoLogo className="h-11 sm:h-12" />
-          </div>
-        </header>
-
-        <main className="max-w-3xl mx-auto px-6 py-10">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-semibold mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-amber-700" />
-              <span>2 daqiqalik so&apos;rovnoma</span>
-            </div>
-            <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-amber-950 leading-tight">
-              Fikringiz biz uchun muhim
-            </h1>
-            <p className="text-stone-600 text-xs sm:text-sm mt-3 max-w-xl mx-auto">
-              Rahnamo platformasini yaxshilash uchun quyidagi qisqa so&apos;rovnomani to&apos;ldiring. Barcha javoblar
-              maxfiy saqlanadi.
-            </p>
-          </div>
-
-          {submitted ? (
-            <div className="bg-white/95 rounded-3xl p-8 border-2 border-emerald-500/30 text-center shadow-md animate-in fade-in zoom-in duration-300">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-700" />
-              </div>
-              <h3 className="font-serif font-bold text-2xl text-amber-950">Rahmat!</h3>
-              <p className="text-stone-600 text-xs sm:text-sm mt-2 max-w-md mx-auto">
-                Javoblaringiz muvaffaqiyatli qabul qilindi. Fikringiz Rahnamo platformasini yaxshilashda bizga
-                yordam beradi.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm space-y-5">
-              <h2 className="font-serif font-bold text-xl text-amber-950 flex items-center gap-2 border-b border-amber-900/10 pb-3">
-                <ClipboardList className="w-5 h-5 text-amber-800" /> So&apos;rovnoma
-              </h2>
-
-              <div>
-                <label className={labelClass}>Yosh oralig&apos;ingiz</label>
-                <select value={ageRange} onChange={(e) => setAgeRange(e.target.value)} className={`${inputClass} cursor-pointer`}>
-                  <option value="">-- Tanlang --</option>
-                  {AGE_RANGES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelClass}>Siz kimsiz?</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputClass} cursor-pointer`}>
-                  <option value="">-- Tanlang --</option>
-                  {STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelClass}>Mutaxassisligingiz / o&apos;qish sohangiz (ixtiyoriy)</label>
-                <input
-                  type="text"
-                  value={fieldOfStudy}
-                  onChange={(e) => setFieldOfStudy(e.target.value)}
-                  placeholder="Masalan: Tibbiyot instituti, 3-kurs"
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Qaysi sohaga qiziqasiz?</label>
-                <select
-                  value={interestArea}
-                  onChange={(e) => setInterestArea(e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
-                  <option value="">-- Tanlang --</option>
-                  {INTEREST_AREA_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                {interestArea === 'Other' && (
-                  <input
-                    type="text"
-                    value={interestAreaOther}
-                    onChange={(e) => setInterestAreaOther(e.target.value)}
-                    placeholder="Qaysi soha? Yozing..."
-                    className={`${inputClass} mt-2`}
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className={labelClass}>Karyerangizdagi eng katta qiyinchilik nima? (ixtiyoriy)</label>
-                <textarea
-                  rows={3}
-                  value={biggestChallenge}
-                  onChange={(e) => setBiggestChallenge(e.target.value)}
-                  placeholder="Fikringizni yozing..."
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Hozirgacha kimdan maslahat olgansiz?</label>
-                <select
-                  value={priorAdviceSource}
-                  onChange={(e) => setPriorAdviceSource(e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
-                  <option value="">-- Tanlang --</option>
-                  {ADVICE_SOURCE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                {priorAdviceSource === 'Other' && (
-                  <input
-                    type="text"
-                    value={priorAdviceSourceOther}
-                    onChange={(e) => setPriorAdviceSourceOther(e.target.value)}
-                    placeholder="Kimdan? Yozing..."
-                    className={`${inputClass} mt-2`}
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className={labelClass}>
-                  Rahnamo kabi 1-ga-1 konsultatsiya xizmatidan foydalanishga qiziqasizmi? *
-                </label>
-                <select
-                  value={interestedInService}
-                  onChange={(e) => {
-                    setInterestedInService(e.target.value);
-                    if (errors.interestedInService) setErrors((prev) => ({ ...prev, interestedInService: '' }));
-                  }}
-                  className={`${inputClass} cursor-pointer ${errors.interestedInService ? 'border-red-500 bg-red-50/20' : ''}`}
-                >
-                  <option value="">-- Tanlang --</option>
-                  {INTEREST_LEVEL_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.interestedInService && (
-                  <p className="text-[11px] text-red-600 mt-1">{errors.interestedInService}</p>
-                )}
-              </div>
-
-              <div>
-                <label className={labelClass}>Bir konsultatsiya uchun qancha to&apos;lashga tayyorsiz?</label>
-                <select
-                  value={priceWillingness}
-                  onChange={(e) => setPriceWillingness(e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
-                  <option value="">-- Tanlang --</option>
-                  {PRICE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelClass}>Qaysi formatni afzal ko&apos;rasiz?</label>
-                <select
-                  value={preferredFormat}
-                  onChange={(e) => setPreferredFormat(e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
-                  <option value="">-- Tanlang --</option>
-                  {FORMAT_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-2 border-t border-amber-900/10">
-                <label className={labelClass}>Telegram username yoki emailingiz *</label>
-                <input
-                  type="text"
-                  value={contactInfo}
-                  onChange={(e) => {
-                    setContactInfo(e.target.value);
-                    if (errors.contactInfo) setErrors((prev) => ({ ...prev, contactInfo: '' }));
-                  }}
-                  placeholder="@username yoki ism@domain.com"
-                  className={`${inputClass} ${errors.contactInfo ? 'border-red-500 bg-red-50/20' : ''}`}
-                />
-                {errors.contactInfo && <p className="text-[11px] text-red-600 mt-1">{errors.contactInfo}</p>}
-                <p className="text-[10px] text-stone-400 mt-1">
-                  Xizmat ishga tushganda birinchilardan bo&apos;lib xabardor bo&apos;lish uchun.
-                </p>
-              </div>
-
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={willingToRefer}
-                  onChange={(e) => setWillingToRefer(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 accent-amber-800 cursor-pointer"
-                />
-                <span className="text-xs text-stone-700">
-                  Agar xizmatni foydali deb topsam, do&apos;stlarimga tavsiya qilishga tayyorman.
-                </span>
-              </label>
-
-              {submitError && (
-                <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-300 rounded-xl px-3.5 py-2.5">
-                  {submitError}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-70 mt-4"
-              >
-                {isSubmitting ? 'Yuborilmoqda...' : "So'rovnomani yuborish"}
-              </button>
-            </form>
-          )}
-        </main>
-      </div>
-
-      <footer className="text-center text-[11px] text-stone-400 py-6 border-t border-amber-900/10">
-        © {new Date().getFullYear()} Rahnamo
-      </footer>
-    </div>
-  );
+  return <div className="ui-page min-h-screen">
+    <header className="border-b border-amber-950/10"><div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-5 py-5"><Link href="/" aria-label={c('back')}><RahnamoLogo className="h-10" /></Link><LanguageSwitcher /></div></header>
+    <main id="main-content" className="mx-auto max-w-3xl px-5 py-10 sm:py-14">
+      <SupportHeader eyebrow={t('eyebrow')} title={t('title')} description={t('description')} />
+      {submitted ? <section className="ui-panel p-7 sm:p-10"><CheckCircle2 className="mb-5 h-10 w-10 text-emerald-700" aria-hidden="true" /><h2 className="font-serif text-2xl font-semibold">{t('successTitle')}</h2><p role="status" className="ui-muted mt-3 leading-relaxed">{t('successBody')}</p><Link href="/" className="ui-button mt-6 inline-flex">{c('back')}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></section> : <form className="ui-panel p-5 sm:p-8" onSubmit={submit} aria-busy={busy}>
+        <h2 className="font-serif text-2xl font-semibold">{t('form')}</h2><p className="ui-muted mt-2 mb-6 text-sm">{c('required')}</p>
+        {!configured && <div className="mb-6"><Notice>{c('demo')}</Notice></div>}
+        <fieldset disabled={busy || !configured} className="space-y-8 disabled:opacity-70">
+          <section className="space-y-5"><h3 className="ui-eyebrow">{t('background')}</h3><div className="grid gap-5 sm:grid-cols-2">
+            {select('age_range', t('age'), [['Under 18','age0'],['18-24','age1'],['25-34','age2'],['35-44','age3'],['45+','age4']])}
+            {select('status', t('status'), [['student','student'],['graduate','graduate'],['working','working'],['other','otherOption']])}
+          </div><Field id="field_of_study" label={t('study')}><input id="field_of_study" name="field_of_study" className="ui-input" maxLength={300} /></Field>
+          {select('interest_area', t('interest'), [['Medicine','medicine'],['Law','law'],['Architecture','architecture'],['IT/Programming','tech'],['Grants & Scholarships','grants'],['Agriculture','agriculture'],['Business','business'],['Other','otherOption']], false, setInterest)}
+          {interest === 'Other' && <Field id="interest_other" label={t('other')}><input id="interest_other" name="interest_other" className="ui-input" maxLength={300} required /></Field>}
+          </section>
+          <section className="space-y-5 border-t border-amber-950/10 pt-6"><h3 className="ui-eyebrow">{t('preferences')}</h3>
+            <Field id="biggest_challenge" label={t('challenge')}><textarea id="biggest_challenge" name="biggest_challenge" rows={4} maxLength={3000} className="ui-input" /></Field>
+            {select('prior_advice_source', t('advice'), [['Friends','friends'],['Family','family'],['Internet forums','forums'],['No one','nobody'],['Other','otherOption']], false, setAdvice)}
+            {advice === 'Other' && <Field id="advice_other" label={t('other')}><input id="advice_other" name="advice_other" className="ui-input" required maxLength={300} /></Field>}
+            {select('interested_in_service', t('interested'), [['Yes definitely','definitely'],['Maybe','maybe'],['Not interested','notInterested']], true)}
+            <div className="grid gap-5 sm:grid-cols-2">{select('price_willingness', t('price'), [['Under 30,000','price0'],['30,000-100,000','price1'],['100,000-300,000','price2'],['300,000-600,000','price3'],['600,000+','price4']])}{select('preferred_format', t('format'), [['Text chat','text'],['Video call','video']])}</div>
+          </section>
+          <section className="space-y-5 border-t border-amber-950/10 pt-6"><h3 className="ui-eyebrow">{t('contactSection')}</h3><Field id="contact_info" label={t('contact')} hint={t('contactHint')}><input id="contact_info" name="contact_info" required maxLength={254} className="ui-input" aria-describedby="contact_info-hint" autoComplete="email" /></Field><label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed"><input type="checkbox" name="willing_to_refer" className="mt-1 h-5 w-5 shrink-0 accent-amber-900" /><span>{t('refer')}</span></label></section>
+          <button className="ui-button w-full sm:w-auto" type="submit"><Send className="h-4 w-4" aria-hidden="true" />{busy ? c('saving') : t('submit')}</button>
+        </fieldset>
+        {error && <div className="mt-5"><Notice>{error}</Notice></div>}
+      </form>}
+    </main>
+  </div>;
 }

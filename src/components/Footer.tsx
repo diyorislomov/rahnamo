@@ -1,91 +1,21 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import RahnamoLogo from '@/components/RahnamoLogo';
-import { Shield, Sparkles, Send, Mail, Heart } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
+import RahnamoLogo from './RahnamoLogo';
 
 export default function Footer() {
-  const t = useTranslations('common');
-  const tFooter = useTranslations('footer');
-  const specialtiesList = tFooter.raw('specialtiesList') as string[];
-
+  const t = useTranslations('discovery');
   return (
-    <footer className="bg-gradient-to-b from-[#2C241E] to-[#1E1813] text-amber-100/80 pt-14 pb-8 border-t-4 border-amber-800">
-      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
-        {/* Col 1: Brand Info */}
-        <div className="md:col-span-1 space-y-3">
-          <RahnamoLogo className="h-12" light={true} />
-          <p className="text-xs text-amber-200/70 leading-relaxed">
-            {tFooter('tagline')}
-          </p>
-          <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-400 font-semibold pt-1">
-            <Shield className="w-3.5 h-3.5" /> {tFooter('verifiedBadge')}
-          </div>
-        </div>
-
-        {/* Col 2: Navigation */}
-        <div className="space-y-2 text-xs">
-          <h4 className="font-serif font-bold text-amber-300 uppercase tracking-wider text-[11px]">{tFooter('platformHeading')}</h4>
-          <ul className="space-y-2 pt-1 text-amber-100/70">
-            <li>
-              <Link href="/" className="hover:text-amber-300 transition-colors">
-                {t('catalog')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/#how-it-works" className="hover:text-amber-300 transition-colors">
-                {t('howItWorks')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/my-bookings" className="hover:text-amber-300 transition-colors">
-                {t('myBookings')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/become-counselor" className="hover:text-amber-300 transition-colors">
-                {t('becomeCounselorJoin')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/admin" className="hover:text-amber-300 transition-colors text-amber-400 font-semibold">
-                {tFooter('adminPanel')}
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Col 3: Specialties */}
-        <div className="space-y-2 text-xs">
-          <h4 className="font-serif font-bold text-amber-300 uppercase tracking-wider text-[11px]">{tFooter('specialtiesHeading')}</h4>
-          <ul className="space-y-2 pt-1 text-amber-100/70">
-            {specialtiesList.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Col 4: Contact & Social */}
-        <div className="space-y-3 text-xs">
-          <h4 className="font-serif font-bold text-amber-300 uppercase tracking-wider text-[11px]">{tFooter('contactHeading')}</h4>
-          <p className="text-amber-200/70 text-[11px]">
-            {tFooter('contactBlurb')}
-          </p>
-          <a
-            href="https://t.me/rahnamo_admin"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 bg-amber-900/80 hover:bg-amber-800 text-amber-50 px-4 py-2.5 rounded-xl border border-amber-700/60 font-semibold transition-all shadow-2xs"
-          >
-            <Send className="w-3.5 h-3.5" /> {tFooter('telegramSupport')}
-          </a>
-        </div>
+    <footer className="border-t border-[#e7ddd0] bg-[#efe5d5] py-10 sm:py-12">
+      <div className="ui-container grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.2fr_.8fr_1fr]">
+        <div><Link href="/" aria-label="Rahnamo"><RahnamoLogo /></Link><p className="ui-muted mt-4 max-w-xs text-sm leading-relaxed">{t('footer.body')}</p></div>
+        <nav aria-label={t('footer.explore')}><h2 className="mb-3 text-sm font-semibold">{t('footer.explore')}</h2><ul className="grid gap-1 text-sm text-[#655548]">
+          {([{ href: '/', key: 'mentors' }, { href: '/my-bookings', key: 'bookings' }, { href: '/forum', key: 'forum' }, { href: '/become-counselor', key: 'become' }] as const).map((link) => <li key={link.href}><Link href={link.href} className="inline-flex min-h-10 items-center hover:underline underline-offset-4">{t(`nav.${link.key}`)}</Link></li>)}
+        </ul></nav>
+        <div><h2 className="text-sm font-semibold">{t('footer.help')}</h2><p className="ui-muted mt-3 max-w-xs text-sm">{t('footer.helpBody')}</p><a href="https://t.me/rahnamo_admin" target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#8b431b] hover:underline underline-offset-4">{t('footer.support')}<ArrowUpRight size={16} aria-hidden="true" /></a></div>
       </div>
-
-      <div className="max-w-7xl mx-auto px-6 mt-10 pt-6 border-t border-amber-900/40 text-center text-[11px] text-amber-200/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>{tFooter('copyright', { year: new Date().getFullYear() })}</p>
-        <p className="flex items-center gap-1">
-          {tFooter('madeWithPrefix')} <Heart className="w-3 h-3 text-amber-500 fill-amber-500" /> {tFooter('madeWithSuffix')}
-        </p>
+      <div className="ui-container mt-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-[#d9cbb6] pt-5 text-xs text-[#6d6259]">
+        <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p><p>{t('footer.location')}</p><Link href="/admin" className="inline-flex min-h-10 items-center hover:underline">{t('footer.admin')}</Link>
       </div>
     </footer>
   );

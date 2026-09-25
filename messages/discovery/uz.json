@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "title": "Rahnamo · Keyingi qadamingizni toping",
+    "description": "Yo‘nalishingizga mos ustozlarni toping, maslahat turlari va narxlarini solishtiring, keyingi qadamingizni belgilang."
+  },
+  "nav": {
+    "label": "Asosiy navigatsiya",
+    "mentors": "Ustoz topish",
+    "bookings": "Mening qabullarim",
+    "forum": "Hamjamiyat",
+    "become": "Ustoz bo‘lish",
+    "open": "Menyuni ochish",
+    "close": "Menyuni yopish",
+    "skip": "Asosiy mazmunga o‘tish",
+    "language": "Til"
+  },
+  "hero": {
+    "eyebrow": "To‘g‘ri maslahat. Aniqroq yo‘l.",
+    "title": "Keyingi qadamingizni ustoz bilan toping.",
+    "body": "O‘qish, karyera yoki yangi imkoniyatlar bo‘yicha yo‘l ko‘rsata oladigan ustozlarni tanlang."
+  },
+  "search": {
+    "label": "Qaysi yo‘nalishda yordam kerak?",
+    "placeholder": "Masalan: grantlar, tibbiyot yoki dasturlash",
+    "clear": "Qidiruvni tozalash",
+    "category": "Qiziqish sohasi",
+    "sort": "Saralash",
+    "name": "Ism bo‘yicha: A–Z",
+    "low": "Avval arzonroq",
+    "high": "Avval qimmatroq",
+    "company": "Tashkilot",
+    "allCompanies": "Barcha tashkilotlar",
+    "reset": "Filtrlarni tozalash",
+    "filters": "Ustozlarni saralash"
+  },
+  "results": {
+    "title": "Ustozingizni toping",
+    "count": "{count} ta ustoz",
+    "loading": "Ustozlar yuklanmoqda…",
+    "errorTitle": "Ustozlarni yuklay olmadik",
+    "errorBody": "Qayta urinib ko‘ring. Qidiruvingiz va filtrlar saqlangan.",
+    "retry": "Qayta urinish",
+    "emptyTitle": "Qidiruvingizga mos ustoz topilmadi",
+    "emptyBody": "Boshqa so‘z bilan qidiring yoki kengroq sohani tanlang.",
+    "noneTitle": "Ustozlar shu yerda ko‘rinadi",
+    "noneBody": "Hozircha katalogda profillar yo‘q. Keyinroq qayta tekshiring.",
+    "demoTitle": "Namuna katalogini ko‘ryapsiz",
+    "demoBody": "Bu profillar platformani sinab ko‘rish uchun berilgan. Haqiqiy vaqtlar va qabul uchun xizmat ulangan bo‘lishi kerak."
+  },
+  "card": {
+    "video": "Video maslahat",
+    "text": "Matnli maslahat",
+    "from": "Video maslahat narxi",
+    "questionPrice": "Bir savol uchun",
+    "currency": "so‘m",
+    "profile": "Profilni ko‘rish",
+    "noPrice": "Maslahat turlarini ko‘rish",
+    "sample": "Namuna profil"
+  },
+  "how": {
+    "eyebrow": "Keyingi qadam sari",
+    "title": "Savolingizdan aniq yo‘nalishgacha.",
+    "oneTitle": "Mos ustozni toping",
+    "oneBody": "Sohalarni ko‘rib chiqing va ustoz sizga qanday yordam bera olishini profilidan bilib oling.",
+    "twoTitle": "Maslahat turini tanlang",
+    "twoBody": "Format va narxlarni solishtiring, so‘ng maslahat uchun so‘rov yuboring.",
+    "threeTitle": "Keyingi qadamlar qo‘l ostida",
+    "threeBody": "Qabul holatini kuzating va Mening qabullarim orqali suhbatga qayting."
+  },
+  "faq": {
+    "eyebrow": "Boshlashdan oldin",
+    "title": "Foydali savol-javoblar.",
+    "q1": "Ustozni qanday tanlayman?",
+    "a1": "Avval sizga kerakli sohani tanlang. Ustoz profilini o‘qing, maslahat turlari va narxlarini solishtiring, so‘ng nimani muhokama qilmoqchi ekaningizni yozing.",
+    "q2": "To‘lov qanday ishlaydi?",
+    "a2": "To‘lov mavjud bo‘lsa, karta orqali o‘tkazma qilinadi. Qabuldagi ko‘rsatmalarga amal qiling va tranzaksiya raqamini yuboring. To‘lov tasdiqlanishidan oldin yuborgan ma’lumotingiz tekshiriladi.",
+    "q3": "Qabulimni qayerdan topaman?",
+    "a3": "Qabulni band qilgan brauzeringizda Mening qabullarim bo‘limini oching. Hozircha qabullar shu brauzerga bog‘langan. Qabul raqamini saqlang va yordam kerak bo‘lsa bizga yozing."
+  },
+  "footer": {
+    "body": "O‘qish, karyera va yangi imkoniyatlar sari shaxsiy maslahat.",
+    "explore": "Platforma",
+    "help": "Yordam kerakmi?",
+    "helpBody": "Qabul yoki platformadan foydalanish bo‘yicha jamoamizga yozing.",
+    "support": "Telegram orqali yordam",
+    "admin": "Boshqaruv",
+    "copyright": "© {year} Rahnamo",
+    "location": "Keyingi qadamingiz uchun."
+  },
+  "stale": {
+    "message": "Saytning yangi versiyasi tayyor. Kerakli ma’lumotlarni saqlab, davom etish uchun sahifani yangilang.",
+    "reload": "Sahifani yangilash"
+  }
+}

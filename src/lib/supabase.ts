@@ -7,5 +7,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export function isSupabaseConfigured() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return !!url && !url.includes('placeholder');
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return !!url && !!key && !url.includes('placeholder') && !key.includes('placeholder');
 }

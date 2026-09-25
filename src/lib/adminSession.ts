@@ -11,15 +11,15 @@ function getSecret(): string {
 
 export function signAdminSession(): string {
   const expiresAt = Date.now() + SESSION_DURATION_MS;
-  const payload = String(expiresAt);
+  const payload = `admin:${expiresAt}`;
   const hmac = crypto.createHmac('sha256', getSecret()).update(payload).digest('hex');
   return `${payload}.${hmac}`;
 }
 
 export function verifyAdminSession(token: string | undefined | null): boolean {
   if (!token) return false;
-  const [payload, hmac] = token.split('.');
-  if (!payload || !hmac) return false;
+  const [payload, hmac, extra] = token.split('.');
+  if (!payload || !hmac || extra !== undefined || !/^admin:\d+$/.test(payload)) return false;
 
   let expected: string;
   try {
@@ -32,6 +32,6 @@ export function verifyAdminSession(token: string | undefined | null): boolean {
   const b = Buffer.from(expected);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
 
-  const expiresAt = parseInt(payload, 10);
+  const expiresAt = Number(payload.slice(6));
   return Number.isFinite(expiresAt) && Date.now() < expiresAt;
 }

@@ -1,293 +1,139 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { Suspense, useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
+import { ArrowRight, RefreshCw, Search } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import SmoothScroll from '@/components/SmoothScroll';
 import CleanHero from '@/components/CleanHero';
 import CatalogIntro from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
 import { supabase } from '@/lib/supabase';
+import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import { Counselor } from '@/types';
-import { Search, ChevronDown, Sparkles } from 'lucide-react';
 
-type SortOption = 'rating' | 'popular' | 'price-low' | 'price-high';
+function Discovery() {
+  const t = useTranslations('discovery');
+  const tSpecialties = useTranslations('specialties');
+  const locale = useLocale();
+  const params = useSearchParams();
+  const configured = isSupabaseConfigured();
+  const [counselors, setCounselors] = useState<Counselor[]>(() => configured ? [] : INITIAL_COUNSELORS);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(() => configured ? 'loading' : 'ready');
+  const [attempt, setAttempt] = useState(0);
+  const query = params.get('q') || '';
+  const requestedCategory = params.get('category') || 'All';
+  const category = Object.hasOwn(SPECIALTY_CONFIG, requestedCategory) ? requestedCategory : 'All';
+  const company = params.get('company') || '';
+  const requestedSort = params.get('sort');
+  const sort = requestedSort === 'price-low' || requestedSort === 'price-high' ? requestedSort : 'name';
 
-const ALL_COMPANIES = 'All';
+  useEffect(() => {
+    if (!configured) return;
+    const controller = new AbortController();
+    // Timeout makes a broken connection recoverable; successful responses are never replaced by sample data.
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let cancelled = false;
+    Promise.resolve(supabase.from('counselors').select('*').abortSignal(controller.signal))
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) { setStatus('error'); return; }
+        setCounselors((data || []).map(mapCounselorRow));
+        setStatus('ready');
+      })
+      .catch(() => { if (!cancelled) setStatus('error'); })
+      .finally(() => clearTimeout(timeout));
+    return () => { cancelled = true; clearTimeout(timeout); controller.abort(); };
+  }, [configured, attempt]);
 
-// Merge live Supabase rows onto the mock list by id: a matching id keeps the
-// mock's decorative-only fields (responseTime/totalSessions/outcomes -- not
-// real DB columns) while taking everything else from the live row; an id
-// that only exists in Supabase (a newly approved counselor) is appended.
-function mergeCounselors(mock: Counselor[], live: Counselor[]): Counselor[] {
-  const byId = new Map(mock.map((c) => [c.id, c]));
-  for (const liveC of live) {
-    const existing = byId.get(liveC.id);
-    byId.set(liveC.id, existing ? { ...existing, ...liveC } : liveC);
+  function updateFilter(key: string, value: string) {
+    const next = new URLSearchParams(params.toString());
+    if (!value || (key === 'category' && value === 'All') || (key === 'sort' && value === 'name')) next.delete(key);
+    else next.set(key, value);
+    const search = next.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`);
   }
-  return Array.from(byId.values());
+
+  function resetFilters() {
+    const next = new URLSearchParams(params.toString());
+    ['q', 'category', 'company', 'sort'].forEach((key) => next.delete(key));
+    window.history.replaceState(null, '', `${window.location.pathname}${next.size ? `?${next}` : ''}${window.location.hash}`);
+  }
+
+  const normalizedQuery = query.trim().toLocaleLowerCase(locale);
+  const filtered = counselors.filter((c) => {
+    const labels = c.specialties.map((s) => Object.hasOwn(SPECIALTY_CONFIG, s) ? tSpecialties(s) : s);
+    const searchable = [c.fullName, c.headline, c.bio, ...c.specialties, ...labels].join(' ').toLocaleLowerCase(locale);
+    return (category === 'All' || c.specialties.includes(category)) && (!company || c.company === company) && searchable.includes(normalizedQuery);
+  }).sort((a, b) => sort === 'price-low' ? a.standardPrice - b.standardPrice : sort === 'price-high' ? b.standardPrice - a.standardPrice : a.fullName.localeCompare(b.fullName, locale));
+  const companies = Array.from(new Set(counselors.map((c) => c.company).filter((c): c is string => !!c))).sort();
+  const hasFilters = !!query || category !== 'All' || !!company || sort !== 'name';
+
+  return (
+    <>
+      <CleanHero />
+      <CatalogIntro searchQuery={query} setSearchQuery={(value) => updateFilter('q', value)} selectedTag={category} setSelectedTag={(value) => updateFilter('category', value)} />
+      <section id="rahnamolar" className="ui-container pb-12 pt-6 sm:pb-16 sm:pt-8" aria-labelledby="results-title">
+        {!configured && <div className="ui-alert mb-5" role="note"><p className="font-semibold">{t('results.demoTitle')}</p><p className="mt-1">{t('results.demoBody')}</p></div>}
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 id="results-title" className="text-xl font-semibold tracking-tight">{t('results.title')}</h2>
+            <p className="ui-muted mt-1 text-sm" role="status" aria-live="polite">{status === 'loading' ? t('results.loading') : status === 'ready' ? t('results.count', { count: filtered.length }) : t('results.errorTitle')}</p>
+          </div>
+          <div className="flex w-full flex-wrap items-end gap-3 sm:w-auto">
+            {companies.length > 1 && <div className="min-w-0 flex-1 sm:w-48 sm:flex-none">
+              <label htmlFor="company-filter" className="ui-label">{t('search.company')}</label>
+              <select id="company-filter" className="ui-input" value={company} onChange={(e) => updateFilter('company', e.target.value)}>
+                <option value="">{t('search.allCompanies')}</option>
+                {companies.map((name) => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </div>}
+            <div className="min-w-0 flex-1 sm:w-48 sm:flex-none">
+              <label htmlFor="mentor-sort" className="ui-label">{t('search.sort')}</label>
+              <select id="mentor-sort" className="ui-input" value={sort} onChange={(e) => updateFilter('sort', e.target.value)}>
+                <option value="name">{t('search.name')}</option><option value="price-low">{t('search.low')}</option><option value="price-high">{t('search.high')}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        {hasFilters && <button type="button" className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#8b431b] underline underline-offset-4" onClick={resetFilters}>{t('search.reset')}<RefreshCw size={14} aria-hidden="true" /></button>}
+        {status === 'loading' ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">{[1, 2, 3].map((id) => <div key={id} className="ui-panel min-h-72 p-6"><div className="h-16 w-16 rounded-xl bg-[#f0e8dc]" /><div className="mt-5 h-4 w-3/4 rounded bg-[#f0e8dc]" /><div className="mt-3 h-4 w-full rounded bg-[#f0e8dc]" /><div className="mt-3 h-4 w-2/3 rounded bg-[#f0e8dc]" /></div>)}</div> : status === 'error' ? (
+          <div className="ui-panel px-6 py-10 text-center" role="alert">
+            <h3 className="text-lg font-semibold">{t('results.errorTitle')}</h3><p className="ui-muted mx-auto mt-2 max-w-md">{t('results.errorBody')}</p>
+            <button type="button" className="ui-button mt-5" onClick={() => { setStatus('loading'); setAttempt((value) => value + 1); }}><RefreshCw size={17} aria-hidden="true" />{t('results.retry')}</button>
+          </div>
+        ) : filtered.length ? <div className="grid items-stretch gap-5 md:grid-cols-2 lg:grid-cols-3">{filtered.map((c) => <CounselorCard key={c.id} counselor={c} demo={!configured} />)}</div> : (
+          <div className="ui-panel px-6 py-12 text-center">
+            <Search className="mx-auto mb-4 text-[#8b6d49]" size={26} aria-hidden="true" />
+            <h3 className="text-lg font-semibold">{t(counselors.length ? 'results.emptyTitle' : 'results.noneTitle')}</h3>
+            <p className="ui-muted mx-auto mt-2 max-w-md">{t(counselors.length ? 'results.emptyBody' : 'results.noneBody')}</p>
+            {hasFilters && <button type="button" onClick={resetFilters} className="ui-button-secondary mt-5">{t('search.reset')}</button>}
+          </div>
+        )}
+      </section>
+      <section id="how-it-works" className="border-y border-[#e7ddd0] bg-[#f1e8d9] py-12 sm:py-16" aria-labelledby="how-title">
+        <div className="ui-container">
+          <p className="ui-eyebrow">{t('how.eyebrow')}</p><h2 id="how-title" className="mt-2 max-w-lg font-serif text-3xl leading-tight sm:text-4xl">{t('how.title')}</h2>
+          <ol className="mt-8 grid gap-8 md:grid-cols-3">
+            {(['one', 'two', 'three'] as const).map((step, index) => <li key={step}>
+              <span className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#bba182] text-sm font-semibold text-[#8b431b]">0{index + 1}</span>
+              <h3 className="text-base font-semibold">{t(`how.${step}Title`)}</h3><p className="ui-muted mt-2 text-sm leading-relaxed">{t(`how.${step}Body`)}</p>
+            </li>)}
+          </ol>
+        </div>
+      </section>
+      <section className="ui-container grid gap-8 py-12 sm:py-16 md:grid-cols-[.8fr_1.2fr]" aria-labelledby="faq-title">
+        <div><p className="ui-eyebrow">{t('faq.eyebrow')}</p><h2 id="faq-title" className="mt-2 font-serif text-3xl leading-tight sm:text-4xl">{t('faq.title')}</h2><a href="https://t.me/rahnamo_admin" target="_blank" rel="noreferrer" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#8b431b]">{t('footer.support')}<ArrowRight size={16} aria-hidden="true" /></a></div>
+        <div>{[1, 2, 3].map((id) => <details className="ui-faq" key={id}><summary>{t(`faq.q${id}`)}</summary><p className="ui-muted pb-5 text-sm leading-relaxed">{t(`faq.a${id}`)}</p></details>)}</div>
+      </section>
+    </>
+  );
 }
 
 export default function Home() {
-  const t = useTranslations('home');
-  const [counselors, setCounselors] = useState<Counselor[]>(INITIAL_COUNSELORS);
-  const [selectedTag, setSelectedTag] = useState<string>('All');
-  const [selectedCompany, setSelectedCompany] = useState<string>(ALL_COMPANIES);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<SortOption>('rating');
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-
-    Promise.resolve(supabase.from('counselors').select('*'))
-      .then(({ data, error }) => {
-        if (!error && data && data.length > 0) {
-          setCounselors(mergeCounselors(INITIAL_COUNSELORS, data.map(mapCounselorRow)));
-        }
-      })
-      .catch((err: unknown) => console.warn('Counselors fetch error, using mock catalog:', err));
-  }, []);
-
-  const COMPANIES = useMemo(
-    () => [
-      ALL_COMPANIES,
-      ...Array.from(new Set(counselors.map((c) => c.company).filter((c): c is string => Boolean(c)))),
-    ],
-    [counselors]
-  );
-
-  // Filter & Search logic — category and company combine (AND), not replace
-  const filteredCounselors = counselors.filter((counselor) => {
-    const matchesTag =
-      selectedTag === 'All' || counselor.specialties.includes(selectedTag);
-
-    const matchesCompany =
-      selectedCompany === ALL_COMPANIES || counselor.company === selectedCompany;
-
-    const matchesSearch =
-      searchQuery.trim() === '' ||
-      counselor.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      counselor.headline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      counselor.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      counselor.specialties.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    return matchesTag && matchesCompany && matchesSearch;
-  });
-
-  // Sort logic
-  const sortedCounselors = [...filteredCounselors].sort((a, b) => {
-    if (sortBy === 'rating') return b.rating - a.rating;
-    if (sortBy === 'popular') return b.reviewsCount - a.reviewsCount;
-    if (sortBy === 'price-low') return a.standardPrice - b.standardPrice;
-    if (sortBy === 'price-high') return b.standardPrice - a.standardPrice;
-    return 0;
-  });
-
-  const toggleFaq = (index: number) => {
-    setOpenFaq(openFaq === index ? null : index);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200">
-      <SmoothScroll>
-        <Navbar />
-
-        <CleanHero counselors={counselors} />
-
-        <CatalogIntro
-          counselors={counselors}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedTag={selectedTag}
-          setSelectedTag={setSelectedTag}
-        />
-
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Sort + company refinement for the results below — search and the
-              primary category picker now live upstream in CatalogIntro, so
-              this card only holds what actually refines what you're already
-              looking at. */}
-          <section id="rahnamolar" className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm my-8 space-y-5 scroll-mt-24">
-            <div className="flex items-center justify-end gap-2 text-xs font-semibold">
-              <span className="text-stone-500 whitespace-nowrap">{t('sortLabel')}</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="bg-amber-50/80 border border-amber-900/15 text-amber-950 font-bold py-3 px-3.5 rounded-2xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
-              >
-                <option value="rating">{t('sortOptions.rating')}</option>
-                <option value="popular">{t('sortOptions.popular')}</option>
-                <option value="price-low">{t('sortOptions.priceLow')}</option>
-                <option value="price-high">{t('sortOptions.priceHigh')}</option>
-              </select>
-            </div>
-
-            {/* Company / Institution Filter Pills — combines with category above (AND) */}
-            {COMPANIES.length > 1 && (
-              <div className="flex flex-wrap gap-2 pt-3 border-t border-amber-900/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 self-center pr-1">
-                  {t('companyLabel')}
-                </span>
-                {COMPANIES.map((name) => {
-                  const isSelected = selectedCompany === name;
-                  return (
-                    <button
-                      key={name}
-                      onClick={() => setSelectedCompany(name)}
-                      className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200 border cursor-pointer ${
-                        isSelected
-                          ? 'bg-amber-900 text-amber-50 border-amber-950 shadow-xs'
-                          : 'bg-white text-stone-600 border-amber-900/15 hover:bg-amber-50/60'
-                      }`}
-                    >
-                      {name === ALL_COMPANIES ? t('allCompanies') : name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* Mentor Cards Grid (Lively Micro-Interactions & Hover Glow) */}
-          <section className="mb-16">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="font-serif font-bold text-xl sm:text-2xl text-amber-950 flex items-center gap-2">
-                  <span>{t('selectedHeading')}</span>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-950 font-mono">
-                    {sortedCounselors.length}
-                  </span>
-                </h2>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  {t('selectedSubheading')}
-                </p>
-              </div>
-            </div>
-
-            {sortedCounselors.length === 0 ? (
-              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 my-6 shadow-xs">
-                <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-8 h-8 text-amber-800" />
-                </div>
-                <h4 className="font-serif font-bold text-lg text-amber-950">{t('emptyTitle')}</h4>
-                <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
-                  {t('emptyBody')}
-                </p>
-                <button
-                  onClick={() => {
-                    setSelectedTag('All');
-                    setSelectedCompany(ALL_COMPANIES);
-                    setSearchQuery('');
-                  }}
-                  className="mt-4 bg-amber-900 text-amber-50 font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-amber-800 transition-all cursor-pointer"
-                >
-                  {t('emptyReset')}
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedCounselors.map((counselor) => (
-                  <CounselorCard key={counselor.id} counselor={counselor} />
-                ))}
-              </div>
-            )}
-          </section>
-
-
-          {/* How Rahnamo Works Section (Desert Oasis Theme) */}
-          <section id="how-it-works" className="bg-gradient-to-b from-[#1E1B4B] via-[#2A265F] to-[#1E1B4B] text-amber-50 rounded-3xl p-8 sm:p-12 my-16 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl" />
-
-            <div className="text-center max-w-2xl mx-auto mb-12 relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-semibold mb-3">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{t('howItWorks.badge')}</span>
-              </div>
-              <h2 className="font-serif font-bold text-2xl sm:text-4xl text-amber-100">
-                {t('howItWorks.heading')}
-              </h2>
-              <p className="text-xs sm:text-sm text-amber-200/70 mt-2">
-                {t('howItWorks.subheading')}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
-                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
-                  1
-                </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step1Title')}</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  {t('howItWorks.step1Body')}
-                </p>
-              </div>
-
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
-                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
-                  2
-                </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step2Title')}</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  {t('howItWorks.step2Body')}
-                </p>
-              </div>
-
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
-                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
-                  3
-                </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step3Title')}</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  {t('howItWorks.step3Body')}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* FAQ Accordion Section (Interactive Expand/Collapse Accordion) */}
-          <section className="max-w-3xl mx-auto my-16">
-            <h2 className="font-serif font-bold text-2xl text-center text-amber-950 mb-6">
-              {t('faq.heading')}
-            </h2>
-            <div className="space-y-3">
-              {(t.raw('faq.items') as { q: string; a: string }[]).map((faq, idx) => {
-                const isOpen = openFaq === idx;
-                return (
-                  <div
-                    key={idx}
-                    className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
-                      isOpen ? 'bg-amber-50/90 border-amber-800 shadow-sm ring-1 ring-amber-800/20' : 'bg-white/95 border-amber-900/15 hover:border-amber-900/30'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleFaq(idx)}
-                      className="w-full p-5 text-left font-serif font-bold text-sm text-amber-950 flex items-center justify-between cursor-pointer gap-4"
-                    >
-                      <span>{faq.q}</span>
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${isOpen ? 'bg-amber-900 text-amber-50 rotate-180' : 'bg-amber-100 text-amber-900'}`}>
-                        <ChevronDown className="w-4 h-4" />
-                      </div>
-                    </button>
-
-                    {isOpen && (
-                      <div className="px-5 pb-5 text-xs text-stone-700 leading-relaxed border-t border-amber-900/10 pt-3.5 animate-in fade-in duration-200">
-                        {faq.a}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        </main>
-
-        <Footer />
-      </SmoothScroll>
-    </div>
-  );
+  const t = useTranslations('discovery.results');
+  return <div className="ui-page"><Navbar /><main><Suspense fallback={<div className="ui-container py-16" role="status">{t('loading')}</div>}><Discovery /></Suspense></main><Footer /></div>;
 }

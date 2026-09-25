@@ -1,1284 +1,142 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { supabase } from '@/lib/supabase';
-import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse, Counselor } from '@/types';
-import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { mapCounselorRow } from '@/lib/counselors';
-import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
-import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users, MessagesSquare, Flag } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
+import { CheckCircle2, LockKeyhole, LogOut, RefreshCw, Search } from 'lucide-react';
+import { SupportShell, SupportHeader, Field, Notice, Busy, SupportApiError, supportRequest } from '@/components/SupportUI';
 
-interface CounselorApp {
-  id?: string;
-  full_name: string;
-  headline: string;
-  // `category` and `company` only exist on the hardcoded mock fallback rows
-  // below -- the real `counselor_applications` table (and the live
-  // /become-counselor form) has neither column, only `specialties` (a plain
-  // comma-separated string). Both must stay optional or every real
-  // application renders "undefined" in this tab.
-  category?: string;
-  specialties?: string;
-  bio: string;
-  company?: string;
-  email: string;
-  phone: string;
-  telegram: string;
-  linkedin?: string;
-  expected_standard_price: number;
-  expected_premium_price: number;
-  expected_price_per_question?: number | null;
-  expected_soft_cap?: number | null;
-  status?: 'pending' | 'approved' | 'rejected';
-}
-
-interface AdminThread {
-  id: string;
-  booking_id: string;
-  counselor_id: string;
-  price_per_question: number;
-  soft_cap: number | null;
-  questions_used: number;
-  total_owed: number;
-  payment_status: 'active' | 'awaiting_payment' | 'closed';
-  payment_receipt: string | null;
-  created_at: string;
-  closed_at: string | null;
-  booking: { student_name: string; email: string; telegram: string } | null;
-  counselor: { full_name: string; headline: string } | null;
-}
-
-// Shared by reject/approve/delete below -- all three need to patch the same
-// `rahnamo_applications` localStorage cache, which is what this tab actually
-// renders from whenever the Supabase fetch comes back empty (see comment at
-// the SELECT policy in schema.sql for why that was always happening before).
-// Without this, a page refresh silently reverted every status change back
-// to the stale cached copy, regardless of whether the Supabase write itself
-// succeeded.
-function persistLocalApplications(updater: (apps: CounselorApp[]) => CounselorApp[]) {
-  try {
-    const existing: CounselorApp[] = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-    localStorage.setItem('rahnamo_applications', JSON.stringify(updater(existing)));
-  } catch (err) {
-    console.error(err);
-  }
-}
+interface Booking { id: string; student_name: string; counselor_name: string; email: string; phone: string; telegram: string; slot: string; tier: string; price: number; payment_method: string; payment_status: string; payment_receipt?: string; status: string; question?: string; education?: string; meet_link?: string; created_at: string }
+interface Application { id: string; full_name: string; headline: string; specialties: string; bio: string; email: string; phone: string; telegram: string; status: string; expected_standard_price: number; expected_premium_price: number; expected_price_per_question?: number | null; expected_soft_cap?: number | null; created_at: string }
+interface Question { id: string; student_name_or_anonymous: string; email?: string; title: string; body: string; category: string; created_at: string }
+interface Answer { id: string; question_id: string; counselor_id: string; body: string; created_at: string }
+interface Mentor { id: string; full_name: string; headline: string; specialties: string[]; standard_price: number; premium_price: number; price_per_question?: number | null; commission_free_until?: string; available_slots?: string[] }
+interface Survey { id: string; created_at: string; age_range?: string; status?: string; field_of_study?: string; interest_area?: string; biggest_challenge?: string; prior_advice_source?: string; interested_in_service: string; price_willingness?: string; preferred_format?: string; contact_info: string; willing_to_refer?: boolean }
+interface Thread { id: string; booking_id: string; questions_used: number; total_owed: number; payment_status: string; payment_receipt?: string; created_at: string; booking?: {student_name: string; email: string; telegram: string} | null; counselor?: {full_name: string; headline: string} | null }
+interface AdminData { truncated?: boolean; bookings: Booking[]; applications: Application[]; forumQuestions: Question[]; forumAnswers: Answer[]; surveyResponses: Survey[]; counselors: Mentor[]; threads: Thread[] }
+type Tab = 'bookings' | 'applications' | 'threads' | 'forum' | 'survey' | 'counselors';
+const EMPTY: AdminData = {bookings:[],applications:[],forumQuestions:[],forumAnswers:[],surveyResponses:[],counselors:[],threads:[]};
+const TABS: Tab[] = ['bookings','applications','threads','forum','survey','counselors'];
+const safeHttps = (value?: string) => { try { const url = new URL(value || ''); return url.protocol === 'https:' ? url.href : null; } catch { return null; } };
 
 export default function AdminDashboardPage() {
-  const t = useTranslations('admin');
-  const tCommon = useTranslations('common');
-  const dateLocale = t('dateLocale');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const t = useTranslations('support.admin');
+  const c = useTranslations('support.common');
+  const survey = useTranslations('support.survey');
+  const locale = useLocale();
+  const [auth, setAuth] = useState<'checking'|'signedOut'|'signedIn'>('checking');
+  const [password, setPassword] = useState('');
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [data, setData] = useState<AdminData>(EMPTY);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [tab, setTab] = useState<Tab>('bookings');
+  const [query, setQuery] = useState('');
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string,string>>({});
+  const [warnings, setWarnings] = useState<Record<string,string>>({});
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum' | 'survey' | 'counselors' | 'threads'>('bookings');
-  const [bookings, setBookings] = useState<BookingTicketData[]>([]);
-  const [applications, setApplications] = useState<CounselorApp[]>([]);
-  const [forumQuestions, setForumQuestions] = useState<ForumQuestion[]>([]);
-  const [forumAnswers, setForumAnswers] = useState<ForumAnswer[]>([]);
-  const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
-  const [counselors, setCounselors] = useState<Counselor[]>([]);
-  const [threads, setThreads] = useState<AdminThread[]>([]);
-  const [threadActionId, setThreadActionId] = useState<string | null>(null);
-  const [threadActionErrors, setThreadActionErrors] = useState<{ [id: string]: string }>({});
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Per-booking-id action state -- lets each row show its own in-flight
-  // spinner and its own error/warning without one booking's failure
-  // clobbering another's.
-  const [bookingActionId, setBookingActionId] = useState<string | null>(null);
-  const [bookingActionErrors, setBookingActionErrors] = useState<{ [id: string]: string }>({});
-  const [bookingActionWarnings, setBookingActionWarnings] = useState<{ [id: string]: string }>({});
-
-  const fetchAdminData = async () => {
-    setLoading(true);
-    
-    // 1. Fetch Bookings from LocalStorage + Supabase
-    let localBookings: BookingTicketData[] = [];
+  const expireSession = useCallback(() => { setAuth('signedOut'); setData(EMPTY); setError(t('sessionExpired')); }, [t]);
+  const loadData = useCallback(async () => {
+    setLoading(true); setError('');
     try {
-      localBookings = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-    } catch (e) {
-      console.error(e);
-    }
+      const result = await supportRequest<AdminData & {success:boolean}>('/api/admin/data');
+      for (const key of Object.keys(EMPTY) as (keyof AdminData)[]) if (!Array.isArray(result[key])) throw new Error('invalid_data');
+      setData(result);
+    } catch (err) {
+      if (err instanceof SupportApiError && err.status === 401) expireSession();
+      else setError(t('loadFailed'));
+    } finally { setLoading(false); }
+  }, [expireSession, t]);
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      try {
-        const { data: supaBookings } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
-        if (supaBookings && supaBookings.length > 0) {
-          const mapped: BookingTicketData[] = supaBookings.map((b) => ({
-            id: b.id,
-            counselorId: b.counselor_id,
-            counselorName: b.counselor_name,
-            counselorHeadline: b.counselor_headline || '',
-            counselorAvatar: b.counselor_avatar || '',
-            tier: b.tier,
-            price: b.price,
-            paymentMethod: b.payment_method,
-            slot: b.slot,
-            studentName: b.student_name,
-            email: b.email,
-            phone: b.phone,
-            telegram: b.telegram,
-            education: b.education,
-            question: b.question,
-            meetLink: b.meet_link,
-            paymentStatus: b.payment_status || 'pending',
-            paymentReceipt: b.payment_receipt || '',
-            status: b.status || 'confirmed',
-            locale: b.locale || 'uz',
-            createdAt: b.created_at,
-          }));
-
-          // Local goes in FIRST so it only ever fills a genuine gap (a
-          // booking made while Supabase was unreachable) -- Supabase's row
-          // must win for any id both sources have, same fix and same root
-          // cause as /my-bookings' merge bug: this used to put local first
-          // in the array and then only ADD supabase rows whose id wasn't
-          // already known locally, which meant a stale local copy on
-          // admin's own device would permanently mask a real status change
-          // made from a different session (e.g. a student confirming their
-          // own booking, or another admin device), no matter how many
-          // times this page was refreshed.
-          const mergedMap = new Map<string, BookingTicketData>();
-          localBookings.forEach((b) => mergedMap.set(b.id, b));
-          mapped.forEach((b) => mergedMap.set(b.id, b));
-          const combined = Array.from(mergedMap.values()).sort(
-            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-          );
-          setBookings(combined);
-        } else {
-          setBookings(localBookings);
-        }
-
-        // 2. Fetch Applications from Supabase
-        const { data: supaApps } = await supabase.from('counselor_applications').select('*');
-        if (supaApps && supaApps.length > 0) {
-          setApplications(supaApps);
-        } else {
-          const localApps = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-          setApplications(localApps);
-        }
-
-        // 3. Fetch Forum questions & answers (moderation view — read-only)
-        const [{ data: supaQuestions }, { data: supaAnswers }] = await Promise.all([
-          supabase.from('forum_questions').select('*').order('created_at', { ascending: false }),
-          supabase.from('forum_answers').select('*'),
-        ]);
-        setForumQuestions(
-          supaQuestions && supaQuestions.length > 0 ? supaQuestions.map(mapForumQuestion) : loadLocalForumQuestions()
-        );
-        setForumAnswers(
-          supaAnswers && supaAnswers.length > 0 ? supaAnswers.map(mapForumAnswer) : loadLocalForumAnswers()
-        );
-
-        // 4. Fetch survey responses -- no localStorage fallback exists for
-        // this one (built after tonight's lessons, deliberately without a
-        // cache layer), so an empty/failed fetch just means an empty list.
-        const { data: supaSurvey } = await supabase
-          .from('survey_responses')
-          .select('*')
-          .order('created_at', { ascending: false });
-        setSurveyResponses(
-          (supaSurvey || []).map((s) => ({
-            id: s.id,
-            ageRange: s.age_range,
-            status: s.status,
-            fieldOfStudy: s.field_of_study,
-            interestArea: s.interest_area,
-            biggestChallenge: s.biggest_challenge,
-            priorAdviceSource: s.prior_advice_source,
-            interestedInService: s.interested_in_service,
-            priceWillingness: s.price_willingness,
-            preferredFormat: s.preferred_format,
-            contactInfo: s.contact_info,
-            willingToRefer: s.willing_to_refer,
-            createdAt: s.created_at,
-          }))
-        );
-
-        // 5. Fetch the live counselor roster -- for the commission-window
-        // badge, which needs joined_at/commission_free_until straight from
-        // the counselors table, not the applications table (an approved
-        // application isn't linked back to the counselor row it created).
-        const { data: supaCounselors } = await supabase
-          .from('counselors')
-          .select('*')
-          .order('joined_at', { ascending: false });
-        setCounselors((supaCounselors || []).map(mapCounselorRow));
-
-        // 6. Text Q&A threads -- goes through the admin API route, not a
-        // direct anon-key query, since anon has no grant on
-        // question_threads.payment_status at all (by design -- see
-        // schema.sql). This route uses service_role behind the admin
-        // session cookie instead.
-        try {
-          const threadsRes = await fetch('/api/admin/threads');
-          const threadsData = await threadsRes.json();
-          setThreads(threadsData.success ? threadsData.threads : []);
-        } catch (err) {
-          console.warn('Threads fetch error:', err);
-          setThreads([]);
-        }
-      } catch (err) {
-        console.warn('Supabase fetch error:', err);
-        setBookings(localBookings);
-        setApplications(JSON.parse(localStorage.getItem('rahnamo_applications') || '[]'));
-        setForumQuestions(loadLocalForumQuestions());
-        setForumAnswers(loadLocalForumAnswers());
-      }
-    } else {
-      setBookings(localBookings);
-      setApplications(JSON.parse(localStorage.getItem('rahnamo_applications') || '[]'));
-      setForumQuestions(loadLocalForumQuestions());
-      setForumAnswers(loadLocalForumAnswers());
-    }
-
-    setLoading(false);
-  };
-
-  // The real password never reaches this bundle -- every NEXT_PUBLIC_ var is
-  // inlined into client JS at build time regardless of how it's referenced,
-  // so the check has to happen server-side. /api/admin/check reads a signed,
-  // httpOnly session cookie that only /api/admin/login can issue.
   useEffect(() => {
-    fetch('/api/admin/check')
-      .then((res) => res.json())
-      .then(({ authenticated }) => {
-        if (authenticated) {
-          setIsAuthenticated(true);
-          fetchAdminData();
-        } else {
-          setLoading(false);
-        }
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    let active = true;
+    supportRequest<{authenticated:boolean}>('/api/admin/check').then(result => {
+      if (!active) return;
+      if (result.authenticated) { setAuth('signedIn'); void loadData(); }
+      else setAuth('signedOut');
+    }).catch(() => { if (active) { setAuth('signedOut'); setError(c('loadError')); } });
+    return () => { active = false; };
+  }, [loadData, c]);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const entered = adminPassword.trim();
-
-    fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: entered }),
-    })
-      .then((res) => res.json())
-      .then(({ success }) => {
-        if (success) {
-          setIsAuthenticated(true);
-          setLoginError('');
-          fetchAdminData();
-        } else {
-          setLoginError(t('login.wrongPassword'));
-        }
-      })
-      .catch(() => setLoginError(t('login.checkFailed')));
-  };
-
-  const handleAdminLogout = () => {
-    setIsAuthenticated(false);
-    Promise.resolve(fetch('/api/admin/logout', { method: 'POST' })).catch((err) =>
-      console.warn('Admin logout error:', err)
-    );
-  };
-
-  const handleApprovePayment = async (booking: BookingTicketData) => {
-    const id = booking.id;
-    setBookingActionId(id);
-    setBookingActionErrors((prev) => ({ ...prev, [id]: '' }));
-    setBookingActionWarnings((prev) => ({ ...prev, [id]: '' }));
-
-    // Same reasoning as the booking-submission check: a tab open since
-    // before a deploy runs its old JS forever, and old code silently
-    // skipping the whole Supabase branch is exactly how an admin could
-    // believe a payment was confirmed when it never actually wrote.
-    if (await isRunningStaleBuild()) {
-      announceStaleBuild();
-      setBookingActionId(null);
-      setBookingActionErrors((prev) => ({
-        ...prev,
-        [id]: t('bookings.staleBuildError'),
-      }));
-      return;
-    }
-
-    // The DB write is the actual source of truth here -- awaited on purpose.
-    // The UI must not flip to "confirmed" (which also unlocks the real meet
-    // link on /my-bookings) unless this genuinely persisted; an admin who
-    // believes they confirmed a payment that never actually wrote would have
-    // no way to know the student is still locked out.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      // .select() after .update() is deliberate, not decorative: RLS can
-      // silently affect zero rows with error === null (a real, reproduced
-      // case this exact session hit -- an UPDATE that "succeeds" with a
-      // clean 204 while the row never actually changes). Only a non-empty
-      // returned row proves the write really happened.
-      const { data, error } = await supabase
-        .from('bookings')
-        .update({ payment_status: 'confirmed' })
-        .eq('id', id)
-        .select('id, payment_status');
-
-      if (error || !data || data.length === 0) {
-        console.error('[PAYMENT_CONFIRM_FAILED]', id, { error, rowsAffected: data?.length ?? 0 });
-        setBookingActionId(null);
-        setBookingActionErrors((prev) => ({
-          ...prev,
-          [id]: t('bookings.confirmPaymentFailed'),
-        }));
-        return;
-      }
-    }
-
-    setBookings((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b))
-    );
-    try {
-      const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-      const updated = existing.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b));
-      localStorage.setItem('rahnamo_bookings', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
-
-    // Tells the student directly -- this is the only place the real meet
-    // link is ever sent to them. The DB write above already succeeded, so a
-    // failure here is a warning (the confirmation is real, just unnotified),
-    // not a hard error -- but the admin must still be told, since there is
-    // no other channel that would ever surface this.
-    try {
-      const emailRes = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'payment_confirmed',
-          id: booking.id,
-          studentName: booking.studentName,
-          counselorName: booking.counselorName,
-          tier: booking.tier,
-          price: booking.price,
-          slot: booking.slot,
-          paymentMethod: booking.paymentMethod,
-          email: booking.email,
-          meetLink: booking.meetLink,
-          locale: booking.locale || 'uz',
-        }),
-      });
-      const emailData = await emailRes.json();
-      if (!emailRes.ok || !emailData?.success) {
-        console.error('[PAYMENT_CONFIRMED_EMAIL_FAILED]', id, emailData);
-        setBookingActionWarnings((prev) => ({
-          ...prev,
-          [id]: t('bookings.emailNotSentWarning'),
-        }));
-      }
-    } catch (err) {
-      console.error('[PAYMENT_CONFIRMED_EMAIL_FAILED]', id, err);
-      setBookingActionWarnings((prev) => ({
-        ...prev,
-        [id]: t('bookings.emailNotSentWarning'),
-      }));
-    }
-
-    setBookingActionId(null);
-  };
-
-  const handleCompleteBooking = async (id: string) => {
-    const errorKey = `complete-${id}`;
-    setBookingActionId(id);
-    setBookingActionErrors((prev) => ({ ...prev, [errorKey]: '' }));
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      // Same reasoning as handleApprovePayment above: a clean "no error"
-      // response is not proof anything actually changed under RLS.
-      const { data, error } = await supabase
-        .from('bookings')
-        .update({ status: 'completed' })
-        .eq('id', id)
-        .select('id');
-
-      if (error || !data || data.length === 0) {
-        console.error('[COMPLETE_BOOKING_FAILED]', id, { error, rowsAffected: data?.length ?? 0 });
-        setBookingActionId(null);
-        setBookingActionErrors((prev) => ({
-          ...prev,
-          [errorKey]: t('bookings.completeBookingFailed'),
-        }));
-        return;
-      }
-    }
-
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'completed' } : b)));
-    try {
-      const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-      const updated = existing.map((b) => (b.id === id ? { ...b, status: 'completed' as const } : b));
-      localStorage.setItem('rahnamo_bookings', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
-
-    setBookingActionId(null);
-  };
-
-  // Both actions go through /api/admin/threads (service_role behind the
-  // admin session cookie) -- anon has no grant on payment_status, so a
-  // direct supabase.from('question_threads').update(...) the way bookings
-  // does it would just silently fail RLS the same way admin's "confirm
-  // payment" button used to before that got a real UPDATE policy.
-  const handleThreadAction = async (threadId: string, action: 'flag' | 'confirm_payment') => {
-    setThreadActionId(threadId);
-    setThreadActionErrors((prev) => ({ ...prev, [threadId]: '' }));
-
-    try {
-      const res = await fetch('/api/admin/threads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId, action }),
-      });
-      const data = await res.json();
-
-      if (!data.success) {
-        console.error('[THREAD_ACTION_FAILED]', action, threadId, data.error);
-        setThreadActionErrors((prev) => ({
-          ...prev,
-          [threadId]: action === 'flag' ? t('threads.flagFailed') : t('threads.confirmFailed'),
-        }));
-        setThreadActionId(null);
-        return;
-      }
-
-      setThreads((prev) =>
-        prev.map((th) => (th.id === threadId ? { ...th, payment_status: data.thread.payment_status } : th))
-      );
-    } catch (err) {
-      console.error('[THREAD_ACTION_FAILED]', action, threadId, err);
-      setThreadActionErrors((prev) => ({
-        ...prev,
-        [threadId]: t('threads.networkError'),
-      }));
-    }
-    setThreadActionId(null);
-  };
-
-  const handleApproveApplication = (app: CounselorApp) => {
-    const appKey = app.id || app.email;
-    setApplications((prev) =>
-      prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
-    );
-    persistLocalApplications((apps) =>
-      apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
-    );
-
-    const newCounselorId = `c-${(app.full_name || 'mentor')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')}-${Date.now().toString(36)}`;
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder')) return;
-
-    Promise.resolve(
-      supabase.from('counselors').insert({
-        id: newCounselorId,
-        full_name: app.full_name,
-        headline: app.headline,
-        avatar_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-        specialties: app.specialties
-          ? app.specialties.split(',').map((s) => s.trim()).filter(Boolean)
-          : [app.category || 'Umumiy'],
-        bio: app.bio,
-        standard_price: app.expected_standard_price || 45000,
-        premium_price: app.expected_premium_price || 130000,
-        rating: 5.0,
-        reviews_count: 0,
-        // Placeholder starting slots -- there's no counselor-facing
-        // schedule editor yet, so leaving this empty would make a newly
-        // approved counselor permanently unbookable. Real slot management
-        // is a follow-up feature, not this one.
-        available_slots: ['Dushanba, 19:00 - 19:30', 'Chorshanba, 19:00 - 19:30', 'Shanba, 12:00 - 12:30'],
-        company: app.company || null,
-        price_per_question: app.expected_price_per_question || null,
-        soft_cap: app.expected_soft_cap || null,
-      })
-    )
-      .then(({ error }) => {
-        if (error) {
-          console.warn('Counselor insert error:', error);
-          return;
-        }
-        if (app.id) {
-          return Promise.resolve(
-            supabase.from('counselor_applications').update({ status: 'approved' }).eq('id', app.id)
-          );
-        }
-      })
-      .catch((err) => console.warn('Application approve error:', err));
-  };
-
-  const handleRejectApplication = (app: CounselorApp) => {
-    const appKey = app.id || app.email;
-    setApplications((prev) =>
-      prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
-    );
-    persistLocalApplications((apps) =>
-      apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
-    );
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !app.id) return;
-
-    Promise.resolve(supabase.from('counselor_applications').update({ status: 'rejected' }).eq('id', app.id)).catch(
-      (err) => console.warn('Application reject error:', err)
-    );
-  };
-
-  const handleDeleteApplication = (app: CounselorApp) => {
-    const confirmed = window.confirm(t('applications.deleteConfirm', { name: app.full_name }));
-    if (!confirmed) return;
-
-    const appKey = app.id || app.email;
-    setApplications((prev) => prev.filter((a) => (a.id || a.email) !== appKey));
-    persistLocalApplications((apps) => apps.filter((a) => (a.id || a.email) !== appKey));
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !app.id) return;
-
-    Promise.resolve(supabase.from('counselor_applications').delete().eq('id', app.id)).catch((err) =>
-      console.warn('Application delete error:', err)
-    );
-  };
-
-  const filteredBookings = bookings.filter(
-    (b) =>
-      b.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.counselorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // If NOT Authenticated: Render Secure Login Gate
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased flex flex-col justify-between">
-        <Navbar />
-
-        <main className="max-w-md mx-auto px-4 py-16 w-full">
-          <div className="bg-white rounded-3xl border border-amber-900/15 p-8 shadow-xl text-center space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto shadow-sm">
-              <Lock className="w-8 h-8 text-amber-300" />
-            </div>
-
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
-                {t('login.badge')}
-              </span>
-              <h1 className="font-serif font-extrabold text-2xl text-amber-950 mt-3">
-                {t('login.title')}
-              </h1>
-              <p className="text-xs text-stone-600 mt-1">
-                {t('login.subtitle')}
-              </p>
-            </div>
-
-            <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
-              <div>
-                <label className="text-xs font-semibold text-stone-700 block mb-1">
-                  {t('login.passwordLabel')}
-                </label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
-                  <input
-                    type="password"
-                    placeholder="••••••••••••"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
-                  />
-                </div>
-                {loginError && <p className="text-[11px] text-red-600 font-semibold mt-1.5">{loginError}</p>}
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Lock className="w-4 h-4 text-amber-300" />
-                <span>{t('login.submit')}</span>
-              </button>
-            </form>
-
-            <p className="text-[10px] text-stone-400 pt-2 border-t border-amber-900/10">
-              {t('login.legalNotice')}
-            </p>
-          </div>
-        </main>
-
-        <Footer />
-      </div>
-    );
+  async function login(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (loginBusy) return;
+    setLoginBusy(true); setError('');
+    try { await supportRequest('/api/admin/login', {password}); setPassword(''); setAuth('signedIn'); await loadData(); }
+    catch (err) { setError(err instanceof SupportApiError && err.status === 429 ? c('rateLimit') : t('loginError')); }
+    finally { setLoginBusy(false); }
   }
 
-  return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200">
-      <Navbar />
+  async function logout() {
+    setLogoutBusy(true); setError('');
+    try { await supportRequest('/api/admin/logout', {}); setAuth('signedOut'); setData(EMPTY); setRowErrors({}); setWarnings({}); setSuccess(''); }
+    catch { setError(c('error')); }
+    finally { setLogoutBusy(false); }
+  }
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Title & Logout */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-bold mb-2">
-              <ShieldCheck className="w-4 h-4 text-amber-800" />
-              <span>{t('header.badge')}</span>
-            </div>
-            <h1 className="font-serif font-extrabold text-2xl sm:text-3xl text-amber-950">
-              {t('header.title')}
-            </h1>
-            <p className="text-xs text-stone-600 mt-1">
-              {t('header.subtitle')}
-            </p>
-          </div>
+  async function action(kind: 'bookings'|'applications'|'threads', id: string, actionName: string) {
+    if (busyKey) return;
+    const key = `${kind}:${id}`;
+    setBusyKey(key); setSuccess(''); setRowErrors(prev => ({...prev,[key]:''})); setWarnings(prev => ({...prev,[key]:''}));
+    try {
+      const result = await supportRequest<{success:boolean; booking?: Booking | Booking[]; thread?: {id:string;payment_status:string}; counselorId?:string; warning?:string}>(`/api/admin/${kind}`, {
+        action: actionName, ...(kind === 'bookings' ? {bookingId:id} : kind === 'applications' ? {applicationId:id} : {threadId:id}),
+      });
+      // Reflect acknowledged writes only. Refresh below reconciles joined data.
+      setData(prev => {
+        if (kind === 'applications') return {...prev, applications: actionName === 'delete' ? prev.applications.filter(a => a.id !== id) : prev.applications.map(a => a.id === id ? {...a,status:actionName === 'approve' ? 'approved':'rejected'} : a)};
+        if (kind === 'bookings') {
+          const saved = Array.isArray(result.booking) ? result.booking[0] : result.booking;
+          return {...prev,bookings:prev.bookings.map(b => b.id === id ? {...b,...saved,...(!saved ? actionName === 'confirm_payment' ? {payment_status:'confirmed'} : {status:'completed'} : {})} : b)};
+        }
+        return {...prev,threads:prev.threads.map(th => th.id === id ? {...th,payment_status:result.thread?.payment_status || (actionName === 'flag' ? 'awaiting_payment':'closed')} : th)};
+      });
+      setDeleteId(null); setSuccess(c('saved'));
+      if (result.warning) setWarnings(prev => ({...prev,[key]:t('paymentWarning')}));
+      await loadData();
+    } catch (err) {
+      if (err instanceof SupportApiError && err.status === 401) expireSession();
+      else setRowErrors(prev => ({...prev,[key]:err instanceof SupportApiError && err.status === 429 ? c('rateLimit') : c('error')}));
+    } finally { setBusyKey(null); }
+  }
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={fetchAdminData}
-              className="inline-flex items-center gap-2 bg-amber-900 text-amber-50 font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-amber-800 transition-all cursor-pointer shadow-xs"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>{t('header.refresh')}</span>
-            </button>
+  const money = (amount: number | null | undefined) => c('money', {amount:Number(amount || 0).toLocaleString(locale)});
+  const date = (value?: string) => { const d = new Date(value || ''); return Number.isNaN(d.getTime()) ? t('unknown') : d.toLocaleString(locale, {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); };
+  const status = (value?: string) => t.has(value || '') ? t(value || '') : value || t('unknown');
+  const statusBadge = (value?: string) => <span className={`ui-status ${value === 'confirmed' || value === 'approved' || value === 'completed' || value === 'closed' ? 'bg-emerald-50 text-emerald-900' : ''}`}>{status(value)}</span>;
+  const detail = (label: string, value: React.ReactNode) => <div className="min-w-0"><dt className="ui-muted text-xs">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed">{value === null || value === undefined || value === '' ? t('unknown') : value}</dd></div>;
+  const receipt = (value?: string) => <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-amber-900">{c('receipt')}</p><p className="mt-2 whitespace-pre-wrap break-all text-sm font-medium">{safeHttps(value) ? <a href={safeHttps(value)!} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{value}</a> : value || c('noReceipt')}</p></div>;
+  const rowFeedback = (kind: string,id: string) => <>{rowErrors[`${kind}:${id}`] && <Notice>{rowErrors[`${kind}:${id}`]}</Notice>}{warnings[`${kind}:${id}`] && <Notice>{warnings[`${kind}:${id}`]}</Notice>}</>;
+  const button = (kind: 'bookings'|'applications'|'threads',id: string, actionName: string,label:string,secondary = false) => <button type="button" className={secondary ? 'ui-button-secondary':'ui-button'} disabled={!!busyKey || loading || logoutBusy} onClick={() => void action(kind,id,actionName)}>{busyKey === `${kind}:${id}` ? c('saving') : label}</button>;
+  const matched = useCallback((row: object) => JSON.stringify(row).toLocaleLowerCase().includes(query.toLocaleLowerCase()),[query]);
+  const rows = useMemo(() => ({bookings:data.bookings.filter(matched),applications:data.applications.filter(matched),threads:data.threads.filter(matched),forum:data.forumQuestions.filter(matched),survey:data.surveyResponses.filter(matched),counselors:data.counselors.filter(matched)}),[data,matched]);
+  const counts: Record<Tab,number> = {bookings:data.bookings.length,applications:data.applications.length,threads:data.threads.length,forum:data.forumQuestions.length,survey:data.surveyResponses.length,counselors:data.counselors.length};
 
-            <button
-              onClick={handleAdminLogout}
-              className="inline-flex items-center gap-1.5 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>{t('header.logout')}</span>
-            </button>
-          </div>
-        </div>
+  if (auth === 'checking') return <SupportShell><Busy label={c('loading')} /></SupportShell>;
+  if (auth === 'signedOut') return <SupportShell><section className="ui-panel mx-auto max-w-md p-6 sm:p-9"><div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-950"><LockKeyhole aria-hidden="true" className="h-6 w-6" /></div><h1 className="font-serif text-3xl font-semibold">{t('loginTitle')}</h1><p className="ui-muted mt-3 text-sm leading-relaxed">{t('loginDescription')}</p><form onSubmit={login} className="mt-7 space-y-5" aria-busy={loginBusy}><Field id="admin-password" label={t('password')}><input id="admin-password" type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} disabled={loginBusy} className="ui-input" /></Field><button type="submit" disabled={loginBusy} className="ui-button w-full">{loginBusy ? t('signingIn') : t('signIn')}</button>{error && <Notice>{error}</Notice>}</form></section></SupportShell>;
 
-        {/* Admin Navigation Tabs */}
-        <div className="flex items-center gap-3 mb-6 border-b border-amber-900/15 pb-3">
-          <button
-            onClick={() => setActiveTab('bookings')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'bookings'
-                ? 'bg-amber-900 text-amber-50 shadow-sm'
-                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>{t('tabs.bookings', { count: bookings.length })}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('applications')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'applications'
-                ? 'bg-amber-900 text-amber-50 shadow-sm'
-                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>{t('tabs.applications', { count: applications.length })}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('forum')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'forum'
-                ? 'bg-amber-900 text-amber-50 shadow-sm'
-                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
-            }`}
-          >
-            <MessageCircleQuestion className="w-4 h-4" />
-            <span>{t('tabs.forum', { count: forumQuestions.length })}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('survey')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'survey'
-                ? 'bg-amber-900 text-amber-50 shadow-sm'
-                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" />
-            <span>{t('tabs.survey', { count: surveyResponses.length })}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('counselors')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'counselors'
-                ? 'bg-amber-900 text-amber-50 shadow-sm'
-                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>{t('tabs.counselors', { count: counselors.length })}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('threads')}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'threads'
-                ? 'bg-amber-900 text-amber-50 shadow-sm'
-                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
-            }`}
-          >
-            <MessagesSquare className="w-4 h-4" />
-            <span>{t('threads.tabLabel', { count: threads.length })}</span>
-          </button>
-        </div>
-
-        {/* Tab 1: Bookings Management */}
-        {activeTab === 'bookings' && (
-          <div className="space-y-6">
-            {/* Search Filter */}
-            <div className="relative max-w-md">
-              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
-              <input
-                type="text"
-                placeholder={t('bookings.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-amber-900/15 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
-              />
-            </div>
-
-            {filteredBookings.length === 0 ? (
-              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
-                <Calendar className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('bookings.emptyTitle')}</h4>
-                <p className="text-xs text-stone-500 mt-1">{t('bookings.emptyBody')}</p>
-              </div>
-            ) : (
-              <div className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-amber-50/80 border-b border-amber-900/10 text-amber-950 font-serif font-bold">
-                        <th className="p-4">{t('bookings.colTicketId')}</th>
-                        <th className="p-4">{t('bookings.colStudent')}</th>
-                        <th className="p-4">{t('bookings.colCounselor')}</th>
-                        <th className="p-4">{t('bookings.colTimePackage')}</th>
-                        <th className="p-4">{t('bookings.colPaymentStatus')}</th>
-                        <th className="p-4">{t('bookings.colSessionStatus')}</th>
-                        <th className="p-4">{t('bookings.colVideoRoom')}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-amber-900/10">
-                      {filteredBookings.map((b) => (
-                        <tr key={b.id} className="hover:bg-amber-50/30 transition-colors">
-                          <td className="p-4 font-mono font-bold text-amber-900">{b.id}</td>
-                          <td className="p-4">
-                            <div className="font-bold text-stone-900">{b.studentName}</div>
-                            <div className="text-[11px] text-stone-500">{b.email} • {b.phone}</div>
-                            <div className="text-[10px] text-amber-800 font-semibold">{b.telegram}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="font-bold text-amber-950">{b.counselorName}</div>
-                            <div className="text-[10px] text-stone-500 line-clamp-1">{b.counselorHeadline}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="font-semibold text-stone-900">{b.slot}</div>
-                            <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300/50">
-                              {(b.tier === 'standard' || b.tier === 'premium' ? tCommon(b.tier) : b.tier).toUpperCase()} ({b.price.toLocaleString()} UZS)
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            {b.paymentStatus === 'confirmed' ? (
-                              <div className="space-y-1.5">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                                  <CheckCircle className="w-3 h-3 text-emerald-700" />
-                                  <span>{t('bookings.paymentConfirmedBadge', { method: b.paymentMethod })}</span>
-                                </span>
-                                {bookingActionWarnings[b.id] && (
-                                  <div className="flex items-start gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 rounded-lg px-2 py-1.5 max-w-[220px]">
-                                    <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                                    <span>{bookingActionWarnings[b.id]}</span>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="space-y-1.5">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                  <Clock className="w-3 h-3 text-amber-700 animate-spin" />
-                                  <span>{t('bookings.paymentPendingBadge')}</span>
-                                </span>
-                                {b.paymentReceipt && (
-                                  <div className="text-[10px] font-mono text-stone-600">
-                                    {t('bookings.receiptIdLabel')} <span className="font-bold text-amber-950">{b.paymentReceipt}</span>
-                                  </div>
-                                )}
-                                {bookingActionErrors[b.id] && (
-                                  <div className="flex items-start gap-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-300 rounded-lg px-2 py-1.5 max-w-[220px]">
-                                    <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                                    <span>{bookingActionErrors[b.id]}</span>
-                                  </div>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleApprovePayment(b)}
-                                  disabled={bookingActionId === b.id}
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {bookingActionId === b.id ? t('bookings.approving') : t('bookings.approvePayment')}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            {b.status === 'completed' ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-200 text-stone-700 border border-stone-300">
-                                <CheckCircle className="w-3 h-3" /> {t('bookings.sessionCompletedBadge')}
-                              </span>
-                            ) : (
-                              <div className="space-y-1.5">
-                                {bookingActionErrors[`complete-${b.id}`] && (
-                                  <div className="flex items-start gap-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-300 rounded-lg px-2 py-1.5 max-w-[220px]">
-                                    <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                                    <span>{bookingActionErrors[`complete-${b.id}`]}</span>
-                                  </div>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleCompleteBooking(b.id)}
-                                  disabled={bookingActionId === b.id}
-                                  className="px-2.5 py-1 rounded-lg bg-stone-700 hover:bg-stone-800 text-stone-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {bookingActionId === b.id ? '...' : t('bookings.completeButton')}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <a
-                              href={b.meetLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-emerald-800 font-bold hover:underline"
-                            >
-                              <Video className="w-3.5 h-3.5" />
-                              <span>{t('bookings.joinRoom')}</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 2: Counselor Applications */}
-        {activeTab === 'applications' && (
-          <div className="space-y-6">
-            {applications.length === 0 ? (
-              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
-                <UserCheck className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('applications.emptyTitle')}</h4>
-                <p className="text-xs text-stone-500 mt-1">{t('applications.emptyBody')}</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {applications.map((app, idx) => (
-                  <div key={app.id || idx} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-4">
-                    <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                          {app.category || app.specialties || t('applications.generalCategoryFallback')}
-                        </span>
-                        <h3 className="font-serif font-bold text-base text-amber-950">{app.full_name}</h3>
-                        <p className="text-xs text-stone-600">{app.headline}{app.company ? ` (${app.company})` : ''}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          app.status === 'approved'
-                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                            : app.status === 'rejected'
-                            ? 'bg-red-100 text-red-900 border border-red-300'
-                            : 'bg-amber-100 text-amber-900 border border-amber-300'
-                        }`}>
-                          {app.status === 'approved'
-                            ? t('applications.statusApproved')
-                            : app.status === 'rejected'
-                            ? t('applications.statusRejected')
-                            : t('applications.statusPending')}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteApplication(app)}
-                          title={t('applications.deleteButtonTitle')}
-                          className="p-1.5 rounded-lg border border-stone-200 bg-stone-50 text-stone-500 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-stone-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-900/10">
-                      "{app.bio}"
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-stone-600 font-mono">
-                      <div>📧 {app.email}</div>
-                      <div>📞 {app.phone}</div>
-                      <div>💬 {app.telegram}</div>
-                      <div>
-                        {app.linkedin ? (
-                          <a href={app.linkedin} target="_blank" rel="noreferrer" className="text-amber-800 underline">
-                            {t('applications.linkedinProfile')}
-                          </a>
-                        ) : (
-                          <span className="text-stone-400">{t('applications.linkedinNotProvided')}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between">
-                      <div className="text-xs font-serif">
-                        <span className="text-stone-400 block text-[10px]">{t('applications.expectedPriceLabel')}</span>
-                        <span className="font-bold text-amber-950">{app.expected_standard_price?.toLocaleString()} UZS</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleRejectApplication(app)}
-                          disabled={app.status === 'approved' || app.status === 'rejected'}
-                          className="px-3.5 py-1.5 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {t('applications.reject')}
-                        </button>
-                        <button
-                          onClick={() => handleApproveApplication(app)}
-                          disabled={app.status === 'approved' || app.status === 'rejected'}
-                          className="px-3.5 py-1.5 rounded-xl bg-amber-900 text-amber-50 text-xs font-bold hover:bg-amber-800 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {t('applications.approve')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: Forum Moderation (read-only for this pass) */}
-        {activeTab === 'forum' && (
-          <div className="space-y-6">
-            {forumQuestions.length === 0 ? (
-              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
-                <MessageCircleQuestion className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('forum.emptyTitle')}</h4>
-                <p className="text-xs text-stone-500 mt-1">{t('forum.emptyBody')}</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {[...forumQuestions]
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .map((q) => {
-                    const qAnswers = forumAnswers.filter((a) => a.questionId === q.id);
-                    return (
-                      <div key={q.id} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-3">
-                        <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">{q.category}</span>
-                            <h3 className="font-serif font-bold text-base text-amber-950">{q.title}</h3>
-                            <p className="text-xs text-stone-600 mt-1">{q.body}</p>
-                          </div>
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 whitespace-nowrap">
-                            {t('forum.answersCountSuffix', { count: qAnswers.length })}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-xs text-stone-600 font-mono">
-                          <div>👤 {q.studentNameOrAnonymous}</div>
-                          <div className="flex items-center gap-1">
-                            <Mail className="w-3.5 h-3.5 text-stone-400" /> {q.email}
-                          </div>
-                        </div>
-
-                        {qAnswers.length > 0 && (
-                          <div className="pt-2 space-y-2">
-                            {qAnswers.map((a) => {
-                              const responder = INITIAL_COUNSELORS.find((c) => c.id === a.counselorId);
-                              return (
-                                <div key={a.id} className="bg-amber-50/60 border border-amber-900/10 rounded-xl p-3 text-xs">
-                                  <span className="font-bold text-amber-950">{responder?.fullName || a.counselorId}: </span>
-                                  <span className="text-stone-700">{a.body}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 4: Survey Responses -- read-only lead list, no actions */}
-        {activeTab === 'survey' && (
-          <div className="space-y-6">
-            {surveyResponses.length === 0 ? (
-              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
-                <ClipboardList className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('survey.emptyTitle')}</h4>
-                <p className="text-xs text-stone-500 mt-1">{t('survey.emptyBody')}</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {surveyResponses.map((s) => (
-                  <div key={s.id} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-4">
-                    <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                          {s.status || t('survey.statusFallback')} {s.ageRange ? `• ${s.ageRange}` : ''}
-                        </span>
-                        <h3 className="font-serif font-bold text-base text-amber-950">{s.contactInfo}</h3>
-                        {s.fieldOfStudy && <p className="text-xs text-stone-600">{s.fieldOfStudy}</p>}
-                      </div>
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex-shrink-0 ${
-                          s.interestedInService === 'Yes definitely'
-                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                            : s.interestedInService === 'Maybe'
-                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                            : 'bg-stone-100 text-stone-600 border border-stone-300'
-                        }`}
-                      >
-                        {s.interestedInService.toUpperCase()}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-stone-600">
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">{t('survey.interestAreaLabel')}</span>
-                        {s.interestArea || '—'}
-                      </div>
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">{t('survey.adviceSourceLabel')}</span>
-                        {s.priorAdviceSource || '—'}
-                      </div>
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">{t('survey.priceWillingnessLabel')}</span>
-                        {s.priceWillingness || '—'}
-                      </div>
-                      <div>
-                        <span className="text-stone-400 block text-[10px]">{t('survey.formatLabel')}</span>
-                        {s.preferredFormat || '—'}
-                      </div>
-                    </div>
-
-                    {s.biggestChallenge && (
-                      <p className="text-xs text-stone-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-900/10">
-                        &quot;{s.biggestChallenge}&quot;
-                      </p>
-                    )}
-
-                    <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
-                      <span>{s.willingToRefer ? t('survey.willingToReferYes') : t('survey.willingToReferNo')}</span>
-                      <span>{s.createdAt ? new Date(s.createdAt).toLocaleDateString(dateLocale) : ''}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 5: Live counselor roster -- read-only, no actions. Mainly for
-            the commission-window badge so payouts don't require calculating
-            joined_at + 3 months by hand each time. */}
-        {activeTab === 'counselors' && (
-          <div className="space-y-6">
-            {counselors.length === 0 ? (
-              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
-                <Users className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('counselors.emptyTitle')}</h4>
-                <p className="text-xs text-stone-500 mt-1">{t('counselors.emptyBody')}</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {counselors.map((c) => {
-                  const freeUntil = c.commissionFreeUntil ? new Date(c.commissionFreeUntil) : null;
-                  const isCommissionFree = freeUntil ? new Date() < freeUntil : false;
-                  return (
-                    <div key={c.id} className="bg-white/95 rounded-3xl border border-amber-900/15 p-6 shadow-sm space-y-4">
-                      <div className="flex items-start justify-between gap-3 border-b border-amber-900/10 pb-3">
-                        <div>
-                          <h3 className="font-serif font-bold text-base text-amber-950">{c.fullName}</h3>
-                          <p className="text-xs text-stone-600">{c.headline}</p>
-                          {c.company && <p className="text-[11px] text-stone-400">{c.company}</p>}
-                        </div>
-                        {freeUntil && (
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex-shrink-0 whitespace-nowrap ${
-                              isCommissionFree
-                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                                : 'bg-amber-100 text-amber-900 border border-amber-300'
-                            }`}
-                          >
-                            {isCommissionFree
-                              ? t('counselors.commissionFreeLabel', { date: freeUntil.toLocaleDateString(dateLocale) })
-                              : t('counselors.commissionStartedLabel')}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs text-stone-600">
-                        <div>
-                          <span className="text-stone-400 block text-[10px]">{t('counselors.standardPriceLabel')}</span>
-                          {c.standardPrice.toLocaleString()} UZS
-                        </div>
-                        <div>
-                          <span className="text-stone-400 block text-[10px]">{t('counselors.premiumPriceLabel')}</span>
-                          {c.premiumPrice.toLocaleString()} UZS
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
-                        <span>{t('counselors.ratingLabel', { rating: c.rating, count: c.reviewsCount })}</span>
-                        <span>{c.joinedAt ? t('counselors.joinedLabel', { date: new Date(c.joinedAt).toLocaleDateString(dateLocale) }) : ''}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 6: Text Q&A threads. The only actions here go through
-            /api/admin/threads (service_role behind this page's own admin
-            session) -- see handleThreadAction above for why a direct
-            supabase.from(...).update() the way bookings does it wouldn't
-            work for this table. */}
-        {activeTab === 'threads' && (
-          <div className="space-y-6">
-            {threads.length === 0 ? (
-              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
-                <MessagesSquare className="w-12 h-12 text-stone-400 mx-auto mb-3" />
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('threads.emptyTitle')}</h4>
-                <p className="text-xs text-stone-500 mt-1">{t('threads.emptyBody')}</p>
-              </div>
-            ) : (
-              <div className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-amber-50/80 border-b border-amber-900/10 text-amber-950 font-serif font-bold">
-                        <th className="p-4">{t('threads.colStudent')}</th>
-                        <th className="p-4">{t('threads.colCounselor')}</th>
-                        <th className="p-4">{t('threads.colQuestions')}</th>
-                        <th className="p-4">{t('threads.colTotal')}</th>
-                        <th className="p-4">{t('threads.colStatus')}</th>
-                        <th className="p-4">{t('threads.colActions')}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-amber-900/10">
-                      {threads.map((th) => (
-                        <tr key={th.id} className="hover:bg-amber-50/30 transition-colors">
-                          <td className="p-4">
-                            <div className="font-bold text-stone-900">{th.booking?.student_name || '—'}</div>
-                            <div className="text-[11px] text-stone-500">{th.booking?.email}</div>
-                            <div className="text-[10px] text-amber-800 font-semibold">{th.booking?.telegram}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="font-bold text-amber-950">{th.counselor?.full_name || th.counselor_id}</div>
-                            <div className="text-[10px] text-stone-500 line-clamp-1">{th.counselor?.headline}</div>
-                          </td>
-                          <td className="p-4 font-mono">
-                            {th.questions_used}
-                            {th.soft_cap ? ` / ${th.soft_cap}` : ''}
-                          </td>
-                          <td className="p-4 font-mono font-bold text-amber-900">
-                            {th.total_owed.toLocaleString()} UZS
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                th.payment_status === 'closed'
-                                  ? 'bg-stone-200 text-stone-700 border border-stone-300'
-                                  : th.payment_status === 'awaiting_payment'
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                  : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                              }`}
-                            >
-                              {th.payment_status === 'closed' ? (
-                                <CheckCircle className="w-3 h-3" />
-                              ) : th.payment_status === 'awaiting_payment' ? (
-                                <Clock className="w-3 h-3" />
-                              ) : (
-                                <MessagesSquare className="w-3 h-3" />
-                              )}
-                              {th.payment_status === 'closed'
-                                ? t('threads.statusClosed')
-                                : th.payment_status === 'awaiting_payment'
-                                ? t('threads.statusAwaitingPayment')
-                                : t('threads.statusActive')}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <div className="space-y-1.5">
-                              {threadActionErrors[th.id] && (
-                                <div className="flex items-start gap-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-300 rounded-lg px-2 py-1.5 max-w-[200px]">
-                                  <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                                  <span>{threadActionErrors[th.id]}</span>
-                                </div>
-                              )}
-                              {th.payment_status === 'active' && !th.soft_cap && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleThreadAction(th.id, 'flag')}
-                                  disabled={threadActionId === th.id}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-700 hover:bg-amber-800 text-amber-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-                                >
-                                  <Flag className="w-3 h-3" /> {t('threads.flagButton')}
-                                </button>
-                              )}
-                              {th.payment_status === 'awaiting_payment' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleThreadAction(th.id, 'confirm_payment')}
-                                  disabled={threadActionId === th.id}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-                                >
-                                  <CheckCircle className="w-3 h-3" /> {t('threads.confirmPaymentButton')}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      <Footer />
-    </div>
-  );
+  return <SupportShell>
+    <div className="flex flex-wrap items-start justify-between gap-5"><SupportHeader eyebrow={t('eyebrow')} title={t('title')} description={t('description')} /><div className="flex flex-wrap gap-2"><button type="button" className="ui-button-secondary" onClick={() => void loadData()} disabled={loading || !!busyKey || logoutBusy}><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin':''}`} aria-hidden="true" />{c('refresh')}</button><button type="button" className="ui-button-secondary" disabled={logoutBusy || !!busyKey} onClick={() => void logout()}><LogOut className="h-4 w-4" aria-hidden="true" />{t('logout')}</button></div></div>
+    <div className="mb-7 grid gap-3 sm:grid-cols-3">{[
+      [t('pendingPayments'),data.bookings.filter(b => b.payment_status === 'pending').length],
+      [t('pendingApplications'),data.applications.filter(a => a.status === 'pending').length],
+      [t('activeThreads'),data.threads.filter(th => th.payment_status !== 'closed').length],
+    ].map(([label,count]) => <div key={label} className="ui-panel p-5"><p className="ui-muted text-sm">{label}</p><p className="mt-2 text-3xl font-semibold tabular-nums">{count}</p></div>)}</div>
+    {data.truncated && <div className="mb-5"><Notice>{t('truncated')}</Notice></div>}{error && <div className="mb-5"><Notice>{error}</Notice></div>}{success && <div className="mb-5"><Notice success>{success}</Notice></div>}
+    <nav className="mb-6 flex flex-wrap gap-2" aria-label={t('eyebrow')}>{TABS.map(item => <button type="button" key={item} onClick={() => {setTab(item);setQuery('');setDeleteId(null);}} aria-pressed={tab === item} className={tab === item ? 'ui-button':'ui-button-secondary'}>{t(item)}<span className="ml-1 text-xs opacity-75">{counts[item]}</span></button>)}</nav>
+    <div className="mb-6 max-w-xl"><Field id="admin-search" label={c('search')}><div className="relative"><Search className="pointer-events-none absolute top-3.5 left-3 h-5 w-5 text-stone-500" aria-hidden="true" /><input id="admin-search" className="ui-input" style={{paddingLeft:40}} type="search" value={query} onChange={e => setQuery(e.target.value)} /></div></Field></div>
+    <section aria-label={t(tab)} aria-busy={loading} className="space-y-5">
+      {loading && <Busy label={c('loading')} />}
+      {!loading && !error && rows[tab].length === 0 && <div className="ui-panel p-8"><p className="ui-muted">{query ? c('noResults'):t('noData')}</p></div>}
+      {tab === 'bookings' && rows.bookings.map(b => <article key={b.id} className="ui-panel space-y-5 p-5 sm:p-7"><header className="flex flex-wrap items-start justify-between gap-3"><div><p className="ui-muted text-xs">{b.id}</p><h2 className="mt-1 font-serif text-2xl font-semibold">{b.student_name}</h2><p className="ui-muted mt-1 text-sm">{b.counselor_name}</p></div><div className="flex flex-wrap gap-4"><div><p className="ui-muted mb-1 text-xs">{t('payment')}</p>{statusBadge(b.payment_status)}</div><div><p className="ui-muted mb-1 text-xs">{c('status')}</p>{statusBadge(b.status)}</div></div></header><dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{detail(t('amount'),money(b.price))}{detail(t('slot'),b.slot)}{detail(t('package'),status(b.tier))}{detail(t('payment'),b.payment_method)}{detail(t('contact'),[b.email,b.phone,b.telegram].filter(Boolean).join('\n'))}{detail(c('created'),date(b.created_at))}{detail(t('question'),b.question)}{detail(t('mentor'),safeHttps(b.meet_link) ? <a href={safeHttps(b.meet_link)!} target="_blank" rel="noopener noreferrer" className="break-all text-amber-900 underline">{b.meet_link}</a> : b.counselor_name)}</dl>{receipt(b.payment_receipt)}<div className="space-y-3"><p className="ui-muted text-sm">{t('receiptHint')}</p><div className="flex flex-wrap gap-3">{b.payment_status === 'pending' && b.tier !== 'text_qa' && button('bookings',b.id,'confirm_payment',t('confirmPayment'))}{b.payment_status === 'confirmed' && b.status !== 'completed' && button('bookings',b.id,'complete',t('complete'),true)}</div></div>{rowFeedback('bookings',b.id)}</article>)}
+      {tab === 'applications' && rows.applications.map(a => <article key={a.id} className="ui-panel space-y-5 p-5 sm:p-7"><header className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-serif text-2xl font-semibold">{a.full_name}</h2><p className="ui-muted mt-1">{a.headline}</p></div>{statusBadge(a.status)}</header><dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{detail(t('contact'),[a.email,a.phone,a.telegram].filter(Boolean).join('\n'))}{detail(t('mentor'),a.specialties)}{detail(c('created'),date(a.created_at))}{detail(t('standard'),money(a.expected_standard_price))}{detail(t('premium'),money(a.expected_premium_price))}{a.expected_price_per_question ? detail(t('perQuestion'),money(a.expected_price_per_question)) : null}</dl><div><h3 className="ui-label">{t('bio')}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">{a.bio}</p></div><p className="ui-muted text-sm">{t('approvalHint')}</p><div className="flex flex-wrap gap-3">{a.status === 'pending' && button('applications',a.id,'approve',t('approve'))}{a.status === 'pending' && button('applications',a.id,'reject',t('reject'),true)}<button type="button" disabled={!!busyKey || loading} onClick={() => setDeleteId(a.id)} className="ui-button-secondary text-red-800">{t('delete')}</button></div>{deleteId === a.id && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4"><p className="mb-3 text-sm font-medium text-red-900">{t('deleteConfirm')}</p><div className="flex flex-wrap gap-2">{button('applications',a.id,'delete',t('confirmDelete'),true)}<button type="button" className="ui-button-secondary" onClick={() => setDeleteId(null)} disabled={!!busyKey}>{c('cancel')}</button></div></div>}{rowFeedback('applications',a.id)}</article>)}
+      {tab === 'threads' && rows.threads.map(th => <article key={th.id} className="ui-panel space-y-5 p-5 sm:p-7"><header className="flex flex-wrap justify-between gap-3"><div><h2 className="font-serif text-2xl font-semibold">{th.booking?.student_name || th.booking_id}</h2><p className="ui-muted mt-1">{th.counselor?.full_name}</p></div>{statusBadge(th.payment_status)}</header><dl className="grid gap-4 sm:grid-cols-3">{detail(t('totalOwed'),money(th.total_owed))}{detail(t('questionsUsed'),th.questions_used)}{detail(t('contact'),[th.booking?.email,th.booking?.telegram].filter(Boolean).join('\n'))}</dl>{receipt(th.payment_receipt)}{th.payment_status !== 'closed' && <><p className="ui-muted text-sm">{t('threadHint')}</p><div className="flex flex-wrap gap-3">{th.payment_status === 'active' && th.questions_used > 0 && button('threads',th.id,'flag',t('flag'),true)}{th.payment_status === 'awaiting_payment' && button('threads',th.id,'confirm_payment',t('closeThread'))}</div></>}{rowFeedback('threads',th.id)}</article>)}
+      {tab === 'forum' && rows.forum.map(q => <article key={q.id} className="ui-panel space-y-4 p-5 sm:p-7"><p className="ui-muted text-xs">{t('readOnly')} · {date(q.created_at)}</p><h2 className="font-serif text-2xl font-semibold">{q.title}</h2><p className="ui-muted text-sm">{q.student_name_or_anonymous} · {q.email}</p><p className="whitespace-pre-wrap break-words leading-relaxed">{q.body}</p>{data.forumAnswers.filter(a => a.question_id === q.id).map(a => <div key={a.id} className="rounded-2xl bg-amber-50 p-4"><p className="text-sm font-semibold">{data.counselors.find(m => m.id === a.counselor_id)?.full_name || t('mentor')}</p><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">{a.body}</p></div>)}</article>)}
+      {tab === 'survey' && rows.survey.map(row => <article key={row.id} className="ui-panel p-5 sm:p-7"><header className="mb-5 flex flex-wrap justify-between gap-3"><h2 className="break-all font-semibold">{row.contact_info}</h2><span className="ui-muted text-sm">{date(row.created_at)}</span></header><dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{detail(survey('age'),row.age_range)}{detail(survey('status'),row.status)}{detail(survey('study'),row.field_of_study)}{detail(survey('interest'),row.interest_area)}{detail(survey('challenge'),row.biggest_challenge)}{detail(survey('advice'),row.prior_advice_source)}{detail(survey('interested'),row.interested_in_service)}{detail(survey('price'),row.price_willingness)}{detail(survey('format'),row.preferred_format)}{detail(survey('refer'),row.willing_to_refer ? c('yes'):c('no'))}</dl></article>)}
+      {tab === 'counselors' && <div className="grid gap-5 sm:grid-cols-2">{rows.counselors.map(m => <article key={m.id} className="ui-panel space-y-4 p-5 sm:p-7"><h2 className="font-serif text-2xl font-semibold">{m.full_name}</h2><p className="ui-muted">{m.headline}</p><p className="ui-muted text-sm">{m.specialties?.join(' · ')}</p><dl className="grid gap-4 sm:grid-cols-2">{detail(t('standard'),money(m.standard_price))}{detail(t('premium'),money(m.premium_price))}{m.price_per_question ? detail(t('perQuestion'),money(m.price_per_question)):null}{m.commission_free_until ? detail(t('commissionUntil'),date(m.commission_free_until)):null}</dl><Link href={`/counselors/${encodeURIComponent(m.id)}`} className="ui-button-secondary inline-flex"><CheckCircle2 className="h-4 w-4" aria-hidden="true" />{t('viewProfile')}</Link></article>)}</div>}
+    </section>
+  </SupportShell>;
 }

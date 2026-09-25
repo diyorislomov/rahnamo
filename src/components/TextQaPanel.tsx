@@ -1,441 +1,142 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { Lock, Send, Loader2, CheckCircle2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { getDeviceId } from '@/lib/deviceId';
-import { ensureStudentAuth } from '@/lib/threadAuth';
-import { Counselor, QuestionThread, ThreadMessage } from '@/types';
+import { formatInteger } from '@/lib/format';
 
-interface QuestionThreadRow {
-  id: string;
-  booking_id: string;
-  counselor_id: string;
-  student_auth_id: string;
-  device_id: string;
-  price_per_question: number;
-  soft_cap: number | null;
-  questions_used: number;
-  total_owed: number;
-  payment_status: 'active' | 'awaiting_payment' | 'closed';
-  payment_receipt: string | null;
-  age_confirmed_at: string;
-  created_at: string;
-  closed_at: string | null;
-}
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { CheckCircle2, Loader2, MessageCircle, RefreshCw, Send } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { Counselor } from '@/types';
+import { studentAccessToken } from './studentJourney';
+import PaymentInstructions from './PaymentInstructions';
 
-function mapThread(r: QuestionThreadRow): QuestionThread {
-  return {
-    id: r.id,
-    bookingId: r.booking_id,
-    counselorId: r.counselor_id,
-    studentAuthId: r.student_auth_id,
-    deviceId: r.device_id,
-    pricePerQuestion: r.price_per_question,
-    softCap: r.soft_cap,
-    questionsUsed: r.questions_used,
-    totalOwed: r.total_owed,
-    paymentStatus: r.payment_status,
-    paymentReceipt: r.payment_receipt,
-    ageConfirmedAt: r.age_confirmed_at,
-    createdAt: r.created_at,
-    closedAt: r.closed_at,
-  };
-}
+type ThreadRow = { id: string; booking_id: string; price_per_question: number; soft_cap: number | null; questions_used: number; total_owed: number; payment_status: 'active' | 'awaiting_payment' | 'closed'; payment_receipt: string | null };
+type MessageRow = { id: string; sender_role: 'student' | 'counselor'; body: string; created_at: string };
 
-const CENTRAL_CARD_NUMBER = '8600 5555 4444 3333';
-const CENTRAL_CARD_DIGITS = '8600555544443333';
+export default function TextQaPanel({ counselor, bookingId }: { counselor: Counselor; bookingId?: string }) {
+  const t = useTranslations('journeys');
+  const locale = useLocale();
+  const [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [loadError, setLoadError] = useState('');
+  const [thread, setThread] = useState<ThreadRow | null>(null);
+  const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [age, setAge] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [receipt, setReceipt] = useState('');
+  const [busy, setBusy] = useState<'start' | 'ask' | 'receipt' | null>(null);
+  const [actionError, setActionError] = useState('');
+  const [syncError, setSyncError] = useState(false);
+  const busyRef = useRef(false);
+  const startRequest = useRef<string | null>(null);
+  const askRequest = useRef<{ id: string; body: string } | null>(null);
+  const demo = !isSupabaseConfigured();
 
-export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
-  const t = useTranslations('textQa');
+  const readThread = useCallback(async (id: string, signal?: AbortSignal) => {
+    const threadQuery = supabase.from('question_threads').select('*').eq('id', id);
+    const messageQuery = supabase.from('thread_messages').select('id,sender_role,body,created_at').eq('thread_id', id).order('created_at', { ascending: true });
+    const [a, b] = await Promise.all([signal ? threadQuery.abortSignal(signal).single() : threadQuery.single(), signal ? messageQuery.abortSignal(signal) : messageQuery]);
+    if (a.error || b.error || !a.data) throw new Error('load_failed');
+    return { thread: a.data as ThreadRow, messages: (b.data || []) as MessageRow[] };
+  }, []);
 
-  const [phase, setPhase] = useState<'checking' | 'start' | 'thread'>('checking');
-  const [ageConfirmed, setAgeConfirmed] = useState(false);
-  const [startError, setStartError] = useState('');
-  const [isStarting, setIsStarting] = useState(false);
-
-  const [thread, setThread] = useState<QuestionThread | null>(null);
-  const [messages, setMessages] = useState<ThreadMessage[]>([]);
-  const [newQuestion, setNewQuestion] = useState('');
-  const [askError, setAskError] = useState('');
-  const [isAsking, setIsAsking] = useState(false);
-
-  const [receiptRef, setReceiptRef] = useState('');
-  const [copiedCard, setCopiedCard] = useState(false);
-  const [isSubmittingReceipt, setIsSubmittingReceipt] = useState(false);
-  const [receiptError, setReceiptError] = useState('');
-
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  async function loadThread(threadId: string) {
-    const [{ data: threadRow }, { data: msgRows }] = await Promise.all([
-      supabase.from('question_threads').select('*').eq('id', threadId).single(),
-      supabase.from('thread_messages').select('*').eq('thread_id', threadId).order('created_at', { ascending: true }),
-    ]);
-    if (threadRow) setThread(mapThread(threadRow as QuestionThreadRow));
-    if (msgRows) {
-      setMessages(
-        msgRows.map((m) => ({ id: m.id, threadId: m.thread_id, senderRole: m.sender_role, body: m.body, createdAt: m.created_at }))
-      );
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      setLoading(true); setLoadError('');
+      try {
+        if (demo) return;
+        const { data: session, error: authError } = await supabase.auth.getSession();
+        if (authError) throw authError;
+        if (!session.session) { if (bookingId) throw new Error('missing'); return; }
+        let query = supabase.from('question_threads').select('*').eq('counselor_id', counselor.id).eq('student_auth_id', session.session.user.id);
+        if (bookingId) query = query.eq('booking_id', bookingId);
+        else query = query.neq('payment_status', 'closed');
+        const { data, error } = await query.order('created_at', { ascending: false }).limit(1).abortSignal(controller.signal).maybeSingle();
+        if (error || (!data && bookingId)) throw error || new Error('missing');
+        if (!data || controller.signal.aborted) return;
+        const result = await readThread(data.id, controller.signal);
+        if (!controller.signal.aborted) { setThread(result.thread); setMessages(result.messages); }
+      } catch { if (!controller.signal.aborted) setLoadError(bookingId ? t('threadNotFound') : t('threadLoadFailed')); }
+      finally { if (!controller.signal.aborted) setLoading(false); }
     }
-  }
+    void load();
+    return () => controller.abort();
+  }, [bookingId, counselor.id, demo, attempt, readThread, t]);
 
-  // On mount: only ever looks for a thread that could already exist for
-  // THIS browser's own already-persisted anonymous session -- never
-  // triggers a fresh sign-in just to check, so a first-time visitor never
-  // gets an auth.users row created before they've actually chosen to
-  // start anything.
+  const threadId = thread?.id;
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const uid = sessionData.session?.user?.id;
-      if (!uid) {
-        if (!cancelled) setPhase('start');
-        return;
-      }
-      const { data } = await supabase
-        .from('question_threads')
-        .select('*')
-        .eq('counselor_id', counselor.id)
-        .eq('student_auth_id', uid)
-        .neq('payment_status', 'closed')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (cancelled) return;
-      if (data) {
-        setThread(mapThread(data as QuestionThreadRow));
-        await loadThread(data.id);
-        setPhase('thread');
-      } else {
-        setPhase('start');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [counselor.id]);
-
-  // Polling, not Realtime -- consistent with the rest of this app, which
-  // uses no websocket subscriptions anywhere. Refetches while the thread
-  // view is open; stops the instant it isn't.
-  useEffect(() => {
-    if (phase !== 'thread' || !thread) return;
-    pollRef.current = setInterval(() => {
-      loadThread(thread.id);
+    if (!threadId) return;
+    const controller = new AbortController();
+    let running = false;
+    const timer = setInterval(async () => {
+      if (running || document.visibilityState === 'hidden') return;
+      running = true;
+      try {
+        const result = await readThread(threadId, controller.signal);
+        if (!controller.signal.aborted) { setThread(result.thread); setMessages(result.messages); setSyncError(false); }
+      } catch { if (!controller.signal.aborted) setSyncError(true); }
+      finally { running = false; }
     }, 5000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, thread?.id]);
+    return () => { clearInterval(timer); controller.abort(); };
+  }, [threadId, readThread]);
 
-  const handleStart = async () => {
-    if (!ageConfirmed) {
-      setStartError(t('start.ageRequiredError'));
-      return;
-    }
-    setIsStarting(true);
-    setStartError('');
-
-    let studentAuthId: string;
+  async function start() {
+    if (!age || busyRef.current) return;
+    busyRef.current = true; setBusy('start'); setActionError('');
+    startRequest.current ||= crypto.randomUUID();
     try {
-      studentAuthId = await ensureStudentAuth();
-    } catch (err) {
-      console.error('[TEXT_QA_AUTH_FAILED]', err);
-      setIsStarting(false);
-      setStartError(t('start.authFailed'));
-      return;
-    }
-
-    const bookingId = `RNM-TXT-${Math.floor(1000 + Math.random() * 9000)}`;
-    const { error: bookingError } = await supabase.from('bookings').insert({
-      id: bookingId,
-      device_id: getDeviceId(),
-      counselor_id: counselor.id,
-      counselor_name: counselor.fullName,
-      counselor_headline: counselor.headline,
-      counselor_avatar: counselor.avatarUrl,
-      tier: 'text_qa',
-      price: 0,
-      payment_method: 'payme',
-      slot: "Ochiq matnli maslahat",
-      student_name: '(Matnli maslahat)',
-      email: '',
-      phone: '',
-      telegram: '',
-      education: '',
-      question: '(Matnli maslahat orqali)',
-    });
-
-    if (bookingError) {
-      console.error('[TEXT_QA_BOOKING_INSERT_FAILED]', bookingError);
-      setIsStarting(false);
-      setStartError(t('start.startFailed'));
-      return;
-    }
-
-    const { data: threadRow, error: threadError } = await supabase
-      .from('question_threads')
-      .insert({
-        booking_id: bookingId,
-        counselor_id: counselor.id,
-        student_auth_id: studentAuthId,
-        device_id: getDeviceId(),
-        age_confirmed_at: new Date().toISOString(),
-      })
-      .select('*')
-      .single();
-
-    if (threadError || !threadRow) {
-      console.error('[TEXT_QA_THREAD_INSERT_FAILED]', threadError);
-      setIsStarting(false);
-      setStartError(t('start.startFailed'));
-      return;
-    }
-
-    setThread(mapThread(threadRow as QuestionThreadRow));
-    setMessages([]);
-    setIsStarting(false);
-    setPhase('thread');
-  };
-
-  const handleAsk = async () => {
-    if (!thread) return;
-    if (!newQuestion.trim()) {
-      setAskError(t('thread.askFailedEmpty'));
-      return;
-    }
-    setIsAsking(true);
-    setAskError('');
-
-    const { data, error } = await supabase.rpc('ask_thread_question', {
-      p_thread_id: thread.id,
-      p_body: newQuestion.trim(),
-    });
-
-    if (error || !data?.success) {
-      console.error('[TEXT_QA_ASK_FAILED]', error, data);
-      setAskError(t('thread.askFailedGeneric'));
-      setIsAsking(false);
-      return;
-    }
-
-    setNewQuestion('');
-    await loadThread(thread.id);
-    setIsAsking(false);
-  };
-
-  const handleSubmitReceipt = async () => {
-    if (!thread) return;
-    setIsSubmittingReceipt(true);
-    setReceiptError('');
-
-    const { error } = await supabase
-      .from('question_threads')
-      .update({ payment_receipt: receiptRef.trim() })
-      .eq('id', thread.id);
-
-    if (error) {
-      console.error('[TEXT_QA_RECEIPT_SUBMIT_FAILED]', error);
-      setReceiptError(t('thread.askFailedGeneric'));
-      setIsSubmittingReceipt(false);
-      return;
-    }
-
-    await loadThread(thread.id);
-    setIsSubmittingReceipt(false);
-  };
-
-  const handleStartNew = () => {
-    setThread(null);
-    setMessages([]);
-    setReceiptRef('');
-    setPhase('start');
-  };
-
-  if (phase === 'checking') {
-    return <div className="p-8 text-center text-xs text-stone-500">{t('start.loading')}</div>;
+      const token = await studentAccessToken();
+      const res = await fetch('/api/threads/start', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ id: startRequest.current, counselorId: counselor.id, ageConfirmed: true, locale }) });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.thread) throw new Error('start_failed');
+      const result = await readThread(data.thread.id);
+      setThread(result.thread); setMessages(result.messages);
+      const url = new URL(window.location.href); url.searchParams.set('mode', 'text'); url.searchParams.set('booking', data.thread.booking_id); window.history.replaceState(null, '', url);
+    } catch { setActionError(t('threadStartFailed')); }
+    finally { busyRef.current = false; setBusy(null); }
   }
 
-  if (phase === 'start') {
-    return (
-      <div className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-5">
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-900/10">
-            <span className="text-stone-400 block text-[10px]">{t('start.priceLabel')}</span>
-            <span className="font-bold text-amber-950">{counselor.pricePerQuestion?.toLocaleString()} UZS</span>
-          </div>
-          <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-900/10">
-            <span className="text-stone-400 block text-[10px]">{t('start.capLabel')}</span>
-            <span className="font-bold text-amber-950">
-              {counselor.softCap ? counselor.softCap : t('start.noCapNote')}
-            </span>
-          </div>
-        </div>
-
-        <label className="flex items-start gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={ageConfirmed}
-            onChange={(e) => setAgeConfirmed(e.target.checked)}
-            className="mt-0.5 w-4 h-4 accent-amber-800 cursor-pointer"
-          />
-          <span className="text-xs text-stone-700">{t('start.ageCheckboxLabel')}</span>
-        </label>
-
-        {startError && (
-          <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-300 rounded-xl px-3.5 py-2.5">
-            {startError}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={isStarting || !ageConfirmed}
-          className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-50"
-        >
-          {isStarting ? t('start.loading') : t('start.beginButton')}
-        </button>
-      </div>
-    );
+  async function ask() {
+    const body = draft.trim();
+    if (!thread || !body || busyRef.current) return;
+    busyRef.current = true; setBusy('ask'); setActionError('');
+    if (askRequest.current?.body !== body) askRequest.current = { id: crypto.randomUUID(), body };
+    try {
+      const { data, error } = await supabase.rpc('ask_thread_question', { p_thread_id: thread.id, p_body: body, p_request_id: askRequest.current.id });
+      if (error || !data?.success) throw new Error(data?.reason || 'ask_failed');
+      // Only reset this id after an acknowledged save; uncertain retries reuse it.
+      askRequest.current = null; setDraft('');
+      try { const result = await readThread(thread.id); setThread(result.thread); setMessages(result.messages); setSyncError(false); }
+      catch { setSyncError(true); }
+    } catch { setActionError(t('questionFailed')); }
+    finally { busyRef.current = false; setBusy(null); }
   }
 
-  if (!thread) return null;
+  async function submitReceipt() {
+    if (!thread || !receipt.trim() || busyRef.current) return;
+    busyRef.current = true; setBusy('receipt'); setActionError('');
+    try {
+      const { data, error } = await supabase.from('question_threads').update({ payment_receipt: receipt.trim() }).eq('id', thread.id).select('*').single();
+      if (error || !data) throw error || new Error('save_failed');
+      setThread(data as ThreadRow); setReceipt('');
+    } catch { setActionError(t('receiptFailed')); }
+    finally { busyRef.current = false; setBusy(null); }
+  }
 
-  return (
-    <div className="bg-white/95 rounded-3xl border border-amber-900/10 shadow-sm flex flex-col max-h-[600px]">
-      <div className="p-4 border-b border-amber-900/10 flex items-center justify-between text-xs font-bold text-amber-950 bg-amber-50/60 rounded-t-3xl">
-        <span>
-          {thread.softCap
-            ? t('thread.questionsLabelWithCap', { used: thread.questionsUsed, cap: thread.softCap })
-            : t('thread.questionsLabel', { used: thread.questionsUsed })}
-        </span>
-        <span>{t('thread.totalLabel', { amount: thread.totalOwed.toLocaleString() })}</span>
-      </div>
+  if (loading) return <section className="ui-panel p-8" role="status"><Loader2 className="animate-spin mb-3" aria-hidden /><p className="ui-muted">{t('loadingConversation')}</p></section>;
+  if (loadError) return <section className="ui-panel p-6 space-y-4"><p className="ui-alert" role="alert">{loadError}</p><button className="ui-button-secondary" onClick={() => setAttempt((n) => n + 1)}><RefreshCw size={17} aria-hidden />{t('retry')}</button><Link href="/my-bookings" className="block text-sm font-semibold text-amber-900">{t('openBookings')}</Link></section>;
+  if (!thread) return <section className="ui-panel p-6 sm:p-8 space-y-5"><div className="h-12 w-12 bg-amber-100 rounded-2xl flex items-center justify-center"><MessageCircle size={24} aria-hidden /></div><div><p className="ui-eyebrow">{t('textConsultation')}</p><h2 className="font-serif text-3xl mt-2">{t('textStartTitle')}</h2><p className="ui-muted leading-relaxed mt-3">{t('textStartBody')}</p></div><div className="rounded-2xl bg-stone-50 p-5"><p className="font-semibold">{t('perQuestion', { amount: formatInteger(counselor.pricePerQuestion || 0, locale) })}</p><p className="ui-muted text-sm mt-2">{counselor.softCap ? t('softCapHelp', { count: counselor.softCap }) : t('noCapHelp')}</p></div>{demo ? <p className="ui-alert">{t('textDemoNotice')}</p> : <><label className="flex items-start gap-3 text-sm leading-relaxed"><input className="mt-1 h-4 w-4 accent-amber-900" type="checkbox" checked={age} onChange={(e) => setAge(e.target.checked)} />{t('ageConfirmation')}</label>{actionError && <p className="ui-alert" role="alert">{actionError}</p>}<button className="ui-button w-full" disabled={!age || busy !== null || counselor.pricePerQuestion == null} onClick={start}>{busy === 'start' && <Loader2 size={17} className="animate-spin" aria-hidden />}{t('startConversation')}</button><p className="ui-muted text-sm">{t('browserIdentity')}</p></>}</section>;
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[240px]">
-        {messages.length === 0 ? (
-          <p className="text-xs text-stone-400 text-center py-6">{t('thread.noMessagesYet')}</p>
-        ) : (
-          messages.map((m) => (
-            <div key={m.id} className={`flex ${m.senderRole === 'student' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs ${
-                  m.senderRole === 'student'
-                    ? 'bg-amber-900 text-amber-50'
-                    : 'bg-amber-50 text-stone-800 border border-amber-900/10'
-                }`}
-              >
-                <span className="block text-[10px] opacity-70 mb-0.5">
-                  {m.senderRole === 'student' ? t('thread.studentLabel') : t('thread.counselorLabel')}
-                </span>
-                {m.body}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {thread.paymentStatus === 'active' && (
-        <div className="p-4 border-t border-amber-900/10 space-y-2">
-          {askError && <p className="text-[11px] text-red-600 font-semibold">{askError}</p>}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newQuestion}
-              onChange={(e) => setNewQuestion(e.target.value)}
-              placeholder={t('thread.askPlaceholder')}
-              className="flex-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
-            />
-            <button
-              type="button"
-              onClick={handleAsk}
-              disabled={isAsking}
-              className="px-4 py-3 bg-amber-900 hover:bg-amber-800 text-amber-50 rounded-xl cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {isAsking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              <span className="text-xs font-bold">{t('thread.askButton')}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {thread.paymentStatus === 'awaiting_payment' && (
-        <div className="p-4 border-t border-amber-900/10 space-y-3">
-          <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5">
-            {t('thread.awaitingPaymentNotice')}
-          </p>
-
-          {thread.paymentReceipt ? (
-            <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" /> {t('payment.submittedNotice')}
-            </p>
-          ) : (
-            <>
-              <div className="p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase font-bold text-amber-900 block">{t('payment.cardBoxLabel')}</span>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-extrabold text-sm text-amber-950">{CENTRAL_CARD_NUMBER}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof navigator !== 'undefined') {
-                        navigator.clipboard.writeText(CENTRAL_CARD_DIGITS);
-                        setCopiedCard(true);
-                        setTimeout(() => setCopiedCard(false), 2000);
-                      }
-                    }}
-                    className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer"
-                  >
-                    {copiedCard ? t('payment.copiedButton') : t('payment.copyButton')}
-                  </button>
-                </div>
-                <span className="text-[10px] text-stone-600 block">{t('payment.cardOwnerLabel')}</span>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-stone-700 block mb-1">{t('payment.receiptLabel')}</label>
-                <input
-                  type="text"
-                  value={receiptRef}
-                  onChange={(e) => setReceiptRef(e.target.value)}
-                  placeholder={t('payment.receiptPlaceholder')}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
-                />
-                {receiptError && <p className="text-[11px] text-red-600 mt-1">{receiptError}</p>}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSubmitReceipt}
-                disabled={isSubmittingReceipt || !receiptRef.trim()}
-                className="w-full py-3 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                {t('payment.submitButton')}
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {thread.paymentStatus === 'closed' && (
-        <div className="p-4 border-t border-amber-900/10 space-y-2">
-          <p className="text-xs text-stone-600">{t('thread.closedNotice')}</p>
-          <button
-            type="button"
-            onClick={handleStartNew}
-            className="w-full py-3 bg-amber-900 hover:bg-amber-800 text-amber-50 font-bold text-xs rounded-xl transition-all cursor-pointer"
-          >
-            {t('thread.startNewButton')}
-          </button>
-        </div>
-      )}
+  return <section className="ui-panel overflow-hidden" aria-labelledby="thread-title">
+    <div className="p-5 sm:p-6 border-b border-stone-200"><div className="flex justify-between items-start gap-3"><div><p className="ui-eyebrow">{t('textConsultation')}</p><h2 id="thread-title" className="font-serif text-2xl mt-1">{t('yourConversation')}</h2></div><span className="ui-status">{t(thread.payment_status === 'active' ? 'threadActive' : thread.payment_status === 'closed' ? 'threadClosed' : 'awaitingPayment')}</span></div><div className="flex flex-wrap justify-between gap-2 text-sm mt-4"><span className="ui-muted">{t('questionsUsed', { count: thread.questions_used })}{thread.soft_cap ? ` / ${thread.soft_cap}` : ''}</span><strong>{t('balance', { amount: formatInteger(thread.total_owed, locale) })}</strong></div></div>
+    {syncError && <p className="ui-alert m-4" role="status">{t('syncDelayed')}</p>}
+    <div className="p-5 sm:p-6 space-y-4 min-h-60 max-h-[30rem] overflow-y-auto" role="log" aria-label={t('messages')} aria-live="polite">{messages.length === 0 ? <div className="text-center py-10"><MessageCircle className="mx-auto mb-3 text-amber-800" aria-hidden /><p className="ui-muted">{t('firstQuestion')}</p></div> : messages.map((m) => <article key={m.id} className={`flex ${m.sender_role === 'student' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[90%] rounded-2xl p-4 ${m.sender_role === 'student' ? 'bg-amber-900 text-amber-50 rounded-br-sm' : 'bg-stone-100 text-stone-800 rounded-bl-sm'}`}><p className="text-xs font-semibold opacity-75 mb-2">{m.sender_role === 'student' ? t('you') : counselor.fullName}</p><p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p><time dateTime={m.created_at} className="block mt-2 text-[11px] opacity-65">{new Date(m.created_at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })}</time></div></article>)}</div>
+    <div className="p-5 sm:p-6 border-t border-stone-200 space-y-4">{actionError && <p className="ui-alert" role="alert">{actionError}</p>}
+      {thread.payment_status === 'active' ? <form onSubmit={(e) => { e.preventDefault(); void ask(); }} className="space-y-3"><label htmlFor="thread-question" className="ui-label">{t('yourQuestion')}</label><textarea id="thread-question" className="ui-input min-h-24" maxLength={4000} required value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('questionPlaceholder')} /><div className="flex items-center justify-between gap-3"><p className="text-xs ui-muted">{t('perQuestion', { amount: formatInteger(thread.price_per_question, locale) })}</p><button className="ui-button" disabled={busy !== null || !draft.trim()}>{busy === 'ask' ? <Loader2 size={17} className="animate-spin" aria-hidden /> : <Send size={17} aria-hidden />}{t('sendQuestion')}</button></div></form>
+        : thread.payment_status === 'awaiting_payment' ? <><p className="ui-alert">{t('paymentPauseHelp')}</p>{thread.payment_receipt ? <p className="flex items-center gap-2 text-sm text-emerald-800"><CheckCircle2 size={18} aria-hidden />{t('receiptSubmitted')}</p> : <><PaymentInstructions /><form onSubmit={(e) => { e.preventDefault(); void submitReceipt(); }} className="space-y-3"><label htmlFor="thread-receipt" className="ui-label">{t('receiptReference')}</label><input id="thread-receipt" className="ui-input" required maxLength={200} value={receipt} onChange={(e) => setReceipt(e.target.value)} /><p className="ui-muted text-sm">{t('receiptHelp')}</p><button className="ui-button w-full" disabled={busy !== null || !receipt.trim()}>{busy === 'receipt' && <Loader2 className="animate-spin" size={17} aria-hidden />}{t('submitReceipt')}</button></form></>}</>
+          : <><p className="ui-muted text-sm">{t('closedConversationHelp')}</p><a className="ui-button-secondary w-full" href={`/counselors/${encodeURIComponent(counselor.id)}?mode=text`}>{t('startAnotherConversation')}</a></>}
     </div>
-  );
+  </section>;
 }

@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Keep environment documentation, exclude generated browser evidence.
+!.env.example
+/artifacts/

@@ -1,0 +1,94 @@
+{
+  "metadata": {
+    "title": "Rahnamo · Find your next step",
+    "description": "Explore career mentors, compare consultation options, and find guidance for your next step."
+  },
+  "nav": {
+    "label": "Main navigation",
+    "mentors": "Find a mentor",
+    "bookings": "My bookings",
+    "forum": "Community",
+    "become": "Become a mentor",
+    "open": "Open menu",
+    "close": "Close menu",
+    "skip": "Skip to content",
+    "language": "Language"
+  },
+  "hero": {
+    "eyebrow": "A little guidance. A clearer direction.",
+    "title": "Your next step, with the right mentor.",
+    "body": "Explore people who can help with your studies, career, or next opportunity."
+  },
+  "search": {
+    "label": "What would you like help with?",
+    "placeholder": "Try scholarships, medicine, or programming",
+    "clear": "Clear search",
+    "category": "Field of interest",
+    "sort": "Sort by",
+    "name": "Name: A–Z",
+    "low": "Price: low to high",
+    "high": "Price: high to low",
+    "company": "Organization",
+    "allCompanies": "All organizations",
+    "reset": "Reset filters",
+    "filters": "Filter mentors"
+  },
+  "results": {
+    "title": "Find your mentor",
+    "count": "{count, plural, one {# mentor} other {# mentors}}",
+    "loading": "Loading mentors…",
+    "errorTitle": "We could not load the mentors",
+    "errorBody": "Please try again. Your search and filters are saved.",
+    "retry": "Try again",
+    "emptyTitle": "No mentors match this search",
+    "emptyBody": "Try another keyword or broaden your field of interest.",
+    "noneTitle": "Mentors will appear here",
+    "noneBody": "The catalog has no available profiles yet. Please check back later.",
+    "demoTitle": "You are viewing a demo catalog",
+    "demoBody": "These example profiles are for exploring the experience. Real availability and bookings require the live service."
+  },
+  "card": {
+    "video": "Video consultation",
+    "text": "Text Q&A",
+    "from": "Video session from",
+    "questionPrice": "Per question",
+    "currency": "UZS",
+    "profile": "View profile",
+    "noPrice": "View consultation options",
+    "sample": "Example profile"
+  },
+  "how": {
+    "eyebrow": "A clear path forward",
+    "title": "From a question to your next step.",
+    "oneTitle": "Find someone relevant",
+    "oneBody": "Explore specialties and read a mentor’s profile to see how they can help.",
+    "twoTitle": "Choose your consultation",
+    "twoBody": "Compare the format and price, then send your consultation request.",
+    "threeTitle": "Keep your next steps close",
+    "threeBody": "Follow your booking status and return to your conversation from My bookings."
+  },
+  "faq": {
+    "eyebrow": "Before you begin",
+    "title": "A few useful answers.",
+    "q1": "How do I choose a mentor?",
+    "a1": "Start with the field you need help in. Read their profile, compare the consultation formats and prices, and describe what you want to discuss.",
+    "q2": "How does payment work?",
+    "a2": "Payment uses a manual transfer where available. Follow the instructions on your booking and submit the transaction reference. A submitted reference is reviewed before payment is confirmed.",
+    "q3": "Where can I find my booking?",
+    "a3": "Open My bookings in the same browser you used to book. Current booking access is tied to that browser; keep your booking ID and contact support if you need help."
+  },
+  "footer": {
+    "body": "Personal guidance for your studies, career, and the possibilities ahead.",
+    "explore": "Explore",
+    "help": "Need a hand?",
+    "helpBody": "Contact the team about your booking or getting started.",
+    "support": "Telegram support",
+    "admin": "Administration",
+    "copyright": "© {year} Rahnamo",
+    "location": "Built for your next step."
+  },
+  "stale": {
+    "message": "A new version is ready. Save any details you need, then reload to continue.",
+    "reload": "Reload page"
+  }
+}

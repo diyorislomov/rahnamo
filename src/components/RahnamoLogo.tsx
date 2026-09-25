@@ -1,39 +1,18 @@
-'use client';
+import { Compass } from 'lucide-react';
 
-import React from 'react';
+interface RahnamoLogoProps { className?: string; variant?: 'full' | 'monogram'; light?: boolean; }
 
-interface RahnamoLogoProps {
-  className?: string;
-  variant?: 'full' | 'monogram';
-  light?: boolean;
-}
-
-export default function RahnamoLogo({ className = "h-11", light = false }: RahnamoLogoProps) {
+export default function RahnamoLogo({ className = 'h-10', light = false, variant = 'full' }: RahnamoLogoProps) {
   return (
-    <div className={`inline-flex items-center select-none ${className}`}>
-      {light ? (
-        <img
-          src="/brand-horizontal-transparent.png"
-          alt="RAHNAMO — GUIDE. GROW. ACHIEVE."
-          className="h-full w-auto object-contain"
-        />
-      ) : (
-        <img
-          src="/brand-horizontal-for-light-bg.png"
-          alt="RAHNAMO — GUIDE. GROW. ACHIEVE."
-          className="h-full w-auto object-contain"
-        />
-      )}
-    </div>
+    <span className={`inline-flex items-center gap-2.5 ${light ? 'text-[#fff8eb]' : 'text-[#713614]'} ${className}`}>
+      <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border ${light ? 'border-white/30' : 'border-[#cbb391]'}`}>
+        <Compass size={23} strokeWidth={1.5} aria-hidden="true" />
+      </span>
+      {variant === 'full' ? <span className="font-serif text-[25px] font-semibold tracking-[-.04em]">Rahnamo</span> : <span className="sr-only">Rahnamo</span>}
+    </span>
   );
 }
 
-export function RahnamoMonogram({ className = "h-9 w-9", light = false }: { className?: string; light?: boolean }) {
-  return (
-    <img
-      src={light ? "/brand-horizontal-transparent.png" : "/brand-horizontal-for-light-bg.png"}
-      alt="RAHNAMO"
-      className={`${className} object-contain`}
-    />
-  );
+export function RahnamoMonogram({ className = 'h-9 w-9', light = false }: { className?: string; light?: boolean }) {
+  return <RahnamoLogo variant="monogram" className={className} light={light} />;
 }

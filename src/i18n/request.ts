@@ -23,6 +23,11 @@ export default getRequestConfig(async (params) => {
 
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    messages: {
+      ...(await import(`../../messages/${locale}.json`)).default,
+      discovery: (await import(`../../messages/discovery/${locale}.json`)).default,
+      journeys: (await import(`../../messages/journeys/${locale}.json`)).default,
+      support: (await import(`../../messages/support/${locale}.json`)).default,
+    },
   };
 });

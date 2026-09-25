@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { isRunningStaleBuild } from '@/lib/buildVersion';
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -16,6 +17,7 @@ const POLL_INTERVAL_MS = 5 * 60 * 1000;
  */
 export default function StaleBuildWatcher() {
   const [stale, setStale] = useState(false);
+  const t = useTranslations('discovery.stale');
 
   useEffect(() => {
     let cancelled = false;
@@ -48,15 +50,15 @@ export default function StaleBuildWatcher() {
   if (!stale) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] bg-amber-900 text-amber-50 text-xs font-semibold px-4 py-3 rounded-2xl shadow-lg flex items-center gap-3 max-w-[90vw]">
-      <span>Sayt yangilandi. Davom etish uchun sahifani yangilang.</span>
+    <div role="status" className="fixed bottom-4 left-1/2 z-[100] flex w-[calc(100%-32px)] max-w-xl -translate-x-1/2 flex-wrap items-center gap-3 rounded-2xl border border-[#bca78d] bg-[#fff8eb] p-4 text-sm text-[#57371e] shadow-lg">
+      <span className="min-w-0 flex-1 basis-56">{t('message')}</span>
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="flex items-center gap-1.5 bg-amber-50 text-amber-950 px-3 py-1.5 rounded-xl font-bold cursor-pointer flex-shrink-0"
+        className="ui-button"
       >
         <RefreshCw className="w-3.5 h-3.5" />
-        <span>Yangilash</span>
+        <span>{t('reload')}</span>
       </button>
     </div>
   );

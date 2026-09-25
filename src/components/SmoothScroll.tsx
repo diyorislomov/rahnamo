@@ -1,22 +1,6 @@
-'use client';
+import type { ReactNode } from 'react';
 
-import { ReactLenis } from 'lenis/react';
-
-/**
- * Homepage-only smooth-scroll (inertia/easing on wheel & touch). Mounted from
- * page.tsx, not the root layout, so booking, payment, /admin and
- * /my-bookings keep plain native scroll.
- *
- * `respectReducedMotion` is Lenis's own built-in handling: under
- * prefers-reduced-motion it forces 1:1 tracking (no smoothing) and makes
- * programmatic scrolls instant, so there's no need to duplicate that check
- * here. `anchors: true` means any future `<a href="#...">` in-page link
- * scrolls smoothly with zero extra wiring, wherever it's added.
- */
-export default function SmoothScroll({ children }: { children: React.ReactNode }) {
-  return (
-    <ReactLenis root options={{ autoRaf: true, anchors: true, respectReducedMotion: true }}>
-      {children}
-    </ReactLenis>
-  );
+// Native scrolling preserves keyboard, browser history, and reduced-motion behavior.
+export default function SmoothScroll({ children }: { children: ReactNode }) {
+  return children;
 }
