@@ -1,6 +1,7 @@
 'use client';
 
 import { formatInteger } from '@/lib/format';
+import { createRequestId } from '@/lib/uuid';
 
 import { useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -36,9 +37,9 @@ export default function StudentBookingFlow({ counselor }: { counselor: Counselor
     pending.current = true; setSubmitting(true); setError('');
     const payload = { counselorId: counselor.id, tier, slot, ...form, paymentMethod, locale };
     const signature = JSON.stringify(payload);
-    if (request.current?.signature !== signature) request.current = { id: crypto.randomUUID(), signature };
-    const id = request.current.id;
     try {
+      if (request.current?.signature !== signature) request.current = { id: createRequestId(), signature };
+      const id = request.current.id;
       if (demo) {
         const booking: StudentBooking = { id, counselor_id: counselor.id, counselor_name: counselor.fullName, counselor_headline: counselor.headline, counselor_avatar: counselor.avatarUrl, tier, price, slot, student_name: form.studentName, email: form.email, payment_method: paymentMethod, payment_status: 'pending', status: 'confirmed', created_at: new Date().toISOString(), demo: true };
         saveDemoBooking(booking); setSaved(booking);

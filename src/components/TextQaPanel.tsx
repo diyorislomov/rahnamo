@@ -1,6 +1,7 @@
 'use client';
 
 import { formatInteger } from '@/lib/format';
+import { createRequestId } from '@/lib/uuid';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -85,8 +86,8 @@ export default function TextQaPanel({ counselor, bookingId }: { counselor: Couns
   async function start() {
     if (!age || busyRef.current) return;
     busyRef.current = true; setBusy('start'); setActionError('');
-    startRequest.current ||= crypto.randomUUID();
     try {
+      startRequest.current ||= createRequestId();
       const token = await studentAccessToken();
       const res = await fetch('/api/threads/start', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ id: startRequest.current, counselorId: counselor.id, ageConfirmed: true, locale }) });
       const data = await res.json();
@@ -102,8 +103,8 @@ export default function TextQaPanel({ counselor, bookingId }: { counselor: Couns
     const body = draft.trim();
     if (!thread || !body || busyRef.current) return;
     busyRef.current = true; setBusy('ask'); setActionError('');
-    if (askRequest.current?.body !== body) askRequest.current = { id: crypto.randomUUID(), body };
     try {
+      if (askRequest.current?.body !== body) askRequest.current = { id: createRequestId(), body };
       const { data, error } = await supabase.rpc('ask_thread_question', { p_thread_id: thread.id, p_body: body, p_request_id: askRequest.current.id });
       if (error || !data?.success) throw new Error(data?.reason || 'ask_failed');
       // Only reset this id after an acknowledged save; uncertain retries reuse it.

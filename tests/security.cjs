@@ -138,3 +138,26 @@ test('Client entry points do not import Telegram utilities or call the legacy em
   }
   assert.deepEqual(offenders, [], 'Client notifications must be performed by the authoritative server operation');
 });
+
+function loadRequestIdModule(browserCrypto) {
+  const source = fs.readFileSync(path.join(root, 'src/lib/uuid.ts'), 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+  const requestModule = { exports: {} };
+  vm.runInNewContext(compiled, { module: requestModule, exports: requestModule.exports, crypto: browserCrypto }, { timeout: 1000 });
+  return requestModule.exports;
+}
+
+test('Request IDs remain unique UUIDs on an HTTP origin without crypto.randomUUID', () => {
+  let calls = 0;
+  const { createRequestId } = loadRequestIdModule({ getRandomValues(bytes) { calls += 1; return crypto.webcrypto.getRandomValues(bytes); } });
+  const ids = Array.from({ length: 1000 }, () => createRequestId());
+  assert.equal(calls, ids.length);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const id of ids) assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test('Request IDs use the native UUID implementation when the browser offers it', () => {
+  const nativeId = crypto.randomUUID();
+  const { createRequestId } = loadRequestIdModule({ randomUUID() { return nativeId; }, getRandomValues() { throw new Error('native method should be used'); } });
+  assert.equal(createRequestId(), nativeId);
+});

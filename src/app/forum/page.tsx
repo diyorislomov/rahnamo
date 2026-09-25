@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { MessageCircle, Search, Send } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
+import { createRequestId } from '@/lib/uuid';
 import { SupportShell, SupportHeader, Field, Notice, Busy, SupportApiError, supportRequest } from '@/components/SupportUI';
 
 interface Question { id: string; student_name_or_anonymous: string; category: string; title: string; body: string; created_at: string }
@@ -60,7 +61,7 @@ export default function ForumPage() {
     setSubmitting(true); setQuestionError(''); setPosted(false);
     try {
       const result = await supportRequest<{ success: boolean; question: Question }>('/api/forum/question', {
-        id: crypto.randomUUID(), student_name_or_anonymous: anonymous ? t('anonymousName') : value('name'),
+        id: createRequestId(), student_name_or_anonymous: anonymous ? t('anonymousName') : value('name'),
         email: value('email'), category: value('category'), title: value('title'), body: value('body'),
       });
       if (!result.question?.id) throw new Error('missing_question');

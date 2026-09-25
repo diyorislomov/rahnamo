@@ -8,6 +8,8 @@ const base = process.env.QA_BASE_URL || 'http://127.0.0.1:3217';
  const browser = await chromium.launch({channel:'chrome',headless:true});
  try {
   const context=await browser.newContext({viewport:{width:390,height:844}});
+  // Match plain IP:port previews even when this test targets trusted localhost.
+  await context.addInitScript(() => Object.defineProperty(Crypto.prototype, 'randomUUID', { value: undefined, configurable: true }));
   await context.addCookies([{name:'NEXT_LOCALE',value:'en',url:base}]);
   await context.route('**/*', route => new URL(route.request().url()).origin === new URL(base).origin ? route.continue() : route.abort());
   const page=await context.newPage();const errors=[];const writes=[];
