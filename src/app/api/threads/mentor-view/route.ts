@@ -1,27 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { resolveMentorFromRequest } from '@/lib/mentorSession';
 
-// Same shared-passcode gate as /api/threads/reply -- this is the read side
-// of a mentor's inbox (their own non-closed threads + messages), the write
-// side is that other route. Both exist purely because anon/authenticated
-// have no read or write access to another student's or counselor's view of
-// these tables at all; service_role is the only way in, gated by the
-// passcode check here, not by RLS (there is none for this path).
+// Stage 5: identity comes only from the caller's real mentor session now
+// -- the old shared COUNSELOR_PASSCODE plus a client-supplied counselorId
+// let anyone read any mentor's inbox. service_role remains necessary since
+// anon/authenticated have no read access to another mentor's view of
+// these tables at all; resolveMentorFromRequest is what gates it now,
+// not the passcode.
 export async function POST(request: Request) {
-  const { counselorId, passcode } = await request.json();
-  const validPasscode = process.env.COUNSELOR_PASSCODE;
-
-  if (!validPasscode) {
-    console.error('COUNSELOR_PASSCODE is not configured on the server');
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
-  if (typeof passcode !== 'string' || passcode !== validPasscode) {
-    return NextResponse.json({ success: false, error: 'invalid_passcode' }, { status: 401 });
-  }
-
-  if (typeof counselorId !== 'string') {
-    return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
+  const mentor = await resolveMentorFromRequest(request);
+  if (!mentor) {
+    return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
   let supabase;
@@ -35,12 +25,12 @@ export async function POST(request: Request) {
   const { data: threads, error: threadsError } = await supabase
     .from('question_threads')
     .select('*')
-    .eq('counselor_id', counselorId)
+    .eq('counselor_id', mentor.counselorId)
     .neq('payment_status', 'closed')
     .order('created_at', { ascending: false });
 
   if (threadsError) {
-    console.error('[MENTOR_INBOX_THREADS_FAILED]', counselorId, threadsError);
+    console.error('[MENTOR_INBOX_THREADS_FAILED]', mentor.counselorId, threadsError);
     return NextResponse.json({ success: false, error: 'query_failed' }, { status: 500 });
   }
 
@@ -54,7 +44,7 @@ export async function POST(request: Request) {
       .order('created_at', { ascending: true });
 
     if (msgError) {
-      console.error('[MENTOR_INBOX_MESSAGES_FAILED]', counselorId, msgError);
+      console.error('[MENTOR_INBOX_MESSAGES_FAILED]', mentor.counselorId, msgError);
       return NextResponse.json({ success: false, error: 'query_failed' }, { status: 500 });
     }
     messages = msgData || [];

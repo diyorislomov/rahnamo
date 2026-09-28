@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +23,7 @@ import {
   AlertCircle,
   ShieldCheck,
   UserRound,
+  LogIn,
 } from 'lucide-react';
 
 const CATEGORY_KEYS = Object.keys(SPECIALTY_CONFIG).filter((k) => k !== 'All');
@@ -47,15 +49,41 @@ export default function ForumPage() {
 
   // Inline "answer this" mini-forms, keyed by question id
   const [answeringId, setAnsweringId] = useState<string | null>(null);
-  const [answerDrafts, setAnswerDrafts] = useState<{ [questionId: string]: { counselorId: string; body: string; passcode: string } }>({});
+  const [answerDrafts, setAnswerDrafts] = useState<{ [questionId: string]: string }>({});
   const [answerErrors, setAnswerErrors] = useState<{ [questionId: string]: string }>({});
 
-  // Shared secret, not per-counselor identity — same tradeoff the admin
-  // panel's single password gate already accepts. It stops a random visitor
-  // hitting the public INSERT policy directly; it does not stop one
-  // counselor answering under another counselor's name, since there's still
-  // no real per-counselor auth in this pass. Verified server-side in
-  // /api/forum/answer -- the real value never ships in client JS.
+  // Stage 5: identity comes from the caller's real mentor session now,
+  // never a counselor picked from a dropdown plus a shared passcode --
+  // that let anyone answer as any mentor. Resolved once for the whole
+  // page; /api/forum/answer independently re-verifies this server-side
+  // and never trusts anything the client sends.
+  const [checkingMentorSession, setCheckingMentorSession] = useState(true);
+  const [mentorSession, setMentorSession] = useState<{ fullName: string } | null>(null);
+
+  useEffect(() => {
+    async function loadMentorSession() {
+      const { data } = await supabase.auth.getSession();
+      const user = data.session?.user;
+      if (!user || user.is_anonymous) {
+        setMentorSession(null);
+        setCheckingMentorSession(false);
+        return;
+      }
+      const { data: counselorRow } = await supabase
+        .from('counselors')
+        .select('full_name')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      setMentorSession(counselorRow ? { fullName: counselorRow.full_name } : null);
+      setCheckingMentorSession(false);
+    }
+    loadMentorSession();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      loadMentorSession();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   // Pure .then()/.catch() chains, not async/await — every branch's setState
   // calls need to sit inside a Promise callback, not just after an await
@@ -168,8 +196,8 @@ export default function ForumPage() {
   };
 
   const handleSubmitAnswer = async (questionId: string) => {
-    const draft = answerDrafts[questionId];
-    if (!draft?.counselorId || !draft.body?.trim() || draft.body.trim().length < 5) {
+    const draftBody = answerDrafts[questionId]?.trim();
+    if (!draftBody || draftBody.length < 5) {
       setAnswerErrors((prev) => ({
         ...prev,
         [questionId]: t('answer.validationError'),
@@ -177,26 +205,22 @@ export default function ForumPage() {
       return;
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setAnswerErrors((prev) => ({ ...prev, [questionId]: t('answer.saveError') }));
+      return;
+    }
+
     const res = await fetch('/api/forum/answer', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        questionId,
-        counselorId: draft.counselorId,
-        body: draft.body.trim(),
-        passcode: draft.passcode?.trim() || '',
-      }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ questionId, body: draftBody }),
     });
     const result = await res.json();
 
     if (!result.success) {
-      setAnswerErrors((prev) => ({
-        ...prev,
-        [questionId]:
-          result.error === 'invalid_passcode'
-            ? t('answer.invalidPasscode')
-            : t('answer.saveError'),
-      }));
+      setAnswerErrors((prev) => ({ ...prev, [questionId]: t('answer.saveError') }));
       return;
     }
 
@@ -212,7 +236,7 @@ export default function ForumPage() {
     }
 
     setAnswers((prev) => [...prev, newAnswer]);
-    setAnswerDrafts((prev) => ({ ...prev, [questionId]: { counselorId: '', body: '', passcode: '' } }));
+    setAnswerDrafts((prev) => ({ ...prev, [questionId]: '' }));
     setAnswerErrors((prev) => ({ ...prev, [questionId]: '' }));
     setAnsweringId(null);
   };
@@ -411,7 +435,7 @@ export default function ForumPage() {
               const questionAnswers = answers.filter((a) => a.questionId === q.id);
               const cfg = SPECIALTY_CONFIG[q.category];
               const isAnswering = answeringId === q.id;
-              const draft = answerDrafts[q.id] || { counselorId: '', body: '', passcode: '' };
+              const draftBody = answerDrafts[q.id] || '';
 
               return (
                 <div key={q.id} className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm p-6">
@@ -452,36 +476,14 @@ export default function ForumPage() {
                   <div className="mt-4 pt-3 border-t border-amber-900/10">
                     {isAnswering ? (
                       <div className="space-y-2.5">
-                        <select
-                          value={draft.counselorId}
-                          onChange={(e) =>
-                            setAnswerDrafts((prev) => ({ ...prev, [q.id]: { ...draft, counselorId: e.target.value } }))
-                          }
-                          className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
-                        >
-                          <option value="">{t('answer.selectCounselorPlaceholder')}</option>
-                          {INITIAL_COUNSELORS.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.fullName}
-                            </option>
-                          ))}
-                        </select>
+                        <p className="text-[11px] font-semibold text-stone-500">
+                          {t('answer.replyingAs', { name: mentorSession?.fullName || '' })}
+                        </p>
                         <textarea
                           rows={2}
-                          value={draft.body}
-                          onChange={(e) =>
-                            setAnswerDrafts((prev) => ({ ...prev, [q.id]: { ...draft, body: e.target.value } }))
-                          }
+                          value={draftBody}
+                          onChange={(e) => setAnswerDrafts((prev) => ({ ...prev, [q.id]: e.target.value }))}
                           placeholder={t('answer.bodyPlaceholder')}
-                          className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
-                        />
-                        <input
-                          type="password"
-                          value={draft.passcode}
-                          onChange={(e) =>
-                            setAnswerDrafts((prev) => ({ ...prev, [q.id]: { ...draft, passcode: e.target.value } }))
-                          }
-                          placeholder={t('answer.passcodePlaceholder')}
                           className="w-full p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
                         />
                         {answerErrors[q.id] && (
@@ -506,7 +508,7 @@ export default function ForumPage() {
                           </button>
                         </div>
                       </div>
-                    ) : (
+                    ) : mentorSession ? (
                       <button
                         type="button"
                         onClick={() => setAnsweringId(q.id)}
@@ -515,7 +517,15 @@ export default function ForumPage() {
                         <ChevronDown className="w-3.5 h-3.5" />
                         {t('answer.cta')}
                       </button>
-                    )}
+                    ) : !checkingMentorSession ? (
+                      <Link
+                        href="/mentor/dashboard"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 hover:text-amber-950"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        {t('answer.mentorSignInCta')}
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               );

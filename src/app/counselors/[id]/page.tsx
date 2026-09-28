@@ -1292,7 +1292,7 @@ export default function CounselorPage() {
 
       {counselor.pricePerQuestion != null && (
         <div className="max-w-4xl mx-auto px-6 mb-16">
-          <MentorInboxPanel counselor={counselor} />
+          <MentorInboxPanel />
         </div>
       )}
 

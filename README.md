@@ -45,7 +45,6 @@ Create `.env.local` in the project root:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key (client-side) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key — **server-only**, never exposed to the client. Used by a handful of API routes (mentor inbox, admin thread actions) that need to bypass RLS under controlled server-side checks. |
 | `ADMIN_PASSWORD` | Shared passcode gating `/admin` |
-| `COUNSELOR_PASSCODE` | Shared passcode gating the mentor-facing Text Q&A inbox and forum-answer routes |
 | `SESSION_SECRET` | Signs the admin session cookie |
 | `SITE_PASSWORD` | Legacy site-wide gate; currently unused (site is public) |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Outbound email via [Resend](https://resend.com) |

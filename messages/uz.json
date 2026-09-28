@@ -330,14 +330,13 @@
     "emptyTitle": "Hali savollar yo'q",
     "emptyBody": "Birinchi bo'lib savol bering!",
     "answer": {
-      "selectCounselorPlaceholder": "Rahnamoni tanlang...",
+      "replyingAs": "{name} sifatida javob berasiz",
       "bodyPlaceholder": "Javobingizni yozing...",
-      "passcodePlaceholder": "Rahnamo maxfiy kodi",
       "submit": "Javobni joylash",
       "cancel": "Bekor qilish",
       "cta": "Rahnamo sifatida javob berish",
-      "validationError": "Rahnamoni tanlang va javobingizni yozing (kamida 5 ta belgi).",
-      "invalidPasscode": "Rahnamo kodi noto'g'ri. Kodni Rahnamo hamkorlik shartnomasidan tekshiring.",
+      "mentorSignInCta": "Javob berish uchun mentor sifatida kiring",
+      "validationError": "Javobingizni yozing (kamida 5 ta belgi).",
       "saveError": "Javobni saqlashda xatolik yuz berdi. Qayta urinib ko'ring."
     }
   },
@@ -383,9 +382,8 @@
     },
     "inbox": {
       "title": "Rahnamo sifatida javob berish",
-      "passcodeLabel": "Rahnamo maxfiy kodi",
-      "unlockButton": "Kirish",
-      "invalidPasscode": "Kod noto'g'ri.",
+      "mentorSignInCta": "Mentor sifatida kirish",
+      "loadFailed": "Xabarlar qutingizni yuklab bo'lmadi.",
       "noThreads": "Hozircha faol suhbatlar yo'q.",
       "replyPlaceholder": "Javobingizni yozing...",
       "replyButton": "Yuborish",

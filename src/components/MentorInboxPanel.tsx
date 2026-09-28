@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { KeyRound, Send, Loader2 } from 'lucide-react';
-import { Counselor } from '@/types';
+import Link from 'next/link';
+import { Lock, LogIn, Send, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface InboxThreadRow {
   id: string;
@@ -21,19 +22,17 @@ interface InboxMessageRow {
   created_at: string;
 }
 
-// Passcode-gated, same shared secret forum replies already use -- entered
-// once per page load and kept only in this component's own state, never
-// persisted. Mirrors that same accepted tradeoff (one passcode for every
-// mentor, not per-counselor auth), but unlike forum, nothing here is
-// reachable without it: see /api/threads/mentor-view and
-// /api/threads/reply for why the passcode is real enforcement this time,
-// not just an app-layer speed bump in front of an open RLS policy.
-export default function MentorInboxPanel({ counselor }: { counselor: Counselor }) {
+// Stage 5: gated on the caller's own real mentor session now, not a
+// shared passcode -- identity is resolved server-side from the session
+// (see /api/threads/mentor-view and /api/threads/reply), so this always
+// shows the logged-in mentor's OWN inbox, never anyone else's, regardless
+// of which counselor's page it happens to be mounted on.
+export default function MentorInboxPanel() {
   const t = useTranslations('textQa.inbox');
 
-  const [unlocked, setUnlocked] = useState(false);
-  const [passcode, setPasscode] = useState('');
-  const [unlockError, setUnlockError] = useState('');
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [isMentor, setIsMentor] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const [threads, setThreads] = useState<InboxThreadRow[]>([]);
   const [messages, setMessages] = useState<InboxMessageRow[]>([]);
@@ -43,36 +42,60 @@ export default function MentorInboxPanel({ counselor }: { counselor: Counselor }
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  async function getAccessToken(): Promise<string | null> {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || null;
+  }
+
   async function loadInbox() {
+    const token = await getAccessToken();
+    if (!token) return;
+
     const res = await fetch('/api/threads/mentor-view', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ counselorId: counselor.id, passcode }),
+      headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
     if (!data.success) {
-      setUnlockError(t('invalidPasscode'));
-      setUnlocked(false);
+      setLoadError(t('loadFailed'));
       return;
     }
+    setLoadError('');
     setThreads(data.threads);
     setMessages(data.messages);
   }
 
-  const handleUnlock = async () => {
-    setUnlockError('');
-    await loadInbox();
-    setUnlocked(true);
-  };
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const isReal = !!data.session?.user && !data.session.user.is_anonymous;
+      setIsMentor(isReal);
+      setCheckingSession(false);
+      if (isReal) loadInbox();
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
+        setIsMentor(true);
+        loadInbox();
+      }
+      if (event === 'SIGNED_OUT') {
+        setIsMentor(false);
+        setThreads([]);
+        setMessages([]);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (!isMentor) return;
     pollRef.current = setInterval(loadInbox, 5000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlocked]);
+  }, [isMentor]);
 
   const handleReply = async (threadId: string) => {
     const body = drafts[threadId]?.trim();
@@ -81,10 +104,11 @@ export default function MentorInboxPanel({ counselor }: { counselor: Counselor }
     setSendError((prev) => ({ ...prev, [threadId]: '' }));
 
     try {
+      const token = await getAccessToken();
       const res = await fetch('/api/threads/reply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId, counselorId: counselor.id, body, passcode }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ threadId, body }),
       });
       const data = await res.json();
       if (!data.success) {
@@ -101,38 +125,32 @@ export default function MentorInboxPanel({ counselor }: { counselor: Counselor }
     setSendingId(null);
   };
 
-  if (!unlocked) {
+  if (checkingSession) {
+    return null;
+  }
+
+  if (!isMentor) {
     return (
-      <div className="bg-white/95 rounded-3xl border border-amber-900/10 shadow-sm p-6 space-y-3">
-        <h3 className="font-serif font-bold text-sm text-amber-950 flex items-center gap-2">
-          <KeyRound className="w-4 h-4 text-amber-800" /> {t('title')}
-        </h3>
-        <div className="flex gap-2">
-          <input
-            type="password"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder={t('passcodeLabel')}
-            className="flex-1 p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
-          />
-          <button
-            type="button"
-            onClick={handleUnlock}
-            className="px-4 py-2.5 bg-amber-900 hover:bg-amber-800 text-amber-50 text-xs font-bold rounded-xl cursor-pointer"
-          >
-            {t('unlockButton')}
-          </button>
+      <div className="bg-white/95 rounded-3xl border border-amber-900/10 shadow-sm p-6 text-center space-y-3">
+        <div className="w-10 h-10 rounded-xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto">
+          <Lock className="w-5 h-5 text-amber-300" />
         </div>
-        {unlockError && <p className="text-[11px] text-red-600 font-semibold">{unlockError}</p>}
+        <h3 className="font-serif font-bold text-sm text-amber-950">{t('title')}</h3>
+        <Link
+          href="/mentor/dashboard"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3.5 py-2 rounded-xl border border-amber-300/60"
+        >
+          <LogIn className="w-3.5 h-3.5" /> {t('mentorSignInCta')}
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="bg-white/95 rounded-3xl border border-amber-900/10 shadow-sm p-6 space-y-4">
-      <h3 className="font-serif font-bold text-sm text-amber-950 flex items-center gap-2">
-        <KeyRound className="w-4 h-4 text-amber-800" /> {t('title')}
-      </h3>
+      <h3 className="font-serif font-bold text-sm text-amber-950">{t('title')}</h3>
+
+      {loadError && <p className="text-[11px] text-red-600 font-semibold">{loadError}</p>}
 
       {threads.length === 0 ? (
         <p className="text-xs text-stone-400">{t('noThreads')}</p>

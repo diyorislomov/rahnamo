@@ -330,14 +330,13 @@
     "emptyTitle": "No questions yet",
     "emptyBody": "Be the first to ask a question!",
     "answer": {
-      "selectCounselorPlaceholder": "Choose a Rahnamo...",
+      "replyingAs": "Replying as {name}",
       "bodyPlaceholder": "Write your answer...",
-      "passcodePlaceholder": "Rahnamo secret code",
       "submit": "Post answer",
       "cancel": "Cancel",
       "cta": "Answer as a Rahnamo",
-      "validationError": "Choose a Rahnamo and write your answer (at least 5 characters).",
-      "invalidPasscode": "Incorrect Rahnamo code. Check the code from your Rahnamo partnership agreement.",
+      "mentorSignInCta": "Sign in as a mentor to answer",
+      "validationError": "Write your answer (at least 5 characters).",
       "saveError": "There was an error saving the answer. Please try again."
     }
   },
@@ -383,9 +382,8 @@
     },
     "inbox": {
       "title": "Reply as a Rahnamo",
-      "passcodeLabel": "Rahnamo secret code",
-      "unlockButton": "Unlock",
-      "invalidPasscode": "Incorrect code.",
+      "mentorSignInCta": "Sign in as a mentor",
+      "loadFailed": "Could not load your inbox.",
       "noThreads": "No active conversations yet.",
       "replyPlaceholder": "Write your reply...",
       "replyButton": "Send",

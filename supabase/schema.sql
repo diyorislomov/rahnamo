@@ -799,3 +799,28 @@ GRANT SELECT ON public.bookings TO authenticated;
 -- sign-ins" in the Supabase dashboard is a reasonable next step now that
 -- nothing in this codebase calls signInAnonymously() anymore.
 DROP POLICY IF EXISTS "Text Q&A booking insert" ON public.bookings;
+
+-- 12. Real Auth for Mentees and Mentors -- Stage 5 (mentor-identity
+-- hardening for forum answers and Text Q&A replies)
+--
+-- /api/forum/answer, /api/threads/reply, and /api/threads/mentor-view
+-- used to gate on one shared COUNSELOR_PASSCODE plus a client-supplied
+-- counselorId -- anyone who knew the passcode could answer or reply as
+-- ANY mentor, and read any mentor's inbox, just by supplying a different
+-- id. All three routes now resolve the real, authenticated mentor from
+-- the caller's Supabase session (Authorization: Bearer <access token>,
+-- validated server-side via supabase.auth.getUser(token) + a
+-- counselors.auth_id lookup -- see src/lib/mentorSession.ts) and never
+-- trust a client-supplied counselorId at all.
+--
+-- Verification during this stage surfaced a second, deeper hole this
+-- passcode was never actually protecting: forum_answers' own
+-- "Allow public insert forum answers" policy was WITH CHECK (true), so
+-- ANY anon-key request could insert an answer as any counselor directly
+-- via the REST API, completely bypassing /api/forum/answer and its
+-- passcode check. That policy is dropped here with no replacement
+-- permissive policy for anon/authenticated -- forum_answers now works
+-- exactly like thread_messages already did: service_role (used only by
+-- the hardened route, which has already verified the real mentor) is the
+-- only path in.
+DROP POLICY IF EXISTS "Allow public insert forum answers" ON public.forum_answers;

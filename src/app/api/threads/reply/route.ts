@@ -1,32 +1,22 @@
 import { NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { resolveMentorFromRequest } from '@/lib/mentorSession';
 
-// Mirrors /api/forum/answer's shared-passcode gate, but with real
-// enforcement behind it: no RLS policy on thread_messages permits a
-// 'counselor' row via the anon/authenticated roles at all, so this route
-// (using the service_role key, never the anon key) is the ONLY path a
-// counselor reply can reach the table through -- unlike forum, where the
-// same passcode check guards a table whose RLS would let anyone post as
-// any counselor directly against the REST API regardless.
+// Stage 5: identity now comes only from the caller's real mentor session
+// (resolveMentorFromRequest), never from a client-supplied counselorId --
+// the old shared COUNSELOR_PASSCODE plus a thread/counselor-match check
+// only confirmed internal consistency, not who was actually calling.
+// No RLS policy on thread_messages permits a 'counselor' row via the
+// anon/authenticated roles at all, so this route (service_role) remains
+// the only path a counselor reply can reach the table through.
 export async function POST(request: Request) {
-  const { threadId, counselorId, body, passcode } = await request.json();
-  const validPasscode = process.env.COUNSELOR_PASSCODE;
-
-  if (!validPasscode) {
-    console.error('COUNSELOR_PASSCODE is not configured on the server');
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
+  const mentor = await resolveMentorFromRequest(request);
+  if (!mentor) {
+    return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  if (typeof passcode !== 'string' || passcode !== validPasscode) {
-    return NextResponse.json({ success: false, error: 'invalid_passcode' }, { status: 401 });
-  }
-
-  if (
-    typeof threadId !== 'string' ||
-    typeof counselorId !== 'string' ||
-    typeof body !== 'string' ||
-    body.trim().length < 1
-  ) {
+  const { threadId, body } = await request.json();
+  if (typeof threadId !== 'string' || typeof body !== 'string' || body.trim().length < 1) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
@@ -38,10 +28,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
   }
 
-  // Confirms the thread actually belongs to the counselor claimed --
-  // the passcode is shared across all mentors, so this is the only check
-  // standing between "I know the passcode" and "I can reply in anyone's
-  // thread under any counselor's name."
+  // Confirms the thread actually belongs to the real, authenticated
+  // mentor calling this route -- this is now a genuine identity check,
+  // not just internal consistency against a client-claimed id.
   const { data: thread, error: threadError } = await supabase
     .from('question_threads')
     .select('id, counselor_id')
@@ -51,7 +40,7 @@ export async function POST(request: Request) {
   if (threadError || !thread) {
     return NextResponse.json({ success: false, error: 'thread_not_found' }, { status: 404 });
   }
-  if (thread.counselor_id !== counselorId) {
+  if (thread.counselor_id !== mentor.counselorId) {
     return NextResponse.json({ success: false, error: 'counselor_mismatch' }, { status: 403 });
   }
 
