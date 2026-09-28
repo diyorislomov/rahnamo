@@ -53,11 +53,13 @@
     "eyebrow": "1-ga-1 shaxsiy mentorlik",
     "heading": "O'z sohangizdagi haqiqiy mutaxassis bilan bevosita suhbatlashing.",
     "subheading": "Tasdiqlangan Rahnamolar orasidan tanlang, vaqt band qiling va bir hafta ichida birinchi konsultatsiyangizni o'tkazing.",
-    "ctaSecondary": "Yo'nalish bo'yicha tanlash",
-    "searchPlaceholder": "Ism, soha yoki kalit so'z bo'yicha qidirish (masalan: Fulbright, Legal)...",
+    "ctaSecondary": "Qidirish va filtrlar",
+    "searchLabel": "Qaysi yo'nalishda yordam kerak?",
+    "searchPlaceholder": "Yo'nalish, mavzu yoki kalit so'z bo'yicha izlang...",
     "clearSearch": "Tozalash",
-    "disciplineHeading": "Yo'nalish bo'yicha tanlang",
-    "countSuffix": "{count} Rahnamo"
+    "filtersToggle": "Filtrlar",
+    "specialtyFilterLabel": "Qiziqish sohasi",
+    "betaBanner": "Beta versiya. Rahnamo hozircha ishga tushirish bosqichida — yangi ustozlar muntazam qo'shilmoqda."
   },
   "statsBand": {
     "counselors": "Rahnamolar",
@@ -68,7 +70,8 @@
     "sessionsCount": "{count} ta qabul",
     "priceLabel": "Sessiya narxi",
     "priceUnit": "UZS / 30m",
-    "selectTime": "Vaqt tanlash"
+    "selectTime": "Vaqt tanlash",
+    "viewProfile": "Profilni ko'rish"
   },
   "specialties": {
     "All": "Barcha sohalar",
@@ -615,8 +618,6 @@
       "priceLow": "Narx: Arzonroq",
       "priceHigh": "Narx: Qimmatroq"
     },
-    "companyLabel": "Kompaniya:",
-    "allCompanies": "Barcha kompaniyalar",
     "selectedHeading": "Saralangan Rahnamolar",
     "selectedSubheading": "Markaziy Osiyoning yetakchi mutaxassislaridan 1-ga-1 konsultatsiya qabullari",
     "emptyTitle": "Hech qanday Rahnamo topilmadi",

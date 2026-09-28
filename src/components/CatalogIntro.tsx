@@ -1,11 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Search, ArrowRight, ArrowDown } from 'lucide-react';
+import { Search, ArrowRight, SlidersHorizontal, ChevronDown, Info } from 'lucide-react';
 import { Counselor } from '@/types';
-import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import StatsBand from './StatsBand';
-import RevealOnScroll from './RevealOnScroll';
+
+export type SortOption = 'rating' | 'popular' | 'price-low' | 'price-high';
 
 interface CatalogIntroProps {
   counselors: Counselor[];
@@ -13,19 +14,23 @@ interface CatalogIntroProps {
   setSearchQuery: (value: string) => void;
   selectedTag: string;
   setSelectedTag: (value: string) => void;
+  sortBy: SortOption;
+  setSortBy: (value: SortOption) => void;
+  specialtyKeys: string[];
 }
 
 /**
  * The light, spacious landing moment between the cinematic hero and the
- * results grid -- Preplaced's layout rhythm (statement -> trust stats ->
- * search -> browse-by-category), but built entirely from Rahnamo's existing
- * cream/amber palette and existing type stack. No new colors, no new fonts.
+ * results grid -- statement -> trust stats -> one search-and-filter card ->
+ * a beta notice -> the results grid below. Built entirely from Rahnamo's
+ * existing cream/amber palette and existing type stack; this is a layout
+ * change, not a new visual language.
  *
- * StatsBand is rendered here as-is, not rebuilt -- it stays its own already
- * -verified component, just repositioned. Everything in this file lives in
- * one continuous bg-[#FAF6EE] region so the statement, the stats, the
- * search, and the discipline grid read as one section, not several
- * competing bands.
+ * The old icon-tile "browse by specialty" grid is gone -- category and sort
+ * now live as two dropdowns inside one collapsible "Filters" row, alongside
+ * search, matching a single toolbar rather than three separate blocks
+ * (search card, then a sort+company card, then the results heading) the
+ * way this section used to read.
  */
 export default function CatalogIntro({
   counselors,
@@ -33,10 +38,15 @@ export default function CatalogIntro({
   setSearchQuery,
   selectedTag,
   setSelectedTag,
+  sortBy,
+  setSortBy,
+  specialtyKeys,
 }: CatalogIntroProps) {
   const t = useTranslations('catalogIntro');
   const tCommon = useTranslations('common');
+  const tHome = useTranslations('home');
   const tSpecialties = useTranslations('specialties');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
     <div className="bg-[#FAF6EE]">
@@ -62,11 +72,12 @@ export default function CatalogIntro({
               <ArrowRight className="w-4 h-4" />
             </a>
             <a
-              href="#discipline-grid"
+              href="#search-filters"
+              onClick={() => setFiltersOpen(true)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-amber-900/15 hover:border-amber-400/60 text-amber-950 font-bold text-sm px-6 py-3.5 rounded-2xl shadow-xs transition-all"
             >
               <span>{t('ctaSecondary')}</span>
-              <ArrowDown className="w-4 h-4" />
+              <SlidersHorizontal className="w-4 h-4" />
             </a>
           </div>
         </div>
@@ -76,56 +87,85 @@ export default function CatalogIntro({
           <StatsBand counselors={counselors} />
         </div>
 
-        {/* Search */}
-        <div className="max-w-2xl mx-auto">
-          <div className="relative">
-            <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('searchPlaceholder')}
-              className="w-full pl-11 pr-4 py-3.5 bg-white border border-amber-900/15 rounded-2xl text-xs sm:text-sm text-stone-800 outline-none focus:ring-2 focus:ring-amber-700 transition-all placeholder:text-stone-400 shadow-xs"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-bold cursor-pointer"
-              >
-                ✕ {t('clearSearch')}
-              </button>
+        {/* Search + Filters, one toolbar card */}
+        <div id="search-filters" className="max-w-2xl mx-auto mt-8 scroll-mt-24">
+          <div className="bg-white border border-amber-900/15 rounded-3xl shadow-sm p-5 sm:p-6">
+            <label htmlFor="catalog-search" className="text-xs font-bold text-amber-950 block mb-2">
+              {t('searchLabel')}
+            </label>
+            <div className="relative">
+              <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
+                id="catalog-search"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('searchPlaceholder')}
+                className="w-full pl-11 pr-4 py-3.5 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs sm:text-sm text-stone-800 outline-none focus:ring-2 focus:ring-amber-700 transition-all placeholder:text-stone-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-bold cursor-pointer"
+                >
+                  ✕ {t('clearSearch')}
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              aria-expanded={filtersOpen}
+              className="mt-4 flex items-center gap-1.5 text-xs font-bold text-amber-900 hover:text-amber-950 cursor-pointer"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>{t('filtersToggle')}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${filtersOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {filtersOpen && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-amber-900/10 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">
+                    {t('specialtyFilterLabel')}
+                  </label>
+                  <select
+                    value={selectedTag}
+                    onChange={(e) => setSelectedTag(e.target.value)}
+                    className="w-full p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
+                  >
+                    {specialtyKeys.map((key) => (
+                      <option key={key} value={key}>
+                        {tSpecialties(key)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block mb-1.5">
+                    {tHome('sortLabel')}
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className="w-full p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
+                  >
+                    <option value="rating">{tHome('sortOptions.rating')}</option>
+                    <option value="popular">{tHome('sortOptions.popular')}</option>
+                    <option value="price-low">{tHome('sortOptions.priceLow')}</option>
+                    <option value="price-high">{tHome('sortOptions.priceHigh')}</option>
+                  </select>
+                </div>
+              </div>
             )}
           </div>
-        </div>
 
-        {/* Discipline grid -- primary category selector, replaces the old pill row */}
-        <div id="discipline-grid" className="mt-6 scroll-mt-24">
-          <h3 className="text-center font-serif font-bold text-lg text-amber-950 mb-4">
-            {t('disciplineHeading')}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {Object.keys(SPECIALTY_CONFIG).map((key, i) => {
-              const cfg = SPECIALTY_CONFIG[key];
-              const isSelected = selectedTag === key;
-              const count =
-                key === 'All' ? counselors.length : counselors.filter((c) => c.specialties.includes(key)).length;
-
-              return (
-                <RevealOnScroll key={key} delay={Math.min(i, 8) * 80}>
-                  <a
-                    href="#rahnamolar"
-                    onClick={() => setSelectedTag(key)}
-                    className={`flex flex-col items-center justify-center gap-1.5 text-center px-3 py-6 rounded-2xl text-xs font-bold transition-all duration-200 border cursor-pointer w-full ${
-                      isSelected ? cfg.activeClass : cfg.inactiveClass
-                    }`}
-                  >
-                    <span className="text-2xl">{cfg.icon}</span>
-                    <span>{tSpecialties(key)}</span>
-                    <span className="text-[10px] font-normal opacity-70">{t('countSuffix', { count })}</span>
-                  </a>
-                </RevealOnScroll>
-              );
-            })}
+          {/* Beta notice -- a step deeper than the page background so it
+              reads as its own band, still the same warm/amber family. */}
+          <div className="mt-4 flex items-center gap-2.5 bg-amber-100/70 border border-amber-300/50 text-amber-900 text-[11px] sm:text-xs font-medium px-4 py-3 rounded-2xl">
+            <Info className="w-4 h-4 flex-shrink-0 text-amber-700" />
+            <span>{t('betaBanner')}</span>
           </div>
         </div>
       </div>

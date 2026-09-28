@@ -53,11 +53,13 @@
     "eyebrow": "Personal 1-on-1 mentorship",
     "heading": "Talk directly with a real expert in your field.",
     "subheading": "Choose from verified Rahnamo, book a time, and hold your first consultation within a week.",
-    "ctaSecondary": "Browse by specialty",
-    "searchPlaceholder": "Search by name, specialty, or keyword (e.g. Fulbright, Legal)...",
+    "ctaSecondary": "Search and filter",
+    "searchLabel": "What do you need help with?",
+    "searchPlaceholder": "Search by specialty, topic, or keyword...",
     "clearSearch": "Clear",
-    "disciplineHeading": "Choose a specialty",
-    "countSuffix": "{count} Rahnamo"
+    "filtersToggle": "Filters",
+    "specialtyFilterLabel": "Specialty",
+    "betaBanner": "Beta version. Rahnamo is still in its launch phase — new mentors are added regularly."
   },
   "statsBand": {
     "counselors": "Rahnamo",
@@ -68,7 +70,8 @@
     "sessionsCount": "{count} sessions",
     "priceLabel": "Session price",
     "priceUnit": "UZS / 30m",
-    "selectTime": "Select time"
+    "selectTime": "Select time",
+    "viewProfile": "View profile"
   },
   "specialties": {
     "All": "All specialties",
@@ -615,8 +618,6 @@
       "priceLow": "Price: low to high",
       "priceHigh": "Price: high to low"
     },
-    "companyLabel": "Company:",
-    "allCompanies": "All companies",
     "selectedHeading": "Featured Rahnamo",
     "selectedSubheading": "1-on-1 consultations from Central Asia's leading professionals",
     "emptyTitle": "No Rahnamo found",
