@@ -8,6 +8,7 @@ import { Tier, Review, Counselor } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
 import { getDeviceId } from '@/lib/deviceId';
+import { getMenteeAuthId } from '@/lib/menteeAuth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
@@ -137,6 +138,7 @@ export default function CounselorPage() {
   const [selectedSlotOverride, setSelectedSlot] = useState<string>('');
   const selectedSlot = selectedSlotOverride || counselor?.availableSlots?.[0] || '';
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -180,7 +182,11 @@ export default function CounselorPage() {
     );
   }
 
-  const validateForm = () => {
+  // Returns the built-up error map itself (not just a boolean) so the
+  // submit handler can jump the wizard back to whichever step owns the
+  // first invalid field -- every individual check below is unchanged from
+  // before this was split into steps.
+  const validateForm = (): { [key: string]: string } => {
     const newErrors: { [key: string]: string } = {};
 
     if (!selectedSlot) {
@@ -222,8 +228,17 @@ export default function CounselorPage() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
+
+  const STEP1_FIELDS = ['slot'];
+  const STEP2_FIELDS = ['fullName', 'email', 'phone', 'telegram', 'education', 'question'];
+
+  function stepForErrors(errs: { [key: string]: string }): 1 | 2 | 3 {
+    if (STEP1_FIELDS.some((f) => errs[f])) return 1;
+    if (STEP2_FIELDS.some((f) => errs[f])) return 2;
+    return 3;
+  }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let input = e.target.value;
@@ -243,7 +258,9 @@ export default function CounselorPage() {
 
   const handleInitiatePayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setCurrentStep(stepForErrors(newErrors));
       return;
     }
     setShowPaymentModal(true);
@@ -363,9 +380,13 @@ export default function CounselorPage() {
     // incident this whole session traced back to a misconfigured connection.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+      // Bridge stage: device_id is still always written (nothing reads it
+      // any less because of this), and mentee_auth_id is attached on top
+      // whenever a real (non-anonymous) mentee session already exists.
       const { error } = await supabase.from('bookings').insert({
         id: newBooking.id,
         device_id: getDeviceId(),
+        mentee_auth_id: await getMenteeAuthId(),
         counselor_id: newBooking.counselorId,
         counselor_name: newBooking.counselorName,
         counselor_headline: newBooking.counselorHeadline,
@@ -730,8 +751,35 @@ export default function CounselorPage() {
             </div>
           ) : (
             <form onSubmit={handleInitiatePayment} className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-6">
+              {/* Step indicator -- numbered, no wizard library. Clicking a
+                  completed/earlier step jumps back to it; the current and
+                  future steps are not clickable ahead of validation. */}
+              <div className="flex items-center gap-2 pb-2">
+                {([1, 2, 3] as const).map((step, i) => (
+                  <div key={step} className="flex items-center flex-1 last:flex-none">
+                    <button
+                      type="button"
+                      onClick={() => { if (step < currentStep) setCurrentStep(step); }}
+                      disabled={step > currentStep}
+                      className={`w-8 h-8 flex-shrink-0 rounded-full text-xs font-bold flex items-center justify-center border-2 transition-all ${
+                        step === currentStep
+                          ? 'bg-amber-900 border-amber-900 text-amber-50'
+                          : step < currentStep
+                          ? 'bg-amber-100 border-amber-800 text-amber-900 cursor-pointer hover:bg-amber-200'
+                          : 'bg-white border-amber-900/15 text-stone-400'
+                      }`}
+                    >
+                      {step < currentStep ? <CheckCircle2 className="w-4 h-4" /> : step}
+                    </button>
+                    {i < 2 && (
+                      <div className={`h-0.5 flex-1 mx-2 rounded-full transition-all ${step < currentStep ? 'bg-amber-800' : 'bg-amber-900/10'}`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+
               {/* 1. Tier Selection */}
-              <div>
+              <div className={currentStep === 1 ? '' : 'hidden'}>
                 <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step1Heading')}</h3>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <label
@@ -785,7 +833,7 @@ export default function CounselorPage() {
               </div>
 
               {/* 2. Slot Selection */}
-              <div>
+              <div className={currentStep === 1 ? '' : 'hidden'}>
                 <div className="flex items-center justify-between">
                   <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step2Heading')}</h3>
                   {errors.slot && (
@@ -821,8 +869,20 @@ export default function CounselorPage() {
                 </div>
               </div>
 
+              {currentStep === 1 && (
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="bg-amber-900 hover:bg-amber-800 text-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                  >
+                    {t('form.continueButton')}
+                  </button>
+                </div>
+              )}
+
               {/* 3. Validated Intake Questions */}
-              <div className="space-y-4 pt-4 border-t border-amber-900/10">
+              <div className={`space-y-4 pt-4 border-t border-amber-900/10 ${currentStep === 2 ? '' : 'hidden'}`}>
                 <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step3Heading')}</h3>
 
                 {/* Name */}
@@ -949,8 +1009,27 @@ export default function CounselorPage() {
                 </div>
               </div>
 
+              {currentStep === 2 && (
+                <div className="flex justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="bg-white border border-amber-900/20 text-stone-700 hover:bg-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                  >
+                    {t('form.backButton')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="bg-amber-900 hover:bg-amber-800 text-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                  >
+                    {t('form.continueButton')}
+                  </button>
+                </div>
+              )}
+
               {/* 4. Payment Gateway Selection Step */}
-              <div className="space-y-3 pt-4 border-t border-amber-900/10">
+              <div className={`space-y-3 pt-4 border-t border-amber-900/10 ${currentStep === 3 ? '' : 'hidden'}`}>
                 <div className="flex items-center justify-between">
                   <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step4Heading')}</h3>
                   <span className="text-[11px] text-stone-500 flex items-center gap-1">
@@ -1018,14 +1097,25 @@ export default function CounselorPage() {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
-              >
-                {t('form.submit', {
-                  price: (selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString(),
-                })}
-              </button>
+              {currentStep === 3 && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="sm:w-auto bg-white border border-amber-900/20 text-stone-700 hover:bg-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                  >
+                    {t('form.backButton')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
+                  >
+                    {t('form.submit', {
+                      price: (selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString(),
+                    })}
+                  </button>
+                </div>
+              )}
             </form>
           )}
         </div>

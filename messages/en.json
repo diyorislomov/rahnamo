@@ -12,7 +12,9 @@
     "backToHome": "Home",
     "returnHome": "Return to homepage",
     "standard": "Standard",
-    "premium": "Premium"
+    "premium": "Premium",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
   },
   "navbar": {
     "banner": "The Silk Road career counseling and 1-on-1 mentorship platform",
@@ -115,6 +117,11 @@
       "heading": "Become-a-Rahnamo application",
       "fullNameLabel": "Full name *",
       "fullNamePlaceholder": "E.g. Dr. Jasur Mansurov",
+      "photoLabel": "Profile photo (optional)",
+      "photoHint": "Shown on your mentor card if you're approved. You can also add or change it later.",
+      "photoUploading": "Uploading...",
+      "photoUploadFailed": "Photo upload failed. You can still submit without it.",
+      "photoChange": "Change photo",
       "headlineLabel": "Short headline *",
       "headlinePlaceholder": "E.g. Lead Architect & Studio Founder | Ex-Ankara",
       "categoryLabel": "Your primary specialty *",
@@ -185,6 +192,8 @@
       "viewInMyBookings": "View in My Bookings"
     },
     "form": {
+      "continueButton": "Continue",
+      "backButton": "Back",
       "step1Heading": "1. Choose your session type",
       "tierStandardDuration": "20-30 minute guidance session",
       "tierPremiumDuration": "45-60 minute in-depth session",
@@ -246,6 +255,10 @@
     "backToCatalog": "Back to all Rahnamo",
     "headerBadge": "My Personal Dashboard",
     "heading": "My bookings and sessions",
+    "signInPrompt": "Sign in to see your bookings on every device.",
+    "signInLink": "Sign in",
+    "signedInAs": "Signed in as {email}",
+    "signOut": "Sign out",
     "tabs": {
       "all": "All ({count})",
       "upcoming": "Upcoming",
@@ -395,6 +408,82 @@
       "subtitle": "Your session is now officially scheduled"
     }
   },
+  "mentorAuth": {
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match.",
+    "submitFailed": "Something went wrong. Please try again.",
+    "login": {
+      "badge": "For Rahnamo",
+      "title": "Mentor sign in",
+      "subtitle": "Sign in to manage your profile.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "failed": "Incorrect email or password."
+    },
+    "setPassword": {
+      "badge": "Welcome",
+      "title": "Set your password",
+      "subtitle": "You arrived via an invite link — create a password for your mentor account now.",
+      "checkingLink": "Checking link...",
+      "invalidLink": "This link is invalid or has expired. Ask the admin for a new invite.",
+      "passwordLabel": "New password",
+      "confirmPasswordLabel": "Confirm password",
+      "submit": "Save password"
+    }
+  },
+  "mentorDashboard": {
+    "title": "Mentor dashboard",
+    "signOut": "Sign out",
+    "loadFailed": "Failed to load your profile.",
+    "changePhoto": "Change photo",
+    "photoUploadFailed": "Photo upload failed.",
+    "headlineLabel": "Headline",
+    "bioLabel": "About you",
+    "whyWorkWithMeLabel": "Why work with me",
+    "specialtiesLabel": "Specialties (comma-separated)",
+    "standardPriceLabel": "Standard price (UZS)",
+    "premiumPriceLabel": "Premium price (UZS)",
+    "pricePerQuestionLabel": "Price per question (optional)",
+    "softCapLabel": "Question cap (optional)",
+    "optionalPlaceholder": "Optional",
+    "availableSlotsLabel": "Available slots (one per line)",
+    "availableSlotsPlaceholder": "Monday, 19:00 - 19:30",
+    "save": "Save",
+    "saved": "Saved",
+    "saveFailed": "Save failed."
+  },
+  "menteeAuth": {
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match.",
+    "submitFailed": "Something went wrong. Please try again.",
+    "login": {
+      "badge": "For mentees",
+      "title": "Sign in",
+      "subtitle": "Sign in to see your bookings across all your devices.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "failed": "Incorrect email or password.",
+      "noAccount": "Don't have an account?",
+      "signupLink": "Sign up"
+    },
+    "signup": {
+      "badge": "For mentees",
+      "title": "Create your account",
+      "subtitle": "Create an account to track your bookings across all your devices.",
+      "fullNameLabel": "Full name",
+      "fullNamePlaceholder": "Your full name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Sign in",
+      "emailAlreadyRegistered": "This email is already registered. Try signing in instead.",
+      "checkEmail": "Almost done! Check {email} for a confirmation link before signing in."
+    }
+  },
   "admin": {
     "dateLocale": "en-US",
     "login": {
@@ -458,7 +547,10 @@
       "linkedinNotProvided": "LinkedIn not provided",
       "expectedPriceLabel": "Expected session price",
       "reject": "Reject",
-      "approve": "Approve (add to catalog)"
+      "approve": "Approve (add to catalog)",
+      "approving": "Approving...",
+      "approveFailed": "Approval failed. Please try again.",
+      "approveFailedEmailRegistered": "This email is already registered (a prior attempt, or an existing account). Check the mentors list before retrying."
     },
     "forum": {
       "emptyTitle": "No forum posts yet",

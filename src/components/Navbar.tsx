@@ -1,16 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import RahnamoLogo from '@/components/RahnamoLogo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { Menu, X, CalendarCheck, UserCheck, Compass, Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Menu, X, CalendarCheck, UserCheck, Compass, Sparkles, LogIn, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const t = useTranslations('common');
   const tNav = useTranslations('navbar');
+
+  // null = not signed in (or an anonymous Text Q&A session, which doesn't
+  // count as a real mentee account here) -- this is the only place across
+  // the whole site a mentee sees a sign-in/sign-out entry point, so it has
+  // to reflect the real, current session on every page.
+  const [menteeEmail, setMenteeEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      setMenteeEmail(user && !user.is_anonymous ? user.email || null : null);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
+        setMenteeEmail(session.user.email || null);
+      }
+      if (event === 'SIGNED_OUT') {
+        setMenteeEmail(null);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setIsOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b bg-[#FAF6EE]/90 backdrop-blur-md border-amber-900/15">
@@ -57,6 +86,21 @@ export default function Navbar() {
             <UserCheck className="w-4 h-4" />
             {t('becomeCounselor')}
           </Link>
+          {menteeEmail ? (
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60 cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 text-amber-800" /> {t('signOut')}
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60"
+            >
+              <LogIn className="w-4 h-4 text-amber-800" /> {t('signIn')}
+            </Link>
+          )}
           <LanguageSwitcher />
         </nav>
 
@@ -108,6 +152,22 @@ export default function Navbar() {
           >
             {t('becomeCounselorJoin')}
           </Link>
+          {menteeEmail ? (
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 text-amber-800" /> {t('signOut')}
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
+            >
+              <LogIn className="w-4 h-4 text-amber-800" /> {t('signIn')}
+            </Link>
+          )}
           <div className="pt-1">
             <LanguageSwitcher className="w-full justify-center" />
           </div>

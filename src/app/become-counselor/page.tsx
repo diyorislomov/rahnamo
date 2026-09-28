@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { CamelIcon } from '@/components/Icons';
-import { ArrowLeft, CheckCircle2, UserCheck, Send, Mail, Phone, Shield, Sparkles, DollarSign, Calendar, Globe, Award, TrendingUp } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, UserCheck, Send, Mail, Phone, Shield, Sparkles, DollarSign, Calendar, Globe, Award, TrendingUp, Camera, Loader2 } from 'lucide-react';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 
 const CATEGORY_KEYS = Object.keys(SPECIALTY_CONFIG).filter((k) => k !== 'All');
@@ -47,6 +47,14 @@ export default function BecomeCounselorPage() {
   // thread can ever be created against them).
   const [pricePerQuestion, setPricePerQuestion] = useState('');
   const [softCap, setSoftCap] = useState('');
+  // Uploaded immediately on file select, not on form submit -- there's no
+  // application id yet at this point (the row doesn't exist until INSERT
+  // below), so the path uses a random per-attempt token instead. The anon
+  // "app photo upload" Storage policy only checks the applications/*
+  // prefix, not any particular id, so this is a legitimate use of it.
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState('');
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
@@ -99,6 +107,28 @@ export default function BecomeCounselorPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError('');
+    setUploadingPhoto(true);
+
+    const path = `applications/${crypto.randomUUID()}/${file.name}`;
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file);
+
+    if (uploadError) {
+      console.error('[APPLICATION_PHOTO_UPLOAD_FAILED]', uploadError);
+      setUploadingPhoto(false);
+      setPhotoError(t('form.photoUploadFailed'));
+      return;
+    }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    setPhotoUrl(data.publicUrl);
+    setUploadingPhoto(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -130,6 +160,7 @@ export default function BecomeCounselorPage() {
       expected_premium_price: parseInt(premiumPrice, 10) || 130000,
       expected_price_per_question: pricePerQuestion.trim() ? parseInt(pricePerQuestion, 10) || null : null,
       expected_soft_cap: softCap.trim() ? parseInt(softCap, 10) || null : null,
+      photo_url: photoUrl || null,
     };
 
     // Save locally (fallback store, independent of the outcome below)
@@ -389,6 +420,27 @@ export default function BecomeCounselorPage() {
                   className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
                 />
                 {errors.fullName && <p className="text-[11px] text-red-600 mt-1">{errors.fullName}</p>}
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-stone-700 block">{t('form.photoLabel')}</label>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-full bg-amber-100 border border-amber-900/15 flex items-center justify-center overflow-hidden shrink-0">
+                    {photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photoUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-amber-700" />
+                    )}
+                  </div>
+                  <label className="cursor-pointer inline-flex items-center gap-2 text-[11px] font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3.5 py-2 rounded-xl border border-amber-300/60 transition-colors">
+                    {uploadingPhoto && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{uploadingPhoto ? t('form.photoUploading') : photoUrl ? t('form.photoChange') : t('form.photoLabel')}</span>
+                    <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} className="hidden" />
+                  </label>
+                </div>
+                <p className="text-[10px] text-stone-400 mt-1.5">{t('form.photoHint')}</p>
+                {photoError && <p className="text-[11px] text-red-600 mt-1">{photoError}</p>}
               </div>
 
               <div>

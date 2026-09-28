@@ -552,3 +552,153 @@ $$;
 
 REVOKE ALL ON FUNCTION public.ask_thread_question(UUID, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.ask_thread_question(UUID, TEXT) TO authenticated;
+
+-- =============================================================================
+-- 9. Real Auth for Mentees and Mentors -- Stage 0 (schema/infra only)
+--
+-- Replaces device_id/shared-passcode identity with real Supabase Auth
+-- (email+password). This stage is schema/infra only -- no UI change ships
+-- with it, fully reversible. See the approved plan for the full staged
+-- rollout (mentor invite-on-approval, mentee login, the bridge period
+-- before booking becomes login-required, and the Text Q&A/forum identity
+-- fast-follows).
+--
+-- NOTE: the standing rule at the top of this file says "This project has no
+-- Supabase Auth login anywhere today" -- that stops being true as of this
+-- section. Every GRANT below is explicit per that same standing rule.
+--
+-- profiles.role is signup-flow/routing metadata ONLY, never the authority
+-- for "is this person a mentor" -- that's counselors.auth_id IS NOT NULL,
+-- checked everywhere in RLS/UI, so one person can hold a mentee account and
+-- later be an approved mentor under the same auth.users row without a
+-- schema conflict.
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('mentee', 'mentor')),
+    full_name TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own profile" ON public.profiles
+    FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.profiles
+    FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+-- No anon grant at all -- profiles is never publicly readable.
+GRANT SELECT ON public.profiles TO authenticated;
+GRANT UPDATE (full_name) ON public.profiles TO authenticated;
+GRANT ALL ON public.profiles TO service_role;
+
+-- SECURITY DEFINER + SET search_path = public are both required: the
+-- trigger runs as supabase_auth_admin, and without either the insert into
+-- public.profiles fails with "permission denied".
+--
+-- The is_anonymous check is required too, and was missing in the original
+-- version of this trigger -- confirmed live during Stage 2 work to have been
+-- silently breaking every NEW anonymous sign-in (Text Q&A's
+-- ensureStudentAuth() -> signInAnonymously()) since Stage 0 shipped.
+-- Anonymous sign-in also inserts into auth.users, firing this same trigger,
+-- but with no `role` in raw_user_meta_data -- and profiles.role is NOT
+-- NULL, so the insert threw and rolled back the entire anonymous sign-in
+-- ("Database error creating anonymous user"). Anonymous identities never
+-- get a profiles row at all -- they don't fit either 'mentee' or 'mentor'.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.is_anonymous THEN
+    RETURN NEW;
+  END IF;
+  INSERT INTO public.profiles (id, role, full_name)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'role', NEW.raw_user_meta_data->>'full_name');
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ---- counselor_applications: application-time photo upload ----
+ALTER TABLE public.counselor_applications ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
+-- ---- counselors: link to a real mentor account ----
+ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS auth_id UUID REFERENCES auth.users(id);
+ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS email TEXT;
+
+CREATE POLICY "Mentors can update their own profile" ON public.counselors
+    FOR UPDATE USING (auth.uid() = auth_id) WITH CHECK (auth.uid() = auth_id);
+
+-- `counselors` predates the Oct-30 Data API grants cutover, so it already
+-- carries Supabase's legacy blanket table-level UPDATE grant to
+-- `authenticated`/`anon` from before this migration. GRANTs are additive --
+-- layering the column-scoped GRANT below on top of that legacy grant does
+-- nothing to restrict it on its own, so the broad grant is revoked first.
+-- Confirmed live during Stage 1 verification: without this REVOKE, a
+-- mentor could still write `rating` on their own row despite the narrower
+-- GRANT, because the pre-existing table-wide grant alone was enough to
+-- satisfy Postgres's column-privilege check.
+REVOKE UPDATE ON public.counselors FROM authenticated, anon;
+
+-- Column-scoped on purpose: a mentor can never touch id, auth_id, rating,
+-- reviews_count, commission_free_until, company, or joined_at via this grant.
+GRANT UPDATE (
+    bio, headline, standard_price, premium_price, specialties,
+    available_slots, avatar_url, why_work_with_me, price_per_question, soft_cap
+) ON public.counselors TO authenticated;
+
+-- ---- bookings: link to a real mentee account ----
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS mentee_auth_id UUID REFERENCES auth.users(id);
+
+-- Deliberately no mentee-facing UPDATE/DELETE policy -- there is no
+-- self-service cancel flow anywhere in the app today, so none is added
+-- here. Cancellation stays admin-only via the existing admin dashboard,
+-- once that dashboard's own write path is migrated to a service-role route
+-- (Stage 3 of the plan -- tightening this INSERT/SELECT pair below would
+-- otherwise also break the admin's current anon-client payment-confirm
+-- action, so that migration is sequenced together with the next two
+-- policies, not shipped independently).
+CREATE POLICY "Mentees insert their own bookings" ON public.bookings
+    FOR INSERT WITH CHECK (auth.uid() = mentee_auth_id);
+CREATE POLICY "Mentees read their own bookings" ON public.bookings
+    FOR SELECT USING (auth.uid() = mentee_auth_id);
+
+GRANT INSERT (
+    id, mentee_auth_id, counselor_id, counselor_name, counselor_headline, counselor_avatar,
+    tier, price, payment_method, slot, student_name, email, phone, telegram, education,
+    question, meet_link, locale
+) ON public.bookings TO authenticated;
+GRANT SELECT ON public.bookings TO authenticated;
+
+-- Existing device_id-only rows (mentee_auth_id IS NULL) are permanent
+-- legacy/anonymous records now -- NULL never equals a real auth.uid(), so
+-- RLS denies them to every real user automatically. They stay
+-- admin-visible only, via the admin dashboard's service-role client, which
+-- bypasses RLS entirely and is unaffected by anything in this section.
+
+-- ---- Storage: mentor avatar photos ----
+-- One bucket, two path-scoped policies: `applications/*` is anon-insert
+-- (matches counselor_applications' own existing public-insert model --
+-- not a new risk) for the application-time photo upload, before an
+-- applicant has any auth.uid() at all; `mentors/{auth_id}/*` is
+-- owner-only, for post-approval dashboard edits. Run this via the
+-- Supabase dashboard (Storage -> New bucket -> name "avatars", public
+-- read, and set File size limit / Allowed MIME types there -- e.g. 5MB,
+-- image/png+image/jpeg+image/webp) since bucket creation itself isn't
+-- exposed as plain SQL; the two policies below can be run here once the
+-- bucket exists.
+
+CREATE POLICY "app photo upload" ON storage.objects FOR INSERT TO anon
+    WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'applications');
+
+CREATE POLICY "mentor own photo" ON storage.objects FOR ALL TO authenticated
+    USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'mentors' AND (storage.foldername(name))[2] = auth.uid()::text)
+    WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'mentors' AND (storage.foldername(name))[2] = auth.uid()::text);

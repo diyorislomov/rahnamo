@@ -6,6 +6,7 @@ import { Lock, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getDeviceId } from '@/lib/deviceId';
 import { ensureStudentAuth } from '@/lib/threadAuth';
+import { getMenteeAuthId } from '@/lib/menteeAuth';
 import { Counselor, QuestionThread, ThreadMessage } from '@/types';
 
 interface QuestionThreadRow {
@@ -152,9 +153,13 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     }
 
     const bookingId = `RNM-TXT-${Math.floor(1000 + Math.random() * 9000)}`;
+    // studentAuthId above may be an anonymous uid -- mentee_auth_id must
+    // only ever be a real, logged-in mentee's id, so it's resolved
+    // separately rather than reusing studentAuthId directly.
     const { error: bookingError } = await supabase.from('bookings').insert({
       id: bookingId,
       device_id: getDeviceId(),
+      mentee_auth_id: await getMenteeAuthId(),
       counselor_id: counselor.id,
       counselor_name: counselor.fullName,
       counselor_headline: counselor.headline,

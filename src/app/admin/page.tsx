@@ -33,6 +33,7 @@ interface CounselorApp {
   expected_premium_price: number;
   expected_price_per_question?: number | null;
   expected_soft_cap?: number | null;
+  photo_url?: string | null;
   status?: 'pending' | 'approved' | 'rejected';
 }
 
@@ -86,6 +87,8 @@ export default function AdminDashboardPage() {
   const [threads, setThreads] = useState<AdminThread[]>([]);
   const [threadActionId, setThreadActionId] = useState<string | null>(null);
   const [threadActionErrors, setThreadActionErrors] = useState<{ [id: string]: string }>({});
+  const [applicationActionId, setApplicationActionId] = useState<string | null>(null);
+  const [applicationActionErrors, setApplicationActionErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -470,59 +473,66 @@ export default function AdminDashboardPage() {
     setThreadActionId(null);
   };
 
-  const handleApproveApplication = (app: CounselorApp) => {
+  // Goes through /api/admin/approve-application (service_role behind the
+  // admin session cookie) rather than a direct supabase.from('counselors')
+  // insert -- approving now also invites a real mentor auth account
+  // (inviteUserByEmail needs the service_role key, which must never reach
+  // the browser bundle). Local state only flips to "approved" AFTER a
+  // confirmed success, matching handleThreadAction's discipline above --
+  // not optimistically, since a failed invite or insert must not claim
+  // approval that didn't actually happen.
+  const handleApproveApplication = async (app: CounselorApp) => {
     const appKey = app.id || app.email;
-    setApplications((prev) =>
-      prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
-    );
-    persistLocalApplications((apps) =>
-      apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
-    );
+    setApplicationActionId(appKey);
+    setApplicationActionErrors((prev) => ({ ...prev, [appKey]: '' }));
 
-    const newCounselorId = `c-${(app.full_name || 'mentor')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')}-${Date.now().toString(36)}`;
+    try {
+      const res = await fetch('/api/admin/approve-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicationId: app.id || null,
+          fullName: app.full_name,
+          headline: app.headline,
+          specialties: app.specialties,
+          category: app.category,
+          bio: app.bio,
+          company: app.company,
+          email: app.email,
+          expectedStandardPrice: app.expected_standard_price,
+          expectedPremiumPrice: app.expected_premium_price,
+          expectedPricePerQuestion: app.expected_price_per_question,
+          expectedSoftCap: app.expected_soft_cap,
+          photoUrl: app.photo_url,
+        }),
+      });
+      const data = await res.json();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder')) return;
+      if (!data.success) {
+        console.error('[APPLICATION_APPROVE_FAILED]', appKey, data.error, data.message);
+        setApplicationActionErrors((prev) => ({
+          ...prev,
+          [appKey]:
+            data.error === 'email_already_registered'
+              ? t('applications.approveFailedEmailRegistered')
+              : t('applications.approveFailed'),
+        }));
+        setApplicationActionId(null);
+        return;
+      }
 
-    Promise.resolve(
-      supabase.from('counselors').insert({
-        id: newCounselorId,
-        full_name: app.full_name,
-        headline: app.headline,
-        avatar_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-        specialties: app.specialties
-          ? app.specialties.split(',').map((s) => s.trim()).filter(Boolean)
-          : [app.category || 'Umumiy'],
-        bio: app.bio,
-        standard_price: app.expected_standard_price || 45000,
-        premium_price: app.expected_premium_price || 130000,
-        rating: 5.0,
-        reviews_count: 0,
-        // Placeholder starting slots -- there's no counselor-facing
-        // schedule editor yet, so leaving this empty would make a newly
-        // approved counselor permanently unbookable. Real slot management
-        // is a follow-up feature, not this one.
-        available_slots: ['Dushanba, 19:00 - 19:30', 'Chorshanba, 19:00 - 19:30', 'Shanba, 12:00 - 12:30'],
-        company: app.company || null,
-        price_per_question: app.expected_price_per_question || null,
-        soft_cap: app.expected_soft_cap || null,
-      })
-    )
-      .then(({ error }) => {
-        if (error) {
-          console.warn('Counselor insert error:', error);
-          return;
-        }
-        if (app.id) {
-          return Promise.resolve(
-            supabase.from('counselor_applications').update({ status: 'approved' }).eq('id', app.id)
-          );
-        }
-      })
-      .catch((err) => console.warn('Application approve error:', err));
+      setApplications((prev) =>
+        prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
+      );
+      persistLocalApplications((apps) =>
+        apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
+      );
+    } catch (err) {
+      console.error('[APPLICATION_APPROVE_FAILED]', appKey, err);
+      setApplicationActionErrors((prev) => ({ ...prev, [appKey]: t('applications.approveFailed') }));
+    } finally {
+      setApplicationActionId(null);
+    }
   };
 
   const handleRejectApplication = (app: CounselorApp) => {
@@ -965,12 +975,23 @@ export default function AdminDashboardPage() {
                         </button>
                         <button
                           onClick={() => handleApproveApplication(app)}
-                          disabled={app.status === 'approved' || app.status === 'rejected'}
+                          disabled={
+                            app.status === 'approved' ||
+                            app.status === 'rejected' ||
+                            applicationActionId === (app.id || app.email)
+                          }
                           className="px-3.5 py-1.5 rounded-xl bg-amber-900 text-amber-50 text-xs font-bold hover:bg-amber-800 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          {t('applications.approve')}
+                          {applicationActionId === (app.id || app.email)
+                            ? t('applications.approving')
+                            : t('applications.approve')}
                         </button>
                       </div>
+                      {applicationActionErrors[app.id || app.email] && (
+                        <p className="text-[11px] text-red-600 font-semibold mt-1.5 text-right">
+                          {applicationActionErrors[app.id || app.email]}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -12,7 +12,9 @@
     "backToHome": "Bosh sahifa",
     "returnHome": "Bosh sahifaga qaytish",
     "standard": "Standart",
-    "premium": "Premium"
+    "premium": "Premium",
+    "signIn": "Kirish",
+    "signOut": "Chiqish"
   },
   "navbar": {
     "banner": "Buyuk Ipak Yo'li karyera konsultatsiyasi va 1-ga-1 mentorlik platformasi",
@@ -115,6 +117,11 @@
       "heading": "Rahnamo bo'lib qo'shilish anketasi",
       "fullNameLabel": "Ism va Familiyangiz *",
       "fullNamePlaceholder": "Masalan: Dr. Jasur Mansurov",
+      "photoLabel": "Profil surati (ixtiyoriy)",
+      "photoHint": "Agar tasdiqlansangiz, mentor kartangizda ko'rsatiladi. Keyinroq ham qo'shishingiz yoki o'zgartirishingiz mumkin.",
+      "photoUploading": "Yuklanmoqda...",
+      "photoUploadFailed": "Suratni yuklab bo'lmadi. Arizani surat bo'lmasa ham yuborishingiz mumkin.",
+      "photoChange": "Suratni o'zgartirish",
       "headlineLabel": "Qisqa sarlovha (Headline) *",
       "headlinePlaceholder": "Masalan: Lead Architect & Studio Founder | Ex-Ankara",
       "categoryLabel": "Asosiy yo'nalishingiz *",
@@ -185,6 +192,8 @@
       "viewInMyBookings": "Mening qabullarim bo'limida ko'rish"
     },
     "form": {
+      "continueButton": "Davom etish",
+      "backButton": "Orqaga",
       "step1Heading": "1. Qabul turini tanlang",
       "tierStandardDuration": "20-30 daqiqa yo'l-yo'riq",
       "tierPremiumDuration": "45-60 daqiqa chuqur tahlil",
@@ -246,6 +255,10 @@
     "backToCatalog": "Barcha Rahnamolar ro'yxatiga qaytish",
     "headerBadge": "Mening Boshqaruv Panelim",
     "heading": "Mening qabullarim va sessiyalarim",
+    "signInPrompt": "Barcha qurilmalaringizdagi qabullarni ko'rish uchun tizimga kiring.",
+    "signInLink": "Kirish",
+    "signedInAs": "{email} sifatida kirdingiz",
+    "signOut": "Chiqish",
     "tabs": {
       "all": "Barcha ({count})",
       "upcoming": "Kutilmoqda",
@@ -395,6 +408,82 @@
       "subtitle": "Sessiyangiz endi rasman belgilandi"
     }
   },
+  "mentorAuth": {
+    "passwordTooShort": "Parol kamida 8 belgidan iborat bo'lishi kerak.",
+    "passwordMismatch": "Parollar mos kelmadi.",
+    "submitFailed": "Xatolik yuz berdi. Qayta urinib ko'ring.",
+    "login": {
+      "badge": "Rahnamo uchun",
+      "title": "Mentor sifatida kirish",
+      "subtitle": "Profilingizni boshqarish uchun kiring.",
+      "emailLabel": "Email",
+      "passwordLabel": "Parol",
+      "submit": "Kirish",
+      "failed": "Email yoki parol noto'g'ri."
+    },
+    "setPassword": {
+      "badge": "Xush kelibsiz",
+      "title": "Parolingizni o'rnating",
+      "subtitle": "Taklif havolasi orqali keldingiz — endi mentor hisobingiz uchun parol yarating.",
+      "checkingLink": "Havola tekshirilmoqda...",
+      "invalidLink": "Havola yaroqsiz yoki muddati o'tgan. Administratordan yangi taklif so'rang.",
+      "passwordLabel": "Yangi parol",
+      "confirmPasswordLabel": "Parolni tasdiqlang",
+      "submit": "Parolni saqlash"
+    }
+  },
+  "mentorDashboard": {
+    "title": "Mentor paneli",
+    "signOut": "Chiqish",
+    "loadFailed": "Profilni yuklashda xatolik yuz berdi.",
+    "changePhoto": "Rasmni o'zgartirish",
+    "photoUploadFailed": "Rasm yuklashda xatolik yuz berdi.",
+    "headlineLabel": "Sarlavha",
+    "bioLabel": "O'zingiz haqingizda",
+    "whyWorkWithMeLabel": "Nima uchun men bilan ishlashingiz kerak",
+    "specialtiesLabel": "Yo'nalishlar (vergul bilan ajratilgan)",
+    "standardPriceLabel": "Standart narx (so'm)",
+    "premiumPriceLabel": "Premium narx (so'm)",
+    "pricePerQuestionLabel": "Bitta savol narxi (ixtiyoriy)",
+    "softCapLabel": "Savollar chegarasi (ixtiyoriy)",
+    "optionalPlaceholder": "Ixtiyoriy",
+    "availableSlotsLabel": "Bo'sh vaqtlar (har birini alohida qatorga yozing)",
+    "availableSlotsPlaceholder": "Dushanba, 19:00 - 19:30",
+    "save": "Saqlash",
+    "saved": "Saqlandi",
+    "saveFailed": "Saqlashda xatolik yuz berdi."
+  },
+  "menteeAuth": {
+    "passwordTooShort": "Parol kamida 8 belgidan iborat bo'lishi kerak.",
+    "passwordMismatch": "Parollar mos kelmadi.",
+    "submitFailed": "Nimadir xato ketdi. Qayta urinib ko'ring.",
+    "login": {
+      "badge": "Mentiylar uchun",
+      "title": "Kirish",
+      "subtitle": "Barcha qurilmalaringizdagi qabullarni ko'rish uchun tizimga kiring.",
+      "emailLabel": "Elektron pochta",
+      "passwordLabel": "Parol",
+      "submit": "Kirish",
+      "failed": "Elektron pochta yoki parol noto'g'ri.",
+      "noAccount": "Hisobingiz yo'qmi?",
+      "signupLink": "Ro'yxatdan o'tish"
+    },
+    "signup": {
+      "badge": "Mentiylar uchun",
+      "title": "Hisob yaratish",
+      "subtitle": "Barcha qurilmalaringizdagi qabullarni kuzatish uchun hisob yarating.",
+      "fullNameLabel": "Ism va Familiyangiz",
+      "fullNamePlaceholder": "Ism va familiyangiz",
+      "emailLabel": "Elektron pochta",
+      "passwordLabel": "Parol",
+      "confirmPasswordLabel": "Parolni tasdiqlang",
+      "submit": "Hisob yaratish",
+      "haveAccount": "Hisobingiz bormi?",
+      "loginLink": "Kirish",
+      "emailAlreadyRegistered": "Bu elektron pochta allaqachon ro'yxatdan o'tgan. Kirishga urinib ko'ring.",
+      "checkEmail": "Deyarli tayyor! Kirishdan oldin tasdiqlash havolasi uchun {email} pochtangizni tekshiring."
+    }
+  },
   "admin": {
     "dateLocale": "uz-UZ",
     "login": {
@@ -458,7 +547,10 @@
       "linkedinNotProvided": "LinkedIn ko'rsatilmagan",
       "expectedPriceLabel": "Kutilayotgan sessiya narxi",
       "reject": "Rad etish",
-      "approve": "Tasdiqlash (Katalogga qo'shish)"
+      "approve": "Tasdiqlash (Katalogga qo'shish)",
+      "approving": "Tasdiqlanmoqda...",
+      "approveFailed": "Tasdiqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
+      "approveFailedEmailRegistered": "Bu email allaqachon ro'yxatdan o'tgan (avvalgi urinish yoki mavjud hisob). Davom etishdan oldin ustozlar ro'yxatini tekshiring."
     },
     "forum": {
       "emptyTitle": "Hali forum postlari yo'q",

@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getDeviceId } from '@/lib/deviceId';
 import { supabase } from '@/lib/supabase';
-import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Filter, Star, MessageSquareText, Lock } from 'lucide-react';
+import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Filter, Star, MessageSquareText, Lock, LogIn, LogOut } from 'lucide-react';
 
 interface SavedBooking {
   id: string;
@@ -50,6 +50,7 @@ export default function MyBookingsPage() {
   const [reviewDrafts, setReviewDrafts] = useState<{ [bookingId: string]: { rating: number; text: string } }>({});
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
   const [reviewErrors, setReviewErrors] = useState<{ [bookingId: string]: string }>({});
+  const [menteeEmail, setMenteeEmail] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadBookings() {
@@ -66,17 +67,32 @@ export default function MyBookingsPage() {
       const deviceId = getDeviceId();
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+      // Bridge stage: a logged-in mentee's bookings (made on ANY device,
+      // via mentee_auth_id) are fetched alongside this device's own
+      // device_id-scoped bookings, not instead of them -- device_id keeps
+      // working unchanged for guests until Stage 3 removes it.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const menteeUser = sessionData.session?.user;
+      const isRealMentee = !!menteeUser && !menteeUser.is_anonymous;
+      setMenteeEmail(isRealMentee ? menteeUser!.email || null : null);
+
       if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
         try {
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Supabase fetch timeout')), 1500)
           );
 
-          const fetchPromise = supabase
-            .from('bookings')
-            .select('*')
-            .eq('device_id', deviceId)
-            .order('created_at', { ascending: false });
+          const fetchPromise = isRealMentee
+            ? supabase
+                .from('bookings')
+                .select('*')
+                .or(`device_id.eq.${deviceId},mentee_auth_id.eq.${menteeUser!.id}`)
+                .order('created_at', { ascending: false })
+            : supabase
+                .from('bookings')
+                .select('*')
+                .eq('device_id', deviceId)
+                .order('created_at', { ascending: false });
 
           const res: any = await Promise.race([fetchPromise, timeoutPromise]);
 
@@ -127,6 +143,11 @@ export default function MyBookingsPage() {
 
     loadBookings();
   }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setMenteeEmail(null);
+  };
 
   const handleSubmitReview = (b: SavedBooking) => {
     const draft = reviewDrafts[b.id] || { rating: 0, text: '' };
@@ -192,7 +213,30 @@ export default function MyBookingsPage() {
             >
               <ArrowLeft className="w-4 h-4" /> {t('backToCatalog')}
             </Link>
+
+            {menteeEmail ? (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-stone-500 font-medium hidden sm:inline">{t('signedInAs', { email: menteeEmail })}</span>
+                <button
+                  onClick={handleSignOut}
+                  className="inline-flex items-center gap-1.5 font-bold text-stone-600 hover:text-amber-900 bg-white px-3.5 py-2 rounded-xl border border-amber-900/15 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" /> {t('signOut')}
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login?redirect=/my-bookings"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3.5 py-2 rounded-xl border border-amber-300/60 shadow-xs transition-colors"
+              >
+                <LogIn className="w-3.5 h-3.5" /> {t('signInLink')}
+              </Link>
+            )}
           </div>
+
+          {!menteeEmail && (
+            <p className="text-xs text-stone-500 mb-6 -mt-4">{t('signInPrompt')}</p>
+          )}
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>

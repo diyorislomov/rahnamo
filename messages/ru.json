@@ -12,7 +12,9 @@
     "backToHome": "Главная страница",
     "returnHome": "Вернуться на главную",
     "standard": "Стандарт",
-    "premium": "Премиум"
+    "premium": "Премиум",
+    "signIn": "Войти",
+    "signOut": "Выйти"
   },
   "navbar": {
     "banner": "Платформа карьерных консультаций и 1-на-1 наставничества Великого Шёлкового пути",
@@ -115,6 +117,11 @@
       "heading": "Анкета для присоединения в качестве Рахнамо",
       "fullNameLabel": "Имя и фамилия *",
       "fullNamePlaceholder": "Например: Dr. Jasur Mansurov",
+      "photoLabel": "Фото профиля (необязательно)",
+      "photoHint": "Будет показано на вашей карточке ментора после одобрения. Вы можете добавить или изменить его позже.",
+      "photoUploading": "Загрузка...",
+      "photoUploadFailed": "Не удалось загрузить фото. Вы можете отправить заявку и без него.",
+      "photoChange": "Изменить фото",
       "headlineLabel": "Краткий заголовок (Headline) *",
       "headlinePlaceholder": "Например: Lead Architect & Studio Founder | Ex-Ankara",
       "categoryLabel": "Ваше основное направление *",
@@ -185,6 +192,8 @@
       "viewInMyBookings": "Смотреть в разделе «Мои консультации»"
     },
     "form": {
+      "continueButton": "Продолжить",
+      "backButton": "Назад",
       "step1Heading": "1. Выберите тип консультации",
       "tierStandardDuration": "20-30 минут консультации",
       "tierPremiumDuration": "45-60 минут глубокого анализа",
@@ -246,6 +255,10 @@
     "backToCatalog": "Вернуться ко всем Рахнамо",
     "headerBadge": "Моя личная панель",
     "heading": "Мои консультации и сессии",
+    "signInPrompt": "Войдите, чтобы видеть свои консультации на всех устройствах.",
+    "signInLink": "Войти",
+    "signedInAs": "Вы вошли как {email}",
+    "signOut": "Выйти",
     "tabs": {
       "all": "Все ({count})",
       "upcoming": "Ожидаются",
@@ -395,6 +408,82 @@
       "subtitle": "Ваша сессия теперь официально назначена"
     }
   },
+  "mentorAuth": {
+    "passwordTooShort": "Пароль должен содержать не менее 8 символов.",
+    "passwordMismatch": "Пароли не совпадают.",
+    "submitFailed": "Произошла ошибка. Попробуйте снова.",
+    "login": {
+      "badge": "Для Rahnamo",
+      "title": "Вход для наставника",
+      "subtitle": "Войдите, чтобы управлять своим профилем.",
+      "emailLabel": "Email",
+      "passwordLabel": "Пароль",
+      "submit": "Войти",
+      "failed": "Неверный email или пароль."
+    },
+    "setPassword": {
+      "badge": "Добро пожаловать",
+      "title": "Установите пароль",
+      "subtitle": "Вы перешли по приглашению — теперь создайте пароль для своего аккаунта наставника.",
+      "checkingLink": "Проверка ссылки...",
+      "invalidLink": "Ссылка недействительна или истекла. Запросите новое приглашение у администратора.",
+      "passwordLabel": "Новый пароль",
+      "confirmPasswordLabel": "Подтвердите пароль",
+      "submit": "Сохранить пароль"
+    }
+  },
+  "mentorDashboard": {
+    "title": "Панель наставника",
+    "signOut": "Выйти",
+    "loadFailed": "Ошибка загрузки профиля.",
+    "changePhoto": "Изменить фото",
+    "photoUploadFailed": "Ошибка загрузки фото.",
+    "headlineLabel": "Заголовок",
+    "bioLabel": "О себе",
+    "whyWorkWithMeLabel": "Почему стоит работать со мной",
+    "specialtiesLabel": "Направления (через запятую)",
+    "standardPriceLabel": "Стандартная цена (сум)",
+    "premiumPriceLabel": "Премиум цена (сум)",
+    "pricePerQuestionLabel": "Цена за вопрос (опционально)",
+    "softCapLabel": "Лимит вопросов (опционально)",
+    "optionalPlaceholder": "Опционально",
+    "availableSlotsLabel": "Свободное время (каждое на новой строке)",
+    "availableSlotsPlaceholder": "Понедельник, 19:00 - 19:30",
+    "save": "Сохранить",
+    "saved": "Сохранено",
+    "saveFailed": "Ошибка сохранения."
+  },
+  "menteeAuth": {
+    "passwordTooShort": "Пароль должен содержать не менее 8 символов.",
+    "passwordMismatch": "Пароли не совпадают.",
+    "submitFailed": "Что-то пошло не так. Попробуйте снова.",
+    "login": {
+      "badge": "Для менти",
+      "title": "Войти",
+      "subtitle": "Войдите, чтобы видеть свои консультации на всех устройствах.",
+      "emailLabel": "Электронная почта",
+      "passwordLabel": "Пароль",
+      "submit": "Войти",
+      "failed": "Неверная почта или пароль.",
+      "noAccount": "Нет аккаунта?",
+      "signupLink": "Зарегистрироваться"
+    },
+    "signup": {
+      "badge": "Для менти",
+      "title": "Создать аккаунт",
+      "subtitle": "Создайте аккаунт, чтобы отслеживать консультации на всех устройствах.",
+      "fullNameLabel": "Имя и фамилия",
+      "fullNamePlaceholder": "Ваше имя и фамилия",
+      "emailLabel": "Электронная почта",
+      "passwordLabel": "Пароль",
+      "confirmPasswordLabel": "Подтвердите пароль",
+      "submit": "Создать аккаунт",
+      "haveAccount": "Уже есть аккаунт?",
+      "loginLink": "Войти",
+      "emailAlreadyRegistered": "Эта почта уже зарегистрирована. Попробуйте войти.",
+      "checkEmail": "Почти готово! Проверьте {email} для подтверждения перед входом."
+    }
+  },
   "admin": {
     "dateLocale": "ru-RU",
     "login": {
@@ -458,7 +547,10 @@
       "linkedinNotProvided": "LinkedIn не указан",
       "expectedPriceLabel": "Ожидаемая стоимость сессии",
       "reject": "Отклонить",
-      "approve": "Одобрить (добавить в каталог)"
+      "approve": "Одобрить (добавить в каталог)",
+      "approving": "Одобряется...",
+      "approveFailed": "Ошибка при одобрении. Попробуйте снова.",
+      "approveFailedEmailRegistered": "Этот email уже зарегистрирован (прошлая попытка или существующий аккаунт). Проверьте список наставников перед повтором."
     },
     "forum": {
       "emptyTitle": "Постов на форуме пока нет",
