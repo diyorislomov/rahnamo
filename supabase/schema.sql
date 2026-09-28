@@ -660,23 +660,16 @@ ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS mentee_auth_id UUID REFEREN
 
 -- Deliberately no mentee-facing UPDATE/DELETE policy -- there is no
 -- self-service cancel flow anywhere in the app today, so none is added
--- here. Cancellation stays admin-only via the existing admin dashboard,
--- once that dashboard's own write path is migrated to a service-role route
--- (Stage 3 of the plan -- tightening this INSERT/SELECT pair below would
--- otherwise also break the admin's current anon-client payment-confirm
--- action, so that migration is sequenced together with the next two
--- policies, not shipped independently).
-CREATE POLICY "Mentees insert their own bookings" ON public.bookings
-    FOR INSERT WITH CHECK (auth.uid() = mentee_auth_id);
+-- here. Cancellation stays admin-only via the existing admin dashboard.
+--
+-- This INSERT policy and the GRANTs that originally followed it were
+-- superseded a stage later, in section 10 below (Stage 3): admin's own
+-- write path had to move to a service-role route first, since tightening
+-- this pair any earlier would have broken admin's own anon-client
+-- payment-confirm action. Read section 10's comments for why the INSERT
+-- policy was rewritten rather than left as it shipped here.
 CREATE POLICY "Mentees read their own bookings" ON public.bookings
     FOR SELECT USING (auth.uid() = mentee_auth_id);
-
-GRANT INSERT (
-    id, mentee_auth_id, counselor_id, counselor_name, counselor_headline, counselor_avatar,
-    tier, price, payment_method, slot, student_name, email, phone, telegram, education,
-    question, meet_link, locale
-) ON public.bookings TO authenticated;
-GRANT SELECT ON public.bookings TO authenticated;
 
 -- Existing device_id-only rows (mentee_auth_id IS NULL) are permanent
 -- legacy/anonymous records now -- NULL never equals a real auth.uid(), so
@@ -702,3 +695,80 @@ CREATE POLICY "app photo upload" ON storage.objects FOR INSERT TO anon
 CREATE POLICY "mentor own photo" ON storage.objects FOR ALL TO authenticated
     USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'mentors' AND (storage.foldername(name))[2] = auth.uid()::text)
     WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'mentors' AND (storage.foldername(name))[2] = auth.uid()::text);
+
+-- 10. Real Auth for Mentees and Mentors -- Stage 3 (mandatory login,
+-- tighten bookings RLS, close a pre-existing self-confirm hole)
+--
+-- Two things ship together here because they're coupled: tightening
+-- bookings RLS breaks admin's own payment-confirm/complete actions unless
+-- they move to a service-role route first (done in
+-- src/app/api/admin/bookings/route.ts, alongside this migration).
+--
+-- Verification during this stage surfaced a real, live vulnerability that
+-- predates this whole migration entirely: the original "Allow public
+-- insert bookings" policy (WITH CHECK (true)) let ANY unauthenticated
+-- client insert a booking with payment_status='confirmed' and
+-- status='completed' set directly, bypassing admin's payment-approval
+-- workflow completely. Confirmed live with a plain anon-key insert before
+-- this fix, cleaned up immediately after.
+
+DROP POLICY IF EXISTS "Allow public read bookings" ON public.bookings;
+DROP POLICY IF EXISTS "Allow public insert bookings" ON public.bookings;
+DROP POLICY IF EXISTS "Allow public update bookings" ON public.bookings;
+
+-- Mentee-authenticated insert, rewritten to also close the self-confirm
+-- hole above: payment_status/status must still be at their untouched
+-- defaults at insert time, no matter which columns a GRANT happens to
+-- leave open. The real booking flow (src/app/counselors/[id]/page.tsx)
+-- never sets either field itself, so this is a no-op for legitimate
+-- inserts and a hard rejection for anything trying to set them.
+DROP POLICY IF EXISTS "Mentees insert their own bookings" ON public.bookings;
+CREATE POLICY "Mentees insert their own bookings" ON public.bookings
+    FOR INSERT WITH CHECK (
+        auth.uid() = mentee_auth_id
+        AND payment_status = 'pending'
+        AND status = 'confirmed'
+    );
+
+-- Text Q&A (src/components/TextQaPanel.tsx) still runs on anonymous Auth
+-- sessions with no real mentee_auth_id -- Stage 4 simplifies that, not
+-- this stage. Scoped narrowly to the one tier that still legitimately
+-- needs a pre-login insert path, replacing the old blanket policy above
+-- rather than carrying its WITH CHECK (true) forward for everyone.
+CREATE POLICY "Text Q&A booking insert" ON public.bookings
+    FOR INSERT WITH CHECK (
+        tier = 'text_qa'
+        AND payment_status = 'pending'
+        AND status = 'confirmed'
+    );
+
+-- No mentee-facing UPDATE policy exists (unchanged from Stage 0) and the
+-- old guest UPDATE policy is gone too -- only service_role can update
+-- bookings at all now, which is exactly what
+-- src/app/api/admin/bookings/route.ts uses for payment-confirm/complete.
+
+-- `bookings` predates the Oct-30 Data API grants cutover, so -- same
+-- lesson as the counselors GRANT incident earlier in this migration -- it
+-- already carries a legacy blanket grant to both anon and authenticated
+-- that a narrower GRANT layered on top would not restrict on its own. The
+-- guest path is removed entirely in this stage (login is now mandatory
+-- before booking), so anon needs zero bookings privileges; authenticated's
+-- grant is rebuilt from scratch with an explicit column list (this also
+-- adds device_id, missing from the Stage 0 list, and still excludes
+-- payment_status/status/payment_receipt -- belt-and-suspenders alongside
+-- the WITH CHECK above).
+REVOKE INSERT, UPDATE, SELECT ON public.bookings FROM anon;
+REVOKE INSERT, UPDATE, SELECT ON public.bookings FROM authenticated;
+
+GRANT INSERT (
+    id, device_id, mentee_auth_id, counselor_id, counselor_name, counselor_headline,
+    counselor_avatar, tier, price, payment_method, slot, student_name, email, phone,
+    telegram, education, question, meet_link, locale
+) ON public.bookings TO authenticated;
+GRANT SELECT ON public.bookings TO authenticated;
+-- No UPDATE grant to authenticated at all -- mentees can never update a
+-- booking from either the RLS or the GRANT layer now.
+
+-- Existing device_id-only rows (mentee_auth_id IS NULL) remain permanent
+-- legacy/anonymous records, admin-visible only via the service-role
+-- client, which bypasses RLS entirely and is unaffected by anything above.

@@ -12,7 +12,7 @@ import { getMenteeAuthId } from '@/lib/menteeAuth';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X, MessageCircleHeart, Send } from 'lucide-react';
+import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X, MessageCircleHeart, Send, LogIn } from 'lucide-react';
 import Link from 'next/link';
 
 import { generateMeetLink } from '@/lib/meeting';
@@ -139,6 +139,28 @@ export default function CounselorPage() {
   const selectedSlot = selectedSlotOverride || counselor?.availableSlots?.[0] || '';
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  // Mandatory-login gate for the video booking wizard only (Stage 3) --
+  // Text Q&A keeps its own separate anonymous-auth path untouched until
+  // Stage 4. null = still checking; false = not logged in as a real
+  // (non-anonymous) mentee; a string = that mentee's email.
+  const [menteeEmail, setMenteeEmail] = useState<string | null | false>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      setMenteeEmail(user && !user.is_anonymous ? user.email || 'mentee' : false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
+        setMenteeEmail(session.user.email || 'mentee');
+      }
+      if (event === 'SIGNED_OUT') {
+        setMenteeEmail(false);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -620,6 +642,34 @@ export default function CounselorPage() {
 
           {!bookingTicket && viewMode === 'text_qa' && counselor.pricePerQuestion != null ? (
             <TextQaPanel counselor={counselor} />
+          ) : !bookingTicket && viewMode === 'video' && !menteeEmail ? (
+            /* Mandatory-login gate for the video booking wizard (Stage 3) --
+               Text Q&A above keeps its own separate anonymous-auth path,
+               untouched until Stage 4. */
+            <div className="bg-white/95 rounded-3xl border-2 border-amber-900/20 p-8 shadow-md text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto shadow-sm">
+                <Lock className="w-7 h-7 text-amber-300" />
+              </div>
+              {menteeEmail === null ? (
+                <p className="text-xs text-stone-500">{t('bookingLoginGate.checking')}</p>
+              ) : (
+                <>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+                      {t('bookingLoginGate.badge')}
+                    </span>
+                    <h3 className="font-serif font-extrabold text-xl text-amber-950 mt-3">{t('bookingLoginGate.title')}</h3>
+                    <p className="text-xs text-stone-600 mt-1.5 max-w-sm mx-auto">{t('bookingLoginGate.subtitle')}</p>
+                  </div>
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent(`/counselors/${rawId}`)}`}
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition-all"
+                  >
+                    <LogIn className="w-4 h-4 text-amber-300" /> {t('bookingLoginGate.cta')}
+                  </Link>
+                </>
+              )}
+            </div>
           ) : bookingTicket ? (
             /* Digital Rahnamo Ticket */
             <div className="bg-white/95 rounded-3xl border-2 border-amber-900/20 p-6 md:p-8 shadow-md">

@@ -160,6 +160,13 @@
   "counselorProfile": {
     "notFound": "Rahnamo topilmadi.",
     "backToCatalog": "Barcha Rahnamolar ro'yxatiga qaytish",
+    "bookingLoginGate": {
+      "checking": "Sessiyangiz tekshirilmoqda...",
+      "badge": "Hisob talab qilinadi",
+      "title": "Qabul band qilish uchun tizimga kiring",
+      "subtitle": "Qabul band qilish va keyinchalik kuzatish uchun bepul hisob yarating yoki tizimga kiring.",
+      "cta": "Kirish yoki hisob yaratish"
+    },
     "videoModeLabel": "Video konsultatsiya",
     "textQaModeLabel": "Matnli maslahat",
     "reviewsCountSuffix": "{count} ta baho",

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { getDeviceId } from '@/lib/deviceId';
 import { supabase } from '@/lib/supabase';
 import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Filter, Star, MessageSquareText, Lock, LogIn, LogOut } from 'lucide-react';
 
@@ -50,10 +49,14 @@ export default function MyBookingsPage() {
   const [reviewDrafts, setReviewDrafts] = useState<{ [bookingId: string]: { rating: number; text: string } }>({});
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
   const [reviewErrors, setReviewErrors] = useState<{ [bookingId: string]: string }>({});
-  const [menteeEmail, setMenteeEmail] = useState<string | null>(null);
+  // Stage 3: null = still checking; false = not logged in (page shows a
+  // sign-in gate instead of any bookings); a string = that mentee's email.
+  // The device_id guest-lookup path is gone -- bookings are only ever
+  // fetched by mentee_auth_id now, matching the tightened RLS.
+  const [menteeEmail, setMenteeEmail] = useState<string | null | false>(null);
 
   useEffect(() => {
-    async function loadBookings() {
+    async function loadBookings(menteeUserId: string) {
       let localBookings: SavedBooking[] = [];
       try {
         const item = localStorage.getItem('rahnamo_bookings');
@@ -64,17 +67,7 @@ export default function MyBookingsPage() {
         console.error('LocalStorage parse error:', err);
       }
 
-      const deviceId = getDeviceId();
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-      // Bridge stage: a logged-in mentee's bookings (made on ANY device,
-      // via mentee_auth_id) are fetched alongside this device's own
-      // device_id-scoped bookings, not instead of them -- device_id keeps
-      // working unchanged for guests until Stage 3 removes it.
-      const { data: sessionData } = await supabase.auth.getSession();
-      const menteeUser = sessionData.session?.user;
-      const isRealMentee = !!menteeUser && !menteeUser.is_anonymous;
-      setMenteeEmail(isRealMentee ? menteeUser!.email || null : null);
 
       if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
         try {
@@ -82,17 +75,11 @@ export default function MyBookingsPage() {
             setTimeout(() => reject(new Error('Supabase fetch timeout')), 1500)
           );
 
-          const fetchPromise = isRealMentee
-            ? supabase
-                .from('bookings')
-                .select('*')
-                .or(`device_id.eq.${deviceId},mentee_auth_id.eq.${menteeUser!.id}`)
-                .order('created_at', { ascending: false })
-            : supabase
-                .from('bookings')
-                .select('*')
-                .eq('device_id', deviceId)
-                .order('created_at', { ascending: false });
+          const fetchPromise = supabase
+            .from('bookings')
+            .select('*')
+            .eq('mentee_auth_id', menteeUserId)
+            .order('created_at', { ascending: false });
 
           const res: any = await Promise.race([fetchPromise, timeoutPromise]);
 
@@ -141,12 +128,22 @@ export default function MyBookingsPage() {
         .catch((err: unknown) => console.warn('Reviews fetch error:', err));
     }
 
-    loadBookings();
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      if (user && !user.is_anonymous) {
+        setMenteeEmail(user.email || 'mentee');
+        loadBookings(user.id);
+      } else {
+        setMenteeEmail(false);
+        setLoading(false);
+      }
+    });
   }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setMenteeEmail(null);
+    setMenteeEmail(false);
+    setBookings([]);
   };
 
   const handleSubmitReview = (b: SavedBooking) => {
@@ -200,6 +197,36 @@ export default function MyBookingsPage() {
     return true;
   });
 
+  if (menteeEmail === null) {
+    return <div className="min-h-screen bg-[#FAF6EE]" />;
+  }
+
+  if (menteeEmail === false) {
+    return (
+      <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased flex flex-col justify-between">
+        <Navbar />
+        <main className="max-w-md mx-auto px-4 py-16 w-full">
+          <div className="bg-white rounded-3xl border border-amber-900/15 p-8 shadow-xl text-center space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto shadow-sm">
+              <Lock className="w-8 h-8 text-amber-300" />
+            </div>
+            <div>
+              <h1 className="font-serif font-extrabold text-2xl text-amber-950">{t('heading')}</h1>
+              <p className="text-xs text-stone-600 mt-1.5">{t('signInPrompt')}</p>
+            </div>
+            <Link
+              href="/login?redirect=/my-bookings"
+              className="inline-flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs rounded-2xl shadow-md transition-all"
+            >
+              <LogIn className="w-4 h-4 text-amber-300" /> {t('signInLink')}
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200 flex flex-col justify-between">
       <div>
@@ -214,29 +241,16 @@ export default function MyBookingsPage() {
               <ArrowLeft className="w-4 h-4" /> {t('backToCatalog')}
             </Link>
 
-            {menteeEmail ? (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-stone-500 font-medium hidden sm:inline">{t('signedInAs', { email: menteeEmail })}</span>
-                <button
-                  onClick={handleSignOut}
-                  className="inline-flex items-center gap-1.5 font-bold text-stone-600 hover:text-amber-900 bg-white px-3.5 py-2 rounded-xl border border-amber-900/15 cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" /> {t('signOut')}
-                </button>
-              </div>
-            ) : (
-              <Link
-                href="/login?redirect=/my-bookings"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3.5 py-2 rounded-xl border border-amber-300/60 shadow-xs transition-colors"
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-stone-500 font-medium hidden sm:inline">{t('signedInAs', { email: menteeEmail })}</span>
+              <button
+                onClick={handleSignOut}
+                className="inline-flex items-center gap-1.5 font-bold text-stone-600 hover:text-amber-900 bg-white px-3.5 py-2 rounded-xl border border-amber-900/15 cursor-pointer"
               >
-                <LogIn className="w-3.5 h-3.5" /> {t('signInLink')}
-              </Link>
-            )}
+                <LogOut className="w-3.5 h-3.5" /> {t('signOut')}
+              </button>
+            </div>
           </div>
-
-          {!menteeEmail && (
-            <p className="text-xs text-stone-500 mb-6 -mt-4">{t('signInPrompt')}</p>
-          )}
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>

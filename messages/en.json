@@ -160,6 +160,13 @@
   "counselorProfile": {
     "notFound": "Rahnamo not found.",
     "backToCatalog": "Back to all Rahnamo",
+    "bookingLoginGate": {
+      "checking": "Checking your session...",
+      "badge": "Account required",
+      "title": "Sign in to book a session",
+      "subtitle": "Create a free account or sign in to book, and track your sessions afterwards.",
+      "cta": "Sign in or create an account"
+    },
     "videoModeLabel": "Video consultation",
     "textQaModeLabel": "Text Q&A",
     "reviewsCountSuffix": "{count} ratings",
