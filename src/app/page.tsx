@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
-import Real3DDesertHero from '@/components/Real3DDesertHero';
+import CleanHero from '@/components/CleanHero';
 import CatalogIntro from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
 import RevealOnScroll from '@/components/RevealOnScroll';
@@ -97,7 +97,7 @@ export default function Home() {
       <SmoothScroll>
         <Navbar />
 
-        <Real3DDesertHero counselors={counselors} />
+        <CleanHero counselors={counselors} />
 
         <CatalogIntro
           counselors={counselors}
