@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Counselor } from '@/types';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
+import AnimatedNumber from './AnimatedNumber';
 
 interface StatsBandProps {
   counselors: Counselor[];
@@ -53,7 +54,9 @@ export default function StatsBand({ counselors }: StatsBandProps) {
               {stat.value}
             </span>
             <div className="relative z-10">
-              <div className="font-serif font-extrabold text-2xl sm:text-3xl text-amber-950">{stat.value}</div>
+              <div className="font-serif font-extrabold text-2xl sm:text-3xl text-amber-950">
+                <AnimatedNumber value={stat.value} />
+              </div>
               <div className="text-xs sm:text-sm font-bold text-stone-600 mt-1 uppercase tracking-wide">
                 {stat.label}
               </div>

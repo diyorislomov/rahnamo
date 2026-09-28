@@ -288,3 +288,53 @@ body {
     display: none;
   }
 }
+
+/* Glassmorphism CTA buttons — for primary calls-to-action over dark/busy
+   backgrounds (the hero, the silk-night "how it works" section) where a
+   solid amber block competes with the imagery behind it. `.btn-glass-light`
+   exists for the rarer case of using the same treatment on a plain/light
+   surface, but a solid button remains the default there since glass on
+   cream has weaker contrast. */
+.btn-glass-dark {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(250, 246, 238, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 8px 24px -8px rgba(0, 0, 0, 0.4);
+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+.btn-glass-dark:hover {
+  background: rgba(250, 246, 238, 0.2);
+  border-color: rgba(245, 158, 11, 0.45);
+  transform: scale(1.02);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 10px 28px -8px rgba(0, 0, 0, 0.45);
+}
+
+.btn-glass-light {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(28, 17, 8, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+.btn-glass-light:hover {
+  background: rgba(28, 17, 8, 0.1);
+  border-color: rgba(245, 158, 11, 0.45);
+  transform: scale(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-glass-dark,
+  .btn-glass-light {
+    transition: background 200ms ease, border-color 200ms ease;
+  }
+  .btn-glass-dark:hover,
+  .btn-glass-light:hover {
+    transform: none;
+  }
+}

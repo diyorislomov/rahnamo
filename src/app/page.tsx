@@ -5,9 +5,10 @@ import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SmoothScroll from '@/components/SmoothScroll';
-import CleanHero from '@/components/CleanHero';
+import Real3DDesertHero from '@/components/Real3DDesertHero';
 import CatalogIntro from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
+import RevealOnScroll from '@/components/RevealOnScroll';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
 import { supabase } from '@/lib/supabase';
@@ -96,7 +97,7 @@ export default function Home() {
       <SmoothScroll>
         <Navbar />
 
-        <CleanHero counselors={counselors} />
+        <Real3DDesertHero counselors={counselors} />
 
         <CatalogIntro
           counselors={counselors}
@@ -190,8 +191,10 @@ export default function Home() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedCounselors.map((counselor) => (
-                  <CounselorCard key={counselor.id} counselor={counselor} />
+                {sortedCounselors.map((counselor, i) => (
+                  <RevealOnScroll key={counselor.id} delay={Math.min(i, 8) * 90}>
+                    <CounselorCard counselor={counselor} />
+                  </RevealOnScroll>
                 ))}
               </div>
             )}
@@ -216,35 +219,41 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
-                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
-                  1
+              <RevealOnScroll delay={0}>
+                <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
+                    1
+                  </div>
+                  <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step1Title')}</h3>
+                  <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                    {t('howItWorks.step1Body')}
+                  </p>
                 </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step1Title')}</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  {t('howItWorks.step1Body')}
-                </p>
-              </div>
+              </RevealOnScroll>
 
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
-                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
-                  2
+              <RevealOnScroll delay={90}>
+                <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
+                    2
+                  </div>
+                  <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step2Title')}</h3>
+                  <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                    {t('howItWorks.step2Body')}
+                  </p>
                 </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step2Title')}</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  {t('howItWorks.step2Body')}
-                </p>
-              </div>
+              </RevealOnScroll>
 
-              <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
-                <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
-                  3
+              <RevealOnScroll delay={180}>
+                <div className="bg-white/5 border border-amber-300/15 p-6 rounded-2xl backdrop-blur-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 font-serif font-bold text-xl flex items-center justify-center mb-4 border border-amber-400/30">
+                    3
+                  </div>
+                  <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step3Title')}</h3>
+                  <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
+                    {t('howItWorks.step3Body')}
+                  </p>
                 </div>
-                <h3 className="font-serif font-bold text-lg text-amber-100">{t('howItWorks.step3Title')}</h3>
-                <p className="text-xs text-amber-200/70 mt-2 leading-relaxed">
-                  {t('howItWorks.step3Body')}
-                </p>
-              </div>
+              </RevealOnScroll>
             </div>
           </section>
 
@@ -257,8 +266,8 @@ export default function Home() {
               {(t.raw('faq.items') as { q: string; a: string }[]).map((faq, idx) => {
                 const isOpen = openFaq === idx;
                 return (
+                  <RevealOnScroll key={idx} delay={Math.min(idx, 6) * 80}>
                   <div
-                    key={idx}
                     className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
                       isOpen ? 'bg-amber-50/90 border-amber-800 shadow-sm ring-1 ring-amber-800/20' : 'bg-white/95 border-amber-900/15 hover:border-amber-900/30'
                     }`}
@@ -280,6 +289,7 @@ export default function Home() {
                       </div>
                     )}
                   </div>
+                  </RevealOnScroll>
                 );
               })}
             </div>

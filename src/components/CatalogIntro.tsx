@@ -5,6 +5,7 @@ import { Search, ArrowRight, ArrowDown } from 'lucide-react';
 import { Counselor } from '@/types';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import StatsBand from './StatsBand';
+import RevealOnScroll from './RevealOnScroll';
 
 interface CatalogIntroProps {
   counselors: Counselor[];
@@ -103,25 +104,26 @@ export default function CatalogIntro({
             {t('disciplineHeading')}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {Object.keys(SPECIALTY_CONFIG).map((key) => {
+            {Object.keys(SPECIALTY_CONFIG).map((key, i) => {
               const cfg = SPECIALTY_CONFIG[key];
               const isSelected = selectedTag === key;
               const count =
                 key === 'All' ? counselors.length : counselors.filter((c) => c.specialties.includes(key)).length;
 
               return (
-                <a
-                  key={key}
-                  href="#rahnamolar"
-                  onClick={() => setSelectedTag(key)}
-                  className={`flex flex-col items-center justify-center gap-1.5 text-center px-3 py-6 rounded-2xl text-xs font-bold transition-all duration-200 border cursor-pointer ${
-                    isSelected ? cfg.activeClass : cfg.inactiveClass
-                  }`}
-                >
-                  <span className="text-2xl">{cfg.icon}</span>
-                  <span>{tSpecialties(key)}</span>
-                  <span className="text-[10px] font-normal opacity-70">{t('countSuffix', { count })}</span>
-                </a>
+                <RevealOnScroll key={key} delay={Math.min(i, 8) * 80}>
+                  <a
+                    href="#rahnamolar"
+                    onClick={() => setSelectedTag(key)}
+                    className={`flex flex-col items-center justify-center gap-1.5 text-center px-3 py-6 rounded-2xl text-xs font-bold transition-all duration-200 border cursor-pointer w-full ${
+                      isSelected ? cfg.activeClass : cfg.inactiveClass
+                    }`}
+                  >
+                    <span className="text-2xl">{cfg.icon}</span>
+                    <span>{tSpecialties(key)}</span>
+                    <span className="text-[10px] font-normal opacity-70">{t('countSuffix', { count })}</span>
+                  </a>
+                </RevealOnScroll>
               );
             })}
           </div>
