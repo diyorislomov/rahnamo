@@ -824,3 +824,40 @@ DROP POLICY IF EXISTS "Text Q&A booking insert" ON public.bookings;
 -- the hardened route, which has already verified the real mentor) is the
 -- only path in.
 DROP POLICY IF EXISTS "Allow public insert forum answers" ON public.forum_answers;
+
+-- 13. Fake-review hole -- flagged in the original migration plan as a
+-- separate, pre-existing gap, fixed here as its own small follow-up.
+--
+-- "Allow public insert reviews" was WITH CHECK (true): anyone could post
+-- a review against ANY booking_id, with any rating/text, with zero
+-- ownership check -- a real marketplace-trust issue (fake reviews,
+-- reviews posted by someone who never booked, or reviews attributed to
+-- the wrong counselor). Now that bookings.mentee_auth_id is a reliable,
+-- mandatory real identity (Stage 3), a review can be tied to it directly.
+--
+-- Three things checked in one policy, all against the SAME bookings row
+-- referenced by the review being inserted:
+--   1. auth.uid() = bookings.mentee_auth_id -- the caller actually owns
+--      this booking (not someone else's).
+--   2. bookings.counselor_id = reviews.counselor_id -- the review can't
+--      be attributed to a DIFFERENT counselor than the one actually
+--      booked, even though the caller does own *some* real booking.
+--   3. bookings.status = 'completed' -- matches /my-bookings' own
+--      existing "leave a review" gating (only shown once admin has
+--      marked the session completed), now enforced server-side too.
+--
+-- Pre-migration device_id-only bookings (mentee_auth_id IS NULL) can
+-- never satisfy #1 -- consistent with their existing "permanent
+-- legacy/anonymous, admin-visible only" status from Stage 3, not a new
+-- restriction introduced here.
+DROP POLICY IF EXISTS "Allow public insert reviews" ON public.reviews;
+CREATE POLICY "Mentees review their own completed bookings" ON public.reviews
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.bookings
+            WHERE bookings.id = reviews.booking_id
+              AND bookings.counselor_id = reviews.counselor_id
+              AND bookings.mentee_auth_id = auth.uid()
+              AND bookings.status = 'completed'
+        )
+    );
