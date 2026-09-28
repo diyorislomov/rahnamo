@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Lock, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { Lock, Send, Loader2, CheckCircle2, LogIn } from 'lucide-react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getDeviceId } from '@/lib/deviceId';
 import { ensureStudentAuth } from '@/lib/threadAuth';
-import { getMenteeAuthId } from '@/lib/menteeAuth';
 import { Counselor, QuestionThread, ThreadMessage } from '@/types';
 
 interface QuestionThreadRow {
@@ -51,7 +51,7 @@ const CENTRAL_CARD_DIGITS = '8600555544443333';
 export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
   const t = useTranslations('textQa');
 
-  const [phase, setPhase] = useState<'checking' | 'start' | 'thread'>('checking');
+  const [phase, setPhase] = useState<'checking' | 'login_required' | 'start' | 'thread'>('checking');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [startError, setStartError] = useState('');
   const [isStarting, setIsStarting] = useState(false);
@@ -82,18 +82,19 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     }
   }
 
-  // On mount: only ever looks for a thread that could already exist for
-  // THIS browser's own already-persisted anonymous session -- never
-  // triggers a fresh sign-in just to check, so a first-time visitor never
-  // gets an auth.users row created before they've actually chosen to
-  // start anything.
+  // Stage 4: mentee login is mandatory here too now -- no more anonymous
+  // sign-in fallback. A visitor with no real session (or a leftover
+  // pre-migration anonymous one) sees the login gate below instead of
+  // ever reaching 'start'. Real sessions still get looked up against any
+  // existing thread on mount, same as before.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const { data: sessionData } = await supabase.auth.getSession();
-      const uid = sessionData.session?.user?.id;
+      const user = sessionData.session?.user;
+      const uid = user && !user.is_anonymous ? user.id : null;
       if (!uid) {
-        if (!cancelled) setPhase('start');
+        if (!cancelled) setPhase('login_required');
         return;
       }
       const { data } = await supabase
@@ -115,8 +116,20 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
         setPhase('start');
       }
     })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous && !cancelled) {
+        setPhase('start');
+      }
+      if (event === 'SIGNED_OUT' && !cancelled) {
+        setPhase('login_required');
+        setThread(null);
+      }
+    });
+
     return () => {
       cancelled = true;
+      sub.subscription.unsubscribe();
     };
   }, [counselor.id]);
 
@@ -153,13 +166,13 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     }
 
     const bookingId = `RNM-TXT-${Math.floor(1000 + Math.random() * 9000)}`;
-    // studentAuthId above may be an anonymous uid -- mentee_auth_id must
-    // only ever be a real, logged-in mentee's id, so it's resolved
-    // separately rather than reusing studentAuthId directly.
+    // studentAuthId is guaranteed real (non-anonymous) now -- the
+    // login_required gate means handleStart is never reachable without
+    // one, so it's safe to reuse directly as mentee_auth_id.
     const { error: bookingError } = await supabase.from('bookings').insert({
       id: bookingId,
       device_id: getDeviceId(),
-      mentee_auth_id: await getMenteeAuthId(),
+      mentee_auth_id: studentAuthId,
       counselor_id: counselor.id,
       counselor_name: counselor.fullName,
       counselor_headline: counselor.headline,
@@ -264,6 +277,26 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
 
   if (phase === 'checking') {
     return <div className="p-8 text-center text-xs text-stone-500">{t('start.loading')}</div>;
+  }
+
+  if (phase === 'login_required') {
+    return (
+      <div className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto shadow-sm">
+          <Lock className="w-7 h-7 text-amber-300" />
+        </div>
+        <div>
+          <h3 className="font-serif font-extrabold text-lg text-amber-950">{t('start.loginRequiredTitle')}</h3>
+          <p className="text-xs text-stone-600 mt-1.5">{t('start.loginRequiredSubtitle')}</p>
+        </div>
+        <Link
+          href={`/login?redirect=${encodeURIComponent(`/counselors/${counselor.id}`)}`}
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition-all"
+        >
+          <LogIn className="w-4 h-4 text-amber-300" /> {t('start.loginRequiredCta')}
+        </Link>
+      </div>
+    );
   }
 
   if (phase === 'start') {

@@ -43,7 +43,7 @@ function LoginForm() {
 
     if (signInError) {
       console.error('[MENTEE_LOGIN_FAILED]', signInError);
-      setError(t('login.failed'));
+      setError(signInError.code === 'email_not_confirmed' ? t('login.emailNotConfirmed') : t('login.failed'));
       return;
     }
 

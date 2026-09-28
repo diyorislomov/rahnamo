@@ -351,7 +351,10 @@
       "ageRequiredError": "You must confirm your age to continue.",
       "beginButton": "Start the conversation",
       "startFailed": "There was an error starting the conversation. Please try again.",
-      "authFailed": "There was an error confirming you (anonymous sign-in failed). Please try again."
+      "authFailed": "Your session could not be confirmed. Please sign in again.",
+      "loginRequiredTitle": "Sign in to start a conversation",
+      "loginRequiredSubtitle": "Create a free account or sign in to ask questions and track your conversation.",
+      "loginRequiredCta": "Sign in or create an account"
     },
     "thread": {
       "questionsLabel": "Questions: {used}",
@@ -472,6 +475,7 @@
       "passwordLabel": "Password",
       "submit": "Sign in",
       "failed": "Incorrect email or password.",
+      "emailNotConfirmed": "Please confirm your email first — check your inbox for the confirmation link.",
       "noAccount": "Don't have an account?",
       "signupLink": "Sign up"
     },

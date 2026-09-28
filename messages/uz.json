@@ -351,7 +351,10 @@
       "ageRequiredError": "Davom etish uchun yoshingizni tasdiqlashingiz kerak.",
       "beginButton": "Suhbatni boshlash",
       "startFailed": "Suhbatni boshlashda xatolik yuz berdi. Qayta urinib ko'ring.",
-      "authFailed": "Tasdiqlashda xatolik yuz berdi (anonim kirish ishlamadi). Qayta urinib ko'ring."
+      "authFailed": "Sessiyangizni tasdiqlab bo'lmadi. Qayta tizimga kiring.",
+      "loginRequiredTitle": "Suhbatni boshlash uchun tizimga kiring",
+      "loginRequiredSubtitle": "Savol berish va suhbatni kuzatish uchun bepul hisob yarating yoki tizimga kiring.",
+      "loginRequiredCta": "Kirish yoki hisob yaratish"
     },
     "thread": {
       "questionsLabel": "Savollar: {used}",
@@ -472,6 +475,7 @@
       "passwordLabel": "Parol",
       "submit": "Kirish",
       "failed": "Elektron pochta yoki parol noto'g'ri.",
+      "emailNotConfirmed": "Iltimos, avval elektron pochtangizni tasdiqlang — tasdiqlash havolasi uchun pochta qutingizni tekshiring.",
       "noAccount": "Hisobingiz yo'qmi?",
       "signupLink": "Ro'yxatdan o'tish"
     },

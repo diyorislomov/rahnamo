@@ -772,3 +772,30 @@ GRANT SELECT ON public.bookings TO authenticated;
 -- Existing device_id-only rows (mentee_auth_id IS NULL) remain permanent
 -- legacy/anonymous records, admin-visible only via the service-role
 -- client, which bypasses RLS entirely and is unaffected by anything above.
+
+-- 11. Real Auth for Mentees and Mentors -- Stage 4 (Text Q&A simplification)
+--
+-- Text Q&A (src/components/TextQaPanel.tsx) now requires a real mentee
+-- login too, same as the video booking wizard since Stage 3 -- there is no
+-- longer any anonymous-Auth entry point anywhere in the app
+-- (src/lib/threadAuth.ts's ensureStudentAuth() no longer calls
+-- signInAnonymously()). The "Text Q&A booking insert" policy from Stage 3
+-- existed only to let those anonymous sessions insert a bookings row with
+-- no mentee_auth_id -- it's dropped here since every new text_qa booking
+-- now goes through the normal "Mentees insert their own bookings" policy
+-- like every other tier.
+--
+-- No change to question_threads/thread_messages RLS at all: their
+-- auth.uid() = student_auth_id checks were always agnostic to how that
+-- uid was created, so a real mentee's uid satisfies them exactly the same
+-- way an anonymous uid used to.
+--
+-- Accepted, one-way risk (unchanged from the original plan, not
+-- reintroduced by this stage): a pre-migration visitor's still-valid
+-- anonymous session and its thread(s) are now unreachable from the UI,
+-- since TextQaPanel treats any anonymous session as "not logged in."
+-- Their auth.users row and thread rows are untouched in the database --
+-- only the UI path to them is gone -- and disabling "Allow anonymous
+-- sign-ins" in the Supabase dashboard is a reasonable next step now that
+-- nothing in this codebase calls signInAnonymously() anymore.
+DROP POLICY IF EXISTS "Text Q&A booking insert" ON public.bookings;

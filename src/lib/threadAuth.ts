@@ -1,26 +1,19 @@
 import { supabase } from './supabase';
 
-// Called lazily -- only at the moment a student actually starts a text
-// thread, never on ordinary page load -- so casual visitors never get an
-// auth.users row created for them. This is the real, RLS-enforceable
-// identity behind question_threads.student_auth_id; unlike device_id
-// (a plain localStorage UUID nothing ties to a request), auth.uid() from a
-// real Supabase session is what a Postgres RLS policy can actually check.
-//
-// Idempotent: supabase-js persists the anonymous session itself, so a
-// returning visitor on the same browser gets the same auth.uid() back
-// without a new sign-in call. Throws (does not silently fall back to
-// anything) if anonymous sign-ins aren't enabled in the Supabase project --
-// callers must surface that as a real, visible error, not a fake success.
+// Stage 4 of the real-auth migration: Text Q&A used to fall back to
+// signInAnonymously() here so a casual visitor could start a thread with no
+// account. Mentee login is mandatory everywhere now (TextQaPanel gates on a
+// real session before this is ever called), so a real, non-anonymous
+// session is guaranteed by the time a caller reaches this point -- this
+// just returns its id. Throws (does not silently fall back to anything) if
+// that guarantee is somehow violated, since a caller relying on a real
+// auth.uid() must never get a fake success.
 export async function ensureStudentAuth(): Promise<string> {
   const { data: sessionData } = await supabase.auth.getSession();
-  if (sessionData.session?.user?.id) {
-    return sessionData.session.user.id;
+  const user = sessionData.session?.user;
+  if (user && !user.is_anonymous) {
+    return user.id;
   }
 
-  const { data, error } = await supabase.auth.signInAnonymously();
-  if (error || !data.user) {
-    throw new Error(error?.message || 'Anonymous sign-in failed');
-  }
-  return data.user.id;
+  throw new Error('No real mentee session -- login is required before this can be called');
 }
