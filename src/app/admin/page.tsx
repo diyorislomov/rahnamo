@@ -4,11 +4,9 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { supabase } from '@/lib/supabase';
 import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse, Counselor } from '@/types';
-import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { mapCounselorRow } from '@/lib/counselors';
-import { mapForumQuestion, mapForumAnswer, loadLocalForumQuestions, loadLocalForumAnswers } from '@/lib/forum';
+import { mapForumQuestion, mapForumAnswer } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
 import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users, MessagesSquare, Flag } from 'lucide-react';
 
@@ -16,11 +14,7 @@ interface CounselorApp {
   id?: string;
   full_name: string;
   headline: string;
-  // `category` and `company` only exist on the hardcoded mock fallback rows
-  // below -- the real `counselor_applications` table (and the live
-  // /become-counselor form) has neither column, only `specialties` (a plain
-  // comma-separated string). Both must stay optional or every real
-  // application renders "undefined" in this tab.
+  // Legacy application rows may still carry these optional fields.
   category?: string;
   specialties?: string;
   bio: string;
@@ -53,20 +47,44 @@ interface AdminThread {
   counselor: { full_name: string; headline: string } | null;
 }
 
-// Shared by reject/approve/delete below -- all three need to patch the same
-// `rahnamo_applications` localStorage cache, which is what this tab actually
-// renders from whenever the Supabase fetch comes back empty (see comment at
-// the SELECT policy in schema.sql for why that was always happening before).
-// Without this, a page refresh silently reverted every status change back
-// to the stale cached copy, regardless of whether the Supabase write itself
-// succeeded.
-function persistLocalApplications(updater: (apps: CounselorApp[]) => CounselorApp[]) {
-  try {
-    const existing: CounselorApp[] = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-    localStorage.setItem('rahnamo_applications', JSON.stringify(updater(existing)));
-  } catch (err) {
-    console.error(err);
-  }
+interface AdminBookingRow {
+  id: string;
+  counselor_id: string;
+  counselor_name: string;
+  counselor_headline: string | null;
+  counselor_avatar: string | null;
+  tier: BookingTicketData['tier'];
+  price: number;
+  payment_method: string;
+  slot: string;
+  student_name: string;
+  email: string;
+  phone: string;
+  telegram: string;
+  education: string;
+  question: string;
+  meet_link: string | null;
+  payment_status: BookingTicketData['paymentStatus'];
+  payment_receipt: string | null;
+  status: BookingTicketData['status'];
+  locale: string | null;
+  created_at: string;
+}
+
+interface SurveyRow {
+  id: string;
+  age_range?: string;
+  status?: string;
+  field_of_study?: string;
+  interest_area?: string;
+  biggest_challenge?: string;
+  prior_advice_source?: string;
+  interested_in_service: string;
+  price_willingness?: string;
+  preferred_format?: string;
+  contact_info: string;
+  willing_to_refer?: boolean;
+  created_at?: string;
 }
 
 export default function AdminDashboardPage() {
@@ -101,29 +119,23 @@ export default function AdminDashboardPage() {
 
   const fetchAdminData = async () => {
     setLoading(true);
-    
-    // 1. Fetch Bookings from LocalStorage + Supabase
-    let localBookings: BookingTicketData[] = [];
     try {
-      localBookings = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-    } catch (e) {
-      console.error(e);
-    }
+      const [bookingsRes, overviewRes, threadsRes] = await Promise.all([
+        fetch('/api/admin/bookings'),
+        fetch('/api/admin/overview'),
+        fetch('/api/admin/threads'),
+      ]);
+      const [bookingsData, overviewData, threadsData] = await Promise.all([
+        bookingsRes.json(),
+        overviewRes.json(),
+        threadsRes.json(),
+      ]);
+      if (!bookingsRes.ok || !bookingsData.success) throw new Error(bookingsData.error || 'bookings_failed');
+      if (!overviewRes.ok || !overviewData.success) throw new Error(overviewData.error || 'overview_failed');
+      if (!threadsRes.ok || !threadsData.success) throw new Error(threadsData.error || 'threads_failed');
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      try {
-        // Goes through the admin API route, not a direct anon-key query --
-        // Stage 3 tightened bookings SELECT to mentee-scoped only
-        // (auth.uid() = mentee_auth_id), which admin's own session never
-        // satisfies (admin isn't a Supabase Auth session at all). This
-        // route uses service_role behind the admin session cookie instead,
-        // same pattern as the threads fetch below.
-        const bookingsRes = await fetch('/api/admin/bookings');
-        const bookingsData = await bookingsRes.json();
-        const supaBookings: Record<string, any>[] | null = bookingsData.success ? bookingsData.bookings : null;
-        if (supaBookings && supaBookings.length > 0) {
-          const mapped: BookingTicketData[] = supaBookings.map((b) => ({
+      setBookings(
+        ((bookingsData.bookings || []) as AdminBookingRow[]).map((b) => ({
             id: b.id,
             counselorId: b.counselor_id,
             counselorName: b.counselor_name,
@@ -139,65 +151,19 @@ export default function AdminDashboardPage() {
             telegram: b.telegram,
             education: b.education,
             question: b.question,
-            meetLink: b.meet_link,
+            meetLink: b.meet_link || undefined,
             paymentStatus: b.payment_status || 'pending',
             paymentReceipt: b.payment_receipt || '',
             status: b.status || 'confirmed',
             locale: b.locale || 'uz',
             createdAt: b.created_at,
-          }));
-
-          // Local goes in FIRST so it only ever fills a genuine gap (a
-          // booking made while Supabase was unreachable) -- Supabase's row
-          // must win for any id both sources have, same fix and same root
-          // cause as /my-bookings' merge bug: this used to put local first
-          // in the array and then only ADD supabase rows whose id wasn't
-          // already known locally, which meant a stale local copy on
-          // admin's own device would permanently mask a real status change
-          // made from a different session (e.g. a student confirming their
-          // own booking, or another admin device), no matter how many
-          // times this page was refreshed.
-          const mergedMap = new Map<string, BookingTicketData>();
-          localBookings.forEach((b) => mergedMap.set(b.id, b));
-          mapped.forEach((b) => mergedMap.set(b.id, b));
-          const combined = Array.from(mergedMap.values()).sort(
-            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-          );
-          setBookings(combined);
-        } else {
-          setBookings(localBookings);
-        }
-
-        // 2. Fetch Applications from Supabase
-        const { data: supaApps } = await supabase.from('counselor_applications').select('*');
-        if (supaApps && supaApps.length > 0) {
-          setApplications(supaApps);
-        } else {
-          const localApps = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-          setApplications(localApps);
-        }
-
-        // 3. Fetch Forum questions & answers (moderation view — read-only)
-        const [{ data: supaQuestions }, { data: supaAnswers }] = await Promise.all([
-          supabase.from('forum_questions').select('*').order('created_at', { ascending: false }),
-          supabase.from('forum_answers').select('*'),
-        ]);
-        setForumQuestions(
-          supaQuestions && supaQuestions.length > 0 ? supaQuestions.map(mapForumQuestion) : loadLocalForumQuestions()
-        );
-        setForumAnswers(
-          supaAnswers && supaAnswers.length > 0 ? supaAnswers.map(mapForumAnswer) : loadLocalForumAnswers()
-        );
-
-        // 4. Fetch survey responses -- no localStorage fallback exists for
-        // this one (built after tonight's lessons, deliberately without a
-        // cache layer), so an empty/failed fetch just means an empty list.
-        const { data: supaSurvey } = await supabase
-          .from('survey_responses')
-          .select('*')
-          .order('created_at', { ascending: false });
-        setSurveyResponses(
-          (supaSurvey || []).map((s) => ({
+          }))
+      );
+      setApplications((overviewData.applications || []) as CounselorApp[]);
+      setForumQuestions((overviewData.questions || []).map(mapForumQuestion));
+      setForumAnswers((overviewData.answers || []).map(mapForumAnswer));
+      setSurveyResponses(
+        ((overviewData.survey || []) as SurveyRow[]).map((s) => ({
             id: s.id,
             ageRange: s.age_range,
             status: s.status,
@@ -212,46 +178,21 @@ export default function AdminDashboardPage() {
             willingToRefer: s.willing_to_refer,
             createdAt: s.created_at,
           }))
-        );
-
-        // 5. Fetch the live counselor roster -- for the commission-window
-        // badge, which needs joined_at/commission_free_until straight from
-        // the counselors table, not the applications table (an approved
-        // application isn't linked back to the counselor row it created).
-        const { data: supaCounselors } = await supabase
-          .from('counselors')
-          .select('*')
-          .order('joined_at', { ascending: false });
-        setCounselors((supaCounselors || []).map(mapCounselorRow));
-
-        // 6. Text Q&A threads -- goes through the admin API route, not a
-        // direct anon-key query, since anon has no grant on
-        // question_threads.payment_status at all (by design -- see
-        // schema.sql). This route uses service_role behind the admin
-        // session cookie instead.
-        try {
-          const threadsRes = await fetch('/api/admin/threads');
-          const threadsData = await threadsRes.json();
-          setThreads(threadsData.success ? threadsData.threads : []);
-        } catch (err) {
-          console.warn('Threads fetch error:', err);
-          setThreads([]);
-        }
-      } catch (err) {
-        console.warn('Supabase fetch error:', err);
-        setBookings(localBookings);
-        setApplications(JSON.parse(localStorage.getItem('rahnamo_applications') || '[]'));
-        setForumQuestions(loadLocalForumQuestions());
-        setForumAnswers(loadLocalForumAnswers());
-      }
-    } else {
-      setBookings(localBookings);
-      setApplications(JSON.parse(localStorage.getItem('rahnamo_applications') || '[]'));
-      setForumQuestions(loadLocalForumQuestions());
-      setForumAnswers(loadLocalForumAnswers());
+      );
+      setCounselors((overviewData.counselors || []).map(mapCounselorRow));
+      setThreads(threadsData.threads || []);
+    } catch (error) {
+      console.error('[ADMIN_DATA_FETCH_FAILED]', error);
+      setBookings([]);
+      setApplications([]);
+      setForumQuestions([]);
+      setForumAnswers([]);
+      setSurveyResponses([]);
+      setCounselors([]);
+      setThreads([]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   // The real password never reaches this bundle -- every NEXT_PUBLIC_ var is
@@ -326,12 +267,7 @@ export default function AdminDashboardPage() {
     // link on /my-bookings) unless this genuinely persisted; an admin who
     // believes they confirmed a payment that never actually wrote would have
     // no way to know the student is still locked out.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      // Goes through the service-role admin route now -- Stage 3 removed
-      // the blanket USING(true)/WITH CHECK(true) bookings UPDATE policy
-      // this used to rely on, since that same policy is what let any
-      // unauthenticated client self-confirm a booking directly.
+    try {
       const confirmRes = await fetch('/api/admin/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -348,18 +284,16 @@ export default function AdminDashboardPage() {
         }));
         return;
       }
+    } catch (error) {
+      console.error('[PAYMENT_CONFIRM_FAILED]', id, error);
+      setBookingActionId(null);
+      setBookingActionErrors((prev) => ({ ...prev, [id]: t('bookings.confirmPaymentFailed') }));
+      return;
     }
 
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b))
     );
-    try {
-      const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-      const updated = existing.map((b) => (b.id === id ? { ...b, paymentStatus: 'confirmed' } : b));
-      localStorage.setItem('rahnamo_bookings', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
 
     // Tells the student directly -- this is the only place the real meet
     // link is ever sent to them. The DB write above already succeeded, so a
@@ -373,15 +307,6 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           kind: 'payment_confirmed',
           id: booking.id,
-          studentName: booking.studentName,
-          counselorName: booking.counselorName,
-          tier: booking.tier,
-          price: booking.price,
-          slot: booking.slot,
-          paymentMethod: booking.paymentMethod,
-          email: booking.email,
-          meetLink: booking.meetLink,
-          locale: booking.locale || 'uz',
         }),
       });
       const emailData = await emailRes.json();
@@ -408,10 +333,7 @@ export default function AdminDashboardPage() {
     setBookingActionId(id);
     setBookingActionErrors((prev) => ({ ...prev, [errorKey]: '' }));
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      // Same reasoning as handleApprovePayment above: now goes through the
-      // service-role admin route rather than the anon-key client.
+    try {
       const completeRes = await fetch('/api/admin/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -428,16 +350,14 @@ export default function AdminDashboardPage() {
         }));
         return;
       }
+    } catch (error) {
+      console.error('[COMPLETE_BOOKING_FAILED]', id, error);
+      setBookingActionId(null);
+      setBookingActionErrors((prev) => ({ ...prev, [errorKey]: t('bookings.completeBookingFailed') }));
+      return;
     }
 
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'completed' } : b)));
-    try {
-      const existing: BookingTicketData[] = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-      const updated = existing.map((b) => (b.id === id ? { ...b, status: 'completed' as const } : b));
-      localStorage.setItem('rahnamo_bookings', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
 
     setBookingActionId(null);
   };
@@ -492,6 +412,7 @@ export default function AdminDashboardPage() {
   // approval that didn't actually happen.
   const handleApproveApplication = async (app: CounselorApp) => {
     const appKey = app.id || app.email;
+    if (!app.id) return;
     setApplicationActionId(appKey);
     setApplicationActionErrors((prev) => ({ ...prev, [appKey]: '' }));
 
@@ -499,21 +420,7 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/admin/approve-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicationId: app.id || null,
-          fullName: app.full_name,
-          headline: app.headline,
-          specialties: app.specialties,
-          category: app.category,
-          bio: app.bio,
-          company: app.company,
-          email: app.email,
-          expectedStandardPrice: app.expected_standard_price,
-          expectedPremiumPrice: app.expected_premium_price,
-          expectedPricePerQuestion: app.expected_price_per_question,
-          expectedSoftCap: app.expected_soft_cap,
-          photoUrl: app.photo_url,
-        }),
+        body: JSON.stringify({ applicationId: app.id }),
       });
       const data = await res.json();
 
@@ -533,9 +440,6 @@ export default function AdminDashboardPage() {
       setApplications((prev) =>
         prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
       );
-      persistLocalApplications((apps) =>
-        apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
-      );
     } catch (err) {
       console.error('[APPLICATION_APPROVE_FAILED]', appKey, err);
       setApplicationActionErrors((prev) => ({ ...prev, [appKey]: t('applications.approveFailed') }));
@@ -544,37 +448,52 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleRejectApplication = (app: CounselorApp) => {
+  const handleRejectApplication = async (app: CounselorApp) => {
     const appKey = app.id || app.email;
-    setApplications((prev) =>
-      prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
-    );
-    persistLocalApplications((apps) =>
-      apps.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
-    );
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !app.id) return;
-
-    Promise.resolve(supabase.from('counselor_applications').update({ status: 'rejected' }).eq('id', app.id)).catch(
-      (err) => console.warn('Application reject error:', err)
-    );
+    if (!app.id) return;
+    setApplicationActionId(appKey);
+    setApplicationActionErrors((prev) => ({ ...prev, [appKey]: '' }));
+    try {
+      const response = await fetch('/api/admin/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', id: app.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'reject_failed');
+      setApplications((prev) =>
+        prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'rejected' } : a))
+      );
+    } catch (error) {
+      console.error('[APPLICATION_REJECT_FAILED]', appKey, error);
+      setApplicationActionErrors((prev) => ({ ...prev, [appKey]: t('applications.approveFailed') }));
+    } finally {
+      setApplicationActionId(null);
+    }
   };
 
-  const handleDeleteApplication = (app: CounselorApp) => {
+  const handleDeleteApplication = async (app: CounselorApp) => {
     const confirmed = window.confirm(t('applications.deleteConfirm', { name: app.full_name }));
-    if (!confirmed) return;
+    if (!confirmed || !app.id) return;
 
     const appKey = app.id || app.email;
-    setApplications((prev) => prev.filter((a) => (a.id || a.email) !== appKey));
-    persistLocalApplications((apps) => apps.filter((a) => (a.id || a.email) !== appKey));
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !app.id) return;
-
-    Promise.resolve(supabase.from('counselor_applications').delete().eq('id', app.id)).catch((err) =>
-      console.warn('Application delete error:', err)
-    );
+    setApplicationActionId(appKey);
+    setApplicationActionErrors((prev) => ({ ...prev, [appKey]: '' }));
+    try {
+      const response = await fetch('/api/admin/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: app.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'delete_failed');
+      setApplications((prev) => prev.filter((a) => (a.id || a.email) !== appKey));
+    } catch (error) {
+      console.error('[APPLICATION_DELETE_FAILED]', appKey, error);
+      setApplicationActionErrors((prev) => ({ ...prev, [appKey]: t('applications.approveFailed') }));
+    } finally {
+      setApplicationActionId(null);
+    }
   };
 
   const filteredBookings = bookings.filter(
@@ -950,7 +869,7 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <p className="text-xs text-stone-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-900/10">
-                      "{app.bio}"
+                      &ldquo;{app.bio}&rdquo;
                     </p>
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-stone-600 font-mono">
@@ -1047,7 +966,7 @@ export default function AdminDashboardPage() {
                         {qAnswers.length > 0 && (
                           <div className="pt-2 space-y-2">
                             {qAnswers.map((a) => {
-                              const responder = INITIAL_COUNSELORS.find((c) => c.id === a.counselorId);
+                              const responder = counselors.find((c) => c.id === a.counselorId);
                               return (
                                 <div key={a.id} className="bg-amber-50/60 border border-amber-900/10 rounded-xl p-3 text-xs">
                                   <span className="font-bold text-amber-950">{responder?.fullName || a.counselorId}: </span>

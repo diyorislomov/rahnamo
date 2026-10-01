@@ -5,9 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Lock, Send, Loader2, CheckCircle2, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { getDeviceId } from '@/lib/deviceId';
-import { ensureStudentAuth } from '@/lib/threadAuth';
 import { Counselor, QuestionThread, ThreadMessage } from '@/types';
+import { isPaymentConfigured, paymentCardDigits, paymentCardDisplay, paymentCardOwner } from '@/lib/paymentConfig';
 
 interface QuestionThreadRow {
   id: string;
@@ -44,9 +43,6 @@ function mapThread(r: QuestionThreadRow): QuestionThread {
     closedAt: r.closed_at,
   };
 }
-
-const CENTRAL_CARD_NUMBER = '8600 5555 4444 3333';
-const CENTRAL_CARD_DIGITS = '8600555544443333';
 
 export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
   const t = useTranslations('textQa');
@@ -155,75 +151,37 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     setIsStarting(true);
     setStartError('');
 
-    let studentAuthId: string;
     try {
-      studentAuthId = await ensureStudentAuth();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('missing_session');
+      const response = await fetch('/api/threads/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ counselorId: counselor.id }),
+      });
+      const result = await response.json();
+      if (response.status === 409 && result.threadId) {
+        await loadThread(result.threadId);
+        setIsStarting(false);
+        setPhase('thread');
+        return;
+      }
+      if (!response.ok || !result.success) throw new Error(result.error || 'start_failed');
+      setThread(mapThread(result.thread as QuestionThreadRow));
+      setMessages([]);
+      setIsStarting(false);
+      setPhase('thread');
     } catch (err) {
-      console.error('[TEXT_QA_AUTH_FAILED]', err);
-      setIsStarting(false);
-      setStartError(t('start.authFailed'));
-      return;
-    }
-
-    const bookingId = `RNM-TXT-${Math.floor(1000 + Math.random() * 9000)}`;
-    // studentAuthId is guaranteed real (non-anonymous) now -- the
-    // login_required gate means handleStart is never reachable without
-    // one, so it's safe to reuse directly as mentee_auth_id.
-    const { error: bookingError } = await supabase.from('bookings').insert({
-      id: bookingId,
-      device_id: getDeviceId(),
-      mentee_auth_id: studentAuthId,
-      counselor_id: counselor.id,
-      counselor_name: counselor.fullName,
-      counselor_headline: counselor.headline,
-      counselor_avatar: counselor.avatarUrl,
-      tier: 'text_qa',
-      price: 0,
-      payment_method: 'payme',
-      slot: "Ochiq matnli maslahat",
-      student_name: '(Matnli maslahat)',
-      email: '',
-      phone: '',
-      telegram: '',
-      education: '',
-      question: '(Matnli maslahat orqali)',
-    });
-
-    if (bookingError) {
-      console.error('[TEXT_QA_BOOKING_INSERT_FAILED]', bookingError);
+      console.error('[TEXT_QA_START_FAILED]', err);
       setIsStarting(false);
       setStartError(t('start.startFailed'));
-      return;
     }
-
-    const { data: threadRow, error: threadError } = await supabase
-      .from('question_threads')
-      .insert({
-        booking_id: bookingId,
-        counselor_id: counselor.id,
-        student_auth_id: studentAuthId,
-        device_id: getDeviceId(),
-        age_confirmed_at: new Date().toISOString(),
-      })
-      .select('*')
-      .single();
-
-    if (threadError || !threadRow) {
-      console.error('[TEXT_QA_THREAD_INSERT_FAILED]', threadError);
-      setIsStarting(false);
-      setStartError(t('start.startFailed'));
-      return;
-    }
-
-    setThread(mapThread(threadRow as QuestionThreadRow));
-    setMessages([]);
-    setIsStarting(false);
-    setPhase('thread');
   };
 
   const handleAsk = async () => {
     if (!thread) return;
-    if (!newQuestion.trim()) {
+    if (!newQuestion.trim() || newQuestion.trim().length > 4000) {
       setAskError(t('thread.askFailedEmpty'));
       return;
     }
@@ -387,6 +345,7 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
               type="text"
               value={newQuestion}
               onChange={(e) => setNewQuestion(e.target.value)}
+              maxLength={4000}
               placeholder={t('thread.askPlaceholder')}
               className="flex-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
             />
@@ -418,22 +377,27 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
               <div className="p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
                 <span className="text-[10px] uppercase font-bold text-amber-900 block">{t('payment.cardBoxLabel')}</span>
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-extrabold text-sm text-amber-950">{CENTRAL_CARD_NUMBER}</span>
+                  <span className="font-mono font-extrabold text-sm text-amber-950">
+                    {isPaymentConfigured ? paymentCardDisplay : t('payment.unavailable')}
+                  </span>
                   <button
                     type="button"
+                    disabled={!isPaymentConfigured}
                     onClick={() => {
-                      if (typeof navigator !== 'undefined') {
-                        navigator.clipboard.writeText(CENTRAL_CARD_DIGITS);
+                      if (typeof navigator !== 'undefined' && isPaymentConfigured) {
+                        navigator.clipboard.writeText(paymentCardDigits);
                         setCopiedCard(true);
                         setTimeout(() => setCopiedCard(false), 2000);
                       }
                     }}
-                    className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer"
+                    className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer disabled:opacity-40"
                   >
                     {copiedCard ? t('payment.copiedButton') : t('payment.copyButton')}
                   </button>
                 </div>
-                <span className="text-[10px] text-stone-600 block">{t('payment.cardOwnerLabel')}</span>
+                <span className="text-[10px] text-stone-600 block">
+                  {isPaymentConfigured ? paymentCardOwner : t('payment.unavailableHint')}
+                </span>
               </div>
 
               <div>
@@ -442,6 +406,7 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
                   type="text"
                   value={receiptRef}
                   onChange={(e) => setReceiptRef(e.target.value)}
+                  maxLength={300}
                   placeholder={t('payment.receiptPlaceholder')}
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
                 />
@@ -451,7 +416,7 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
               <button
                 type="button"
                 onClick={handleSubmitReceipt}
-                disabled={isSubmittingReceipt || !receiptRef.trim()}
+                disabled={isSubmittingReceipt || !receiptRef.trim() || !isPaymentConfigured}
                 className="w-full py-3 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Lock className="w-3.5 h-3.5" />

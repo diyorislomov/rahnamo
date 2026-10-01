@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
-import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Filter, Star, MessageSquareText, Lock, LogIn, LogOut } from 'lucide-react';
+import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Star, MessageSquareText, Lock, LogIn, LogOut } from 'lucide-react';
 
 interface SavedBooking {
   id: string;
@@ -57,63 +58,28 @@ export default function MyBookingsPage() {
 
   useEffect(() => {
     async function loadBookings(menteeUserId: string) {
-      let localBookings: SavedBooking[] = [];
-      try {
-        const item = localStorage.getItem('rahnamo_bookings');
-        if (item) {
-          localBookings = JSON.parse(item);
-        }
-      } catch (err) {
-        console.error('LocalStorage parse error:', err);
-      }
-
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
       if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
         try {
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Supabase fetch timeout')), 1500)
-          );
-
-          const fetchPromise = supabase
+          const res = await supabase
             .from('bookings')
             .select('*')
             .eq('mentee_auth_id', menteeUserId)
             .order('created_at', { ascending: false });
-
-          const res: any = await Promise.race([fetchPromise, timeoutPromise]);
-
-          if (res?.data && res.data.length > 0) {
-            // Local goes in FIRST so it only ever fills gaps (a booking made
-            // while Supabase was unreachable) -- Supabase's row must win for
-            // any id both sources have, or a stale local copy permanently
-            // overwrites a real status change made from another device
-            // (e.g. admin confirming payment), no matter how many times the
-            // page is refreshed. That was a real, reproduced bug: this
-            // device's own cached copy stayed 'pending' forever while the
-            // database had already moved to 'confirmed'.
-            const mergedMap = new Map<string, SavedBooking>();
-            localBookings.forEach((b: SavedBooking) => mergedMap.set(b.id, b));
-            res.data.forEach((b: SavedBooking) => mergedMap.set(b.id, b));
-
-            const combined = Array.from(mergedMap.values()).sort((a, b) => {
-              const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
-              const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
-              return timeB - timeA;
-            });
-            setBookings(combined);
-            setLoading(false);
-            loadReviewedIds(combined);
-            return;
-          }
+          if (res.error) throw res.error;
+          const rows = (res.data || []) as SavedBooking[];
+          setBookings(rows);
+          setLoading(false);
+          loadReviewedIds(rows);
+          return;
         } catch (err) {
-          console.warn('Supabase bookings fetch error or timeout, fallback to local:', err);
+          console.warn('Supabase bookings fetch error:', err);
         }
       }
 
-      setBookings(localBookings);
+      setBookings([]);
       setLoading(false);
-      loadReviewedIds(localBookings);
     }
 
     function loadReviewedIds(list: SavedBooking[]) {
@@ -142,6 +108,7 @@ export default function MyBookingsPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('rahnamo_bookings');
     setMenteeEmail(false);
     setBookings([]);
   };
@@ -152,7 +119,7 @@ export default function MyBookingsPage() {
       setReviewErrors((prev) => ({ ...prev, [b.id]: t('review.ratingError') }));
       return;
     }
-    if (!draft.text.trim() || draft.text.trim().length < 10) {
+    if (!draft.text.trim() || draft.text.trim().length < 10 || draft.text.trim().length > 2000) {
       setReviewErrors((prev) => ({ ...prev, [b.id]: t('review.textError') }));
       return;
     }
@@ -346,9 +313,11 @@ export default function MyBookingsPage() {
                       className="bg-white/95 rounded-3xl p-6 border border-amber-900/15 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-4"
                     >
                       <div className="flex items-center gap-4">
-                        <img
+                        <Image
                           src={avatar}
                           alt={name}
+                          width={56}
+                          height={56}
                           className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-200 shadow-xs"
                         />
                         <div>
@@ -378,9 +347,11 @@ export default function MyBookingsPage() {
                   >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
-                      <img
+                      <Image
                         src={avatar}
                         alt={name}
+                        width={64}
+                        height={64}
                         className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-200 shadow-xs"
                       />
                       <div>
@@ -455,6 +426,7 @@ export default function MyBookingsPage() {
                           <textarea
                             rows={3}
                             value={draft.text}
+                            maxLength={2000}
                             onChange={(e) =>
                               setReviewDrafts((prev) => ({ ...prev, [b.id]: { ...draft, text: e.target.value } }))
                             }

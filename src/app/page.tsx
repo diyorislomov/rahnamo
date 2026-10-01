@@ -10,28 +10,17 @@ import CatalogIntro, { SortOption } from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
 import RevealOnScroll from '@/components/RevealOnScroll';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
+import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
 import { supabase } from '@/lib/supabase';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import { Counselor } from '@/types';
 import { Search, ChevronDown, Sparkles } from 'lucide-react';
 
-// Merge live Supabase rows onto the mock list by id: a matching id keeps the
-// mock's decorative-only fields (responseTime/totalSessions/outcomes -- not
-// real DB columns) while taking everything else from the live row; an id
-// that only exists in Supabase (a newly approved counselor) is appended.
-function mergeCounselors(mock: Counselor[], live: Counselor[]): Counselor[] {
-  const byId = new Map(mock.map((c) => [c.id, c]));
-  for (const liveC of live) {
-    const existing = byId.get(liveC.id);
-    byId.set(liveC.id, existing ? { ...existing, ...liveC } : liveC);
-  }
-  return Array.from(byId.values());
-}
-
 export default function Home() {
   const t = useTranslations('home');
-  const [counselors, setCounselors] = useState<Counselor[]>(INITIAL_COUNSELORS);
+  const [counselors, setCounselors] = useState<Counselor[]>(() =>
+    isSupabaseConfigured() ? [] : INITIAL_COUNSELORS
+  );
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('rating');
@@ -40,13 +29,15 @@ export default function Home() {
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
-    Promise.resolve(supabase.from('counselors').select('*'))
+    Promise.resolve(supabase.from('counselors').select(PUBLIC_COUNSELOR_COLUMNS))
       .then(({ data, error }) => {
-        if (!error && data && data.length > 0) {
-          setCounselors(mergeCounselors(INITIAL_COUNSELORS, data.map(mapCounselorRow)));
-        }
+        if (error) throw error;
+        setCounselors((data || []).map(mapCounselorRow));
       })
-      .catch((err: unknown) => console.warn('Counselors fetch error, using mock catalog:', err));
+      .catch((err: unknown) => {
+        console.error('[COUNSELORS_FETCH_FAILED]', err);
+        setCounselors([]);
+      });
   }, []);
 
   const specialtyKeys = useMemo(() => Object.keys(SPECIALTY_CONFIG), []);

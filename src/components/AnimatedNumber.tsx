@@ -25,8 +25,8 @@ export default function AnimatedNumber({ value, suffix = '', duration = 1500, cl
   useEffect(() => {
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       reducedMotion.current = true;
-      setIsVisible(true);
-      return;
+      const frame = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(frame);
     }
     const node = ref.current;
     if (!node) return;
@@ -46,8 +46,8 @@ export default function AnimatedNumber({ value, suffix = '', duration = 1500, cl
   useEffect(() => {
     if (!isVisible) return;
     if (reducedMotion.current) {
-      setDisplay(value);
-      return;
+      const frame = requestAnimationFrame(() => setDisplay(value));
+      return () => cancelAnimationFrame(frame);
     }
     let cancelled = false;
     const from = display;

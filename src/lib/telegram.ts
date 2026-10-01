@@ -15,32 +15,31 @@ export interface NotificationBookingPayload {
 }
 
 export async function sendTelegramNotification(payload: NotificationBookingPayload): Promise<boolean> {
-  const token = process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.NEXT_PUBLIC_TELEGRAM_CHAT_ID;
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId || token.includes('placeholder')) {
-    console.log('[Telegram Notification Logged]:', payload);
     return false;
   }
 
   const message = `
-🐪 *YANGI RAHNAMO QABULI!*
+🐪 YANGI RAHNAMO QABULI!
 
-🎫 *Chipta ID:* \`${payload.id}\`
-👤 *Talaba:* ${payload.studentName}
-🎓 *Rahnamo:* ${payload.counselorName}
-⏱ *Sessiya vaqti:* ${payload.slot}
-💰 *Sessiya turi & To'lov:* ${payload.tier.toUpperCase()} (${payload.price.toLocaleString()} UZS via ${payload.paymentMethod.toUpperCase()})
+🎫 Chipta ID: ${payload.id}
+👤 Talaba: ${payload.studentName}
+🎓 Rahnamo: ${payload.counselorName}
+⏱ Sessiya vaqti: ${payload.slot}
+💰 Sessiya turi & To'lov: ${payload.tier.toUpperCase()} (${payload.price.toLocaleString()} UZS via ${payload.paymentMethod.toUpperCase()})
 
-📱 *Telefon:* \`${payload.phone}\`
-💬 *Telegram:* ${payload.telegram}
-✉️ *Email:* ${payload.email}
-🏫 *Ta'lim:* ${payload.education}
+📱 Telefon: ${payload.phone}
+💬 Telegram: ${payload.telegram}
+✉️ Email: ${payload.email}
+🏫 Ta'lim: ${payload.education}
 
-❓ *Asosiy savol:*
-"${payload.question}"
+❓ Asosiy savol:
+${payload.question}
 
-🔗 *Video uchrashuv havolasi:*
+🔗 Video uchrashuv havolasi:
 ${payload.meetLink}
   `.trim();
 
@@ -52,7 +51,6 @@ ${payload.meetLink}
       body: JSON.stringify({
         chat_id: chatId,
         text: message,
-        parse_mode: 'Markdown',
       }),
     });
     // A non-2xx here doesn't throw -- fetch only rejects on network failure
@@ -69,3 +67,4 @@ ${payload.meetLink}
     return false;
   }
 }
+import 'server-only';

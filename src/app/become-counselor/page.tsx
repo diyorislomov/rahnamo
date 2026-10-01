@@ -5,10 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { supabase } from '@/lib/supabase';
-import { sendTelegramNotification } from '@/lib/telegram';
-import { CamelIcon } from '@/components/Icons';
-import { ArrowLeft, CheckCircle2, UserCheck, Send, Mail, Phone, Shield, Sparkles, DollarSign, Calendar, Globe, Award, TrendingUp, Camera, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, UserCheck, Shield, Sparkles, Calendar, Globe, Award, TrendingUp, Camera, Loader2 } from 'lucide-react';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 
 const CATEGORY_KEYS = Object.keys(SPECIALTY_CONFIG).filter((k) => k !== 'All');
@@ -114,18 +111,19 @@ export default function BecomeCounselorPage() {
     setPhotoError('');
     setUploadingPhoto(true);
 
-    const path = `applications/${crypto.randomUUID()}/${file.name}`;
-    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file);
-
-    if (uploadError) {
-      console.error('[APPLICATION_PHOTO_UPLOAD_FAILED]', uploadError);
+    try {
+      const form = new FormData();
+      form.set('file', file);
+      const response = await fetch('/api/applications/photo', { method: 'POST', body: form });
+      const result = await response.json();
+      if (!response.ok || !result?.url) throw new Error(result.error || 'upload_failed');
+      setPhotoUrl(result.url);
+    } catch (error) {
+      console.error('[APPLICATION_PHOTO_UPLOAD_FAILED]', error);
       setUploadingPhoto(false);
       setPhotoError(t('form.photoUploadFailed'));
       return;
     }
-
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    setPhotoUrl(data.publicUrl);
     setUploadingPhoto(false);
   };
 
@@ -163,81 +161,20 @@ export default function BecomeCounselorPage() {
       photo_url: photoUrl || null,
     };
 
-    // Save locally (fallback store, independent of the outcome below)
     try {
-      const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-      localStorage.setItem('rahnamo_applications', JSON.stringify([applicationData, ...existing]));
-    } catch (err) {
-      console.error(err);
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(applicationData),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'submit_failed');
+    } catch (error) {
+      console.error('[APPLICATION_SUBMIT_FAILED]', error);
+      setIsSubmitting(false);
+      setSubmitError(t('submitError'));
+      return;
     }
-
-    // The application write itself -- awaited on purpose. A rejected or lost
-    // application with no visible error is a real trust cost (the applicant
-    // walks away believing they applied when admin never saw it), so the
-    // success screen must not appear unless this actually persisted.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      const { data, error } = await supabase
-        .from('counselor_applications')
-        .insert(applicationData)
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('[APPLICATION_INSERT_FAILED]', error);
-        try {
-          const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-          localStorage.setItem(
-            'rahnamo_applications',
-            JSON.stringify(existing.filter((a: { email: string }) => a.email !== applicationData.email))
-          );
-        } catch (err) {
-          console.error(err);
-        }
-        setIsSubmitting(false);
-        setSubmitError(t('submitError'));
-        return;
-      }
-
-      // Captures the real DB-generated id and patches it into the just-saved
-      // localStorage copy, so admin's reject/approve/delete actions (which
-      // target a row by id) have a real one to match against even when
-      // reading from the localStorage fallback rather than a live fetch.
-      if (data?.id) {
-        try {
-          const existing = JSON.parse(localStorage.getItem('rahnamo_applications') || '[]');
-          if (existing[0] && !existing[0].id && existing[0].email === applicationData.email) {
-            existing[0].id = data.id;
-            localStorage.setItem('rahnamo_applications', JSON.stringify(existing));
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    }
-
-    // Telegram alert to admin -- secondary channel, doesn't block the
-    // application itself, but a resolved-false (not just a thrown error) is
-    // now logged distinctly so a silent failure doesn't go unnoticed.
-    sendTelegramNotification({
-      id: `APP-${Math.floor(1000 + Math.random() * 9000)}`,
-      studentName: `${applicationData.full_name} (MENTOR ARIZASI)`,
-      counselorName: applicationData.specialties || 'Yangi Mentor',
-      tier: 'standard',
-      price: applicationData.expected_standard_price,
-      slot: 'Arizachi profilini ko\'rib chiqish',
-      paymentMethod: 'ARIZA',
-      phone: phone,
-      telegram: telegram,
-      email: email,
-      education: applicationData.headline,
-      question: `Bio: ${bio.slice(0, 120)}...`,
-      meetLink: 'https://rahnamo-one.vercel.app/admin',
-    })
-      .then((ok) => {
-        if (!ok) console.error('[TELEGRAM_NOTIFY_FAILED] application submitted, admin alert did not send');
-      })
-      .catch((err) => console.error('[TELEGRAM_NOTIFY_FAILED] application submitted, threw:', err));
 
     setIsSubmitting(false);
     setSubmitted(true);
@@ -414,6 +351,7 @@ export default function BecomeCounselorPage() {
                 <label className="text-xs font-semibold text-stone-700 block">{t('form.fullNameLabel')}</label>
                 <input
                   type="text"
+                  maxLength={120}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder={t('form.fullNamePlaceholder')}
@@ -447,6 +385,7 @@ export default function BecomeCounselorPage() {
                 <label className="text-xs font-semibold text-stone-700 block">{t('form.headlineLabel')}</label>
                 <input
                   type="text"
+                  maxLength={200}
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
                   placeholder={t('form.headlinePlaceholder')}
@@ -477,6 +416,7 @@ export default function BecomeCounselorPage() {
                 <label className="text-xs font-semibold text-stone-700 block">{t('form.specialtiesLabel')}</label>
                 <input
                   type="text"
+                  maxLength={500}
                   value={specialties}
                   onChange={(e) => setSpecialties(e.target.value)}
                   placeholder={t('form.specialtiesPlaceholder')}
@@ -489,6 +429,7 @@ export default function BecomeCounselorPage() {
                 <label className="text-xs font-semibold text-stone-700 block">{t('form.bioLabel')}</label>
                 <textarea
                   rows={4}
+                  maxLength={4000}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder={t('form.bioPlaceholder')}
@@ -502,6 +443,7 @@ export default function BecomeCounselorPage() {
                   <label className="text-xs font-semibold text-stone-700 block">{t('form.telegramLabel')}</label>
                   <input
                     type="text"
+                    maxLength={80}
                     value={telegram}
                     onChange={(e) => setTelegram(e.target.value)}
                     placeholder={t('form.telegramPlaceholder')}
@@ -514,6 +456,7 @@ export default function BecomeCounselorPage() {
                   <label className="text-xs font-semibold text-stone-700 block">{t('form.phoneLabel')}</label>
                   <input
                     type="text"
+                    maxLength={30}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder={t('form.phonePlaceholder')}
@@ -527,6 +470,8 @@ export default function BecomeCounselorPage() {
                 <label className="text-xs font-semibold text-stone-700 block">{t('form.emailLabel')}</label>
                 <input
                   type="email"
+                  maxLength={254}
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t('form.emailPlaceholder')}

@@ -2,6 +2,9 @@ import { Counselor } from '@/types';
 
 export { isSupabaseConfigured } from './supabase';
 
+export const PUBLIC_COUNSELOR_COLUMNS =
+  'id, full_name, headline, avatar_url, specialties, bio, standard_price, premium_price, rating, reviews_count, available_slots, company, why_work_with_me, joined_at, commission_free_until, price_per_question, soft_cap';
+
 interface CounselorRow {
   id: string;
   full_name: string;

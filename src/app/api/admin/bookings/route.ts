@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { isSameOrigin } from '@/lib/serverSecurity';
 
 // Stage 3 of the real-auth migration: bookings RLS is being tightened so
 // only a mentee can read/insert their own row (auth.uid() = mentee_auth_id)
@@ -43,12 +44,19 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
   if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  const { action, id } = await request.json();
-  if (typeof id !== 'string' || !['confirm_payment', 'complete'].includes(action)) {
+  let input: Record<string, unknown>;
+  try {
+    input = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
+  }
+  const { action, id } = input;
+  if (typeof id !== 'string' || typeof action !== 'string' || !['confirm_payment', 'complete'].includes(action)) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
@@ -66,7 +74,12 @@ export async function POST(request: Request) {
   // Same discipline as every other admin action here: a clean "no error"
   // is not proof the row actually changed, so the update must come back
   // with the row it touched, not just a null error.
-  const { data, error } = await supabase.from('bookings').update(update).eq('id', id).select(selectCols).single();
+  let query = supabase.from('bookings').update(update).eq('id', id);
+  query =
+    action === 'confirm_payment'
+      ? query.eq('payment_status', 'pending')
+      : query.eq('payment_status', 'confirmed').eq('status', 'confirmed');
+  const { data, error } = await query.select(selectCols).single();
 
   if (error || !data) {
     console.error('[ADMIN_BOOKING_ACTION_FAILED]', action, id, error);

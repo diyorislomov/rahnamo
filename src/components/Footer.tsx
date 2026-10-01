@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import RahnamoLogo from '@/components/RahnamoLogo';
-import { Shield, Sparkles, Send, Mail, Heart } from 'lucide-react';
+import { Shield, Send, Heart } from 'lucide-react';
 
 export default function Footer() {
   const t = useTranslations('common');

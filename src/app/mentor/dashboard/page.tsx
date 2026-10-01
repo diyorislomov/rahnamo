@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -56,22 +57,16 @@ export default function MentorDashboardPage() {
   const [saved, setSaved] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  const loadCounselor = async (authId: string) => {
-    const { data, error } = await supabase
-      .from('counselors')
-      .select(
-        'id, full_name, headline, avatar_url, specialties, bio, standard_price, premium_price, available_slots, why_work_with_me, price_per_question, soft_cap'
-      )
-      .eq('auth_id', authId)
-      .maybeSingle();
-
-    if (error || !data) {
-      console.error('[MENTOR_DASHBOARD_LOAD_FAILED]', error);
+  const loadCounselor = async (token: string) => {
+    const response = await fetch('/api/mentor/profile', { headers: { Authorization: `Bearer ${token}` } });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      console.error('[MENTOR_DASHBOARD_LOAD_FAILED]', result.error);
       setLoadError(td('loadFailed'));
       return;
     }
 
-    const row = data as MentorRow;
+    const row = result.counselor as MentorRow;
     setCounselor(row);
     setHeadline(row.headline || '');
     setBio(row.bio || '');
@@ -90,13 +85,13 @@ export default function MentorDashboardPage() {
       const uid = data.session?.user.id || null;
       setUserId(uid);
       setCheckingSession(false);
-      if (uid) loadCounselor(uid);
+      if (uid && data.session?.access_token) loadCounselor(data.session.access_token);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         setUserId(session.user.id);
-        loadCounselor(session.user.id);
+        loadCounselor(session.access_token);
       }
       if (event === 'SIGNED_OUT') {
         setUserId(null);
@@ -128,18 +123,30 @@ export default function MentorDashboardPage() {
     if (!file || !userId) return;
 
     setUploadingPhoto(true);
-    const path = `mentors/${userId}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
-    setUploadingPhoto(false);
-
-    if (error) {
-      console.error('[MENTOR_PHOTO_UPLOAD_FAILED]', error);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setUploadingPhoto(false);
       setSaveError(td('photoUploadFailed'));
       return;
     }
-
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    setAvatarUrl(data.publicUrl);
+    try {
+      const form = new FormData();
+      form.set('file', file);
+      const response = await fetch('/api/mentor/photo', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'upload_failed');
+      setAvatarUrl(result.url);
+    } catch (error) {
+      console.error('[MENTOR_PHOTO_UPLOAD_FAILED]', error);
+      setSaveError(td('photoUploadFailed'));
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -150,12 +157,17 @@ export default function MentorDashboardPage() {
     setSaveError('');
     setSaved(false);
 
-    // Only ever touches the columns the Stage 0 GRANT actually allows a
-    // mentor to update -- id/auth_id/rating/reviews_count/etc. are never
-    // in this payload, so even a modified client can't widen this.
-    const { error } = await supabase
-      .from('counselors')
-      .update({
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setSaving(false);
+      setSaveError(td('saveFailed'));
+      return;
+    }
+    const response = await fetch('/api/mentor/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
         headline,
         bio,
         why_work_with_me: whyWorkWithMe || null,
@@ -166,15 +178,14 @@ export default function MentorDashboardPage() {
         soft_cap: softCap ? Number(softCap) : null,
         available_slots: availableSlots.split('\n').map((s) => s.trim()).filter(Boolean),
         avatar_url: avatarUrl,
-      })
-      .eq('auth_id', userId)
-      .select('id')
-      .single();
+      }),
+    });
+    const result = await response.json();
 
     setSaving(false);
 
-    if (error) {
-      console.error('[MENTOR_DASHBOARD_SAVE_FAILED]', error);
+    if (!response.ok || !result.success) {
+      console.error('[MENTOR_DASHBOARD_SAVE_FAILED]', result.error);
       setSaveError(td('saveFailed'));
       return;
     }
@@ -266,9 +277,11 @@ export default function MentorDashboardPage() {
         {counselor && (
           <form onSubmit={handleSave} className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-5">
             <div className="flex items-center gap-4">
-              <img
+              <Image
                 src={avatarUrl || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'}
                 alt=""
+                width={80}
+                height={80}
                 className="w-20 h-20 rounded-2xl object-cover border-2 border-amber-200"
               />
               <label className="flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3.5 py-2 rounded-xl border border-amber-300 cursor-pointer">

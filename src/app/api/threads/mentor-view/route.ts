@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
 import { resolveMentorFromRequest } from '@/lib/mentorSession';
+import { allowRequest } from '@/lib/rateLimit';
 
 // Stage 5: identity comes only from the caller's real mentor session now
 // -- the old shared COUNSELOR_PASSCODE plus a client-supplied counselorId
@@ -12,6 +13,9 @@ export async function POST(request: Request) {
   const mentor = await resolveMentorFromRequest(request);
   if (!mentor) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+  }
+  if (!(await allowRequest(`mentor-view:${mentor.authId}`, 120, 15 * 60 * 1000))) {
+    return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
   }
 
   let supabase;

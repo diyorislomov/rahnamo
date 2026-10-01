@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { defaultLocale, isValidLocale } from '@/i18n/config';
+import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
+import { resolveMenteeFromRequest } from '@/lib/menteeSession';
+import { allowRequest, requestIp } from '@/lib/rateLimit';
+import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { isSameOrigin } from '@/lib/serverSecurity';
 
 interface EmailRequestBody {
   kind?: 'booking_created' | 'payment_confirmed';
+  id?: string;
+}
+
+interface BookingEmailData {
   id: string;
   studentName: string;
   counselorName: string;
@@ -38,6 +48,15 @@ const WRAPPER_CLOSE = (t: EmailTranslator) => `
   </div>
 `;
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 const DETAILS_BOX = (
   t: EmailTranslator,
   tCommon: CommonTranslator,
@@ -54,12 +73,12 @@ const DETAILS_BOX = (
   const tierLabel = opts.tier === 'standard' || opts.tier === 'premium' ? tCommon(opts.tier) : opts.tier;
   return `
   <div style="background-color: #ffffff; border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid #fde68a;">
-    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.ticketId')}</strong> ${opts.id}</p>
-    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.student')}</strong> ${opts.studentName}</p>
-    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.counselor')}</strong> ${opts.counselorName}</p>
-    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.scheduledTime')}</strong> ${opts.slot}</p>
-    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.packageAndPayment')}</strong> ${tierLabel.toUpperCase()} (${opts.price.toLocaleString()} UZS${
-    opts.paymentMethod ? ` via ${opts.paymentMethod.toUpperCase()}` : ''
+    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.ticketId')}</strong> ${escapeHtml(opts.id)}</p>
+    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.student')}</strong> ${escapeHtml(opts.studentName)}</p>
+    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.counselor')}</strong> ${escapeHtml(opts.counselorName)}</p>
+    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.scheduledTime')}</strong> ${escapeHtml(opts.slot)}</p>
+    <p style="margin: 4px 0; font-size: 14px;"><strong>${t('details.packageAndPayment')}</strong> ${escapeHtml(tierLabel.toUpperCase())} (${opts.price.toLocaleString()} UZS${
+    opts.paymentMethod ? ` via ${escapeHtml(opts.paymentMethod.toUpperCase())}` : ''
   })</p>
   </div>
 `;
@@ -71,7 +90,7 @@ const DETAILS_BOX = (
 const MEET_LINK_BOX = (t: EmailTranslator, meetLink: string) => `
   <div style="background-color: #d1fae5; border-radius: 12px; padding: 16px; color: #065f46; font-size: 13px;">
     <p style="margin: 0 0 8px 0;"><strong>${t('meetLink.label')}</strong></p>
-    <a href="${meetLink}" target="_blank" style="display: inline-block; background-color: #047857; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 13px;">
+    <a href="${escapeHtml(meetLink)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #047857; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 13px;">
       ${t('meetLink.button')}
     </a>
     <p style="margin: 10px 0 0 0;">${t('meetLink.reminder')}</p>
@@ -84,7 +103,7 @@ const PENDING_PAYMENT_BOX = (t: EmailTranslator) => `
   </div>
 `;
 
-function buildBookingCreatedEmail(t: EmailTranslator, tCommon: CommonTranslator, body: EmailRequestBody) {
+function buildBookingCreatedEmail(t: EmailTranslator, tCommon: CommonTranslator, body: BookingEmailData) {
   const { id, studentName, counselorName, tier, price, slot, paymentMethod } = body;
   return {
     subject: t('bookingCreated.subject', { id }),
@@ -96,7 +115,7 @@ function buildBookingCreatedEmail(t: EmailTranslator, tCommon: CommonTranslator,
   };
 }
 
-function buildPaymentConfirmedEmail(t: EmailTranslator, tCommon: CommonTranslator, body: EmailRequestBody) {
+function buildPaymentConfirmedEmail(t: EmailTranslator, tCommon: CommonTranslator, body: BookingEmailData) {
   const { id, studentName, counselorName, tier, price, slot, paymentMethod, meetLink } = body;
   return {
     subject: t('paymentConfirmed.subject', { id }),
@@ -110,18 +129,67 @@ function buildPaymentConfirmedEmail(t: EmailTranslator, tCommon: CommonTranslato
 
 export async function POST(request: Request) {
   try {
-    const body: EmailRequestBody = await request.json();
-    const { kind = 'booking_created', email, locale: rawLocale } = body;
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
+    }
+    if (!(await allowRequest(`email:${requestIp(request)}`, 20, 10 * 60_000))) {
+      return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
+    }
+
+    const input: EmailRequestBody = await request.json();
+    const { kind = 'booking_created', id } = input;
+    if (typeof id !== 'string' || !['booking_created', 'payment_confirmed'].includes(kind)) {
+      return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
+    }
+
+    const supabase = getServiceRoleClient();
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (bookingError || !booking) {
+      return NextResponse.json({ success: false, error: 'booking_not_found' }, { status: 404 });
+    }
+
+    if (kind === 'booking_created') {
+      const mentee = await resolveMenteeFromRequest(request);
+      if (!mentee || booking.mentee_auth_id !== mentee.userId) {
+        return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+      }
+    } else {
+      const cookieStore = await cookies();
+      const isAdmin = verifyAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
+      if (!isAdmin || booking.payment_status !== 'confirmed') {
+        return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+      }
+      if (typeof booking.meet_link !== 'string' || !/^https:\/\/meet\.jit\.si\/[A-Za-z0-9_-]+$/.test(booking.meet_link)) {
+        return NextResponse.json({ success: false, error: 'invalid_meet_link' }, { status: 409 });
+      }
+    }
+
+    const body: BookingEmailData = {
+      id: booking.id,
+      studentName: booking.student_name,
+      counselorName: booking.counselor_name,
+      tier: booking.tier,
+      price: booking.price,
+      slot: booking.slot,
+      paymentMethod: booking.payment_method,
+      email: booking.email,
+      meetLink: booking.meet_link,
+      locale: booking.locale,
+    };
+    const { email, locale: rawLocale } = body;
     const locale = isValidLocale(rawLocale) ? rawLocale : defaultLocale;
 
     const resendApiKey = process.env.RESEND_API_KEY;
 
     if (!resendApiKey || resendApiKey.includes('placeholder')) {
-      console.log('[Email Receipt Logged - Add RESEND_API_KEY to send real emails]:', body);
       return NextResponse.json({
         success: false,
         message: 'Resend API key not configured yet.',
-      });
+      }, { status: 500 });
     }
 
     const [t, tCommon] = await Promise.all([

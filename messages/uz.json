@@ -222,7 +222,7 @@
       "questionLabel": "Rahnamoga asosiy savolingiz yoki maqsadingiz nima? *",
       "questionPlaceholder": "Masalan: Germaniyada ordinaturaga topshirish tartibi va klinik tajriba bo'yicha maslahat olmoqchiman.",
       "step4Heading": "4. To'lov usulini tanlang",
-      "securePayment": "Xavfsiz to'lov",
+      "securePayment": "Qo‘lda bank o‘tkazmasi",
       "paymeSubLabel": "Uzcard / Humo",
       "clickSubLabel": "Click Up / Karta",
       "uzumSubLabel": "Uzum kartasi",
@@ -240,9 +240,10 @@
     },
     "staleBuildError": "Sahifa eski versiyada ishlamoqda. Iltimos, sahifani yangilang (F5) va qaytadan urinib ko'ring.",
     "bookingInsertError": "Qabulni saqlashda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling.",
+    "slotUnavailable": "Bu vaqt band bo'lib qoldi. Boshqa vaqtni tanlang.",
     "modal": {
       "providerSystem": "{provider} to'lov tizimi",
-      "secureGateway": "Xavfsiz to'lov shlyuziga ulanish",
+      "secureGateway": "Tanlangan ilova orqali kartaga o‘tkazing va chek ID sini kiriting",
       "serviceLabel": "Xizmat:",
       "serviceValue": "{name} (1-ga-1 sessiya)",
       "timeLabel": "Vaqt:",
@@ -251,12 +252,15 @@
       "copyButton": "Nusxalash",
       "copiedButton": "Nusxalandi! ✓",
       "cardOwnerLabel": "Egasining ismi: Rahnamo Platform Inc.",
+      "paymentUnavailable": "To‘lov rekvizitlari sozlanmagan",
+      "paymentUnavailableHint": "Administrator bilan bog‘laning.",
       "receiptLabel": "To'lov Cheki / Tranzaksiya Raqami (Chek ID)",
       "receiptPlaceholder": "Masalan: 89420194 yoki Karta oxirgi 4 raqami",
       "receiptHint": "Payme / Click chekidagi ID raqamini kiriting. Administratorimiz imkon qadar tezroq tasdiqlaydi.",
       "cardNumberLabel": "Sizning Karta Raqamingiz (Tekshirish uchun)",
       "cardNumberPlaceholder": "8600 0000 0000 0000",
       "cardError": "Karta raqami to'liq 16 xonali bo'lishi kerak (Uzcard / Humo / Visa).",
+      "receiptRequired": "To'lov cheki yoki tranzaksiya raqamini kiriting.",
       "processing": "To'lov amalga oshirilmoqda...",
       "confirm": "To'lovni tasdiqlash"
     }
@@ -376,6 +380,8 @@
     "payment": {
       "cardBoxLabel": "Rahnamo Markaziy Platforma Kartasi (Uzcard / Humo)",
       "cardOwnerLabel": "Egasining ismi: Rahnamo Platform Inc.",
+      "unavailable": "To‘lov rekvizitlari sozlanmagan",
+      "unavailableHint": "Administrator bilan bog‘laning.",
       "copyButton": "Nusxalash",
       "copiedButton": "Nusxalandi! ✓",
       "receiptLabel": "To'lov Cheki / Tranzaksiya Raqami (Chek ID)",
@@ -477,8 +483,30 @@
       "submit": "Kirish",
       "failed": "Elektron pochta yoki parol noto'g'ri.",
       "emailNotConfirmed": "Iltimos, avval elektron pochtangizni tasdiqlang — tasdiqlash havolasi uchun pochta qutingizni tekshiring.",
+      "forgotPassword": "Parolni unutdingizmi?",
       "noAccount": "Hisobingiz yo'qmi?",
       "signupLink": "Ro'yxatdan o'tish"
+    },
+    "forgot": {
+      "title": "Parolni tiklash",
+      "subtitle": "Hisobingiz emailini kiriting. Sizga xavfsiz tiklash havolasini yuboramiz.",
+      "emailPlaceholder": "email@example.com",
+      "submit": "Tiklash havolasini yuborish",
+      "sent": "Agar bu email bilan hisob mavjud bo‘lsa, tiklash havolasi yuborildi.",
+      "failed": "Havolani yuborib bo‘lmadi. Keyinroq qayta urinib ko‘ring.",
+      "back": "Kirish sahifasiga qaytish"
+    },
+    "reset": {
+      "title": "Yangi parol o‘rnating",
+      "password": "Yangi parol",
+      "confirmation": "Yangi parolni takrorlang",
+      "submit": "Parolni yangilash",
+      "tooShort": "Parol kamida 8 belgidan iborat bo‘lishi kerak.",
+      "mismatch": "Parollar mos kelmadi.",
+      "failed": "Parolni yangilab bo‘lmadi. Yangi tiklash havolasini so‘rang.",
+      "invalidLink": "Tiklash havolasi yaroqsiz yoki muddati tugagan.",
+      "success": "Parolingiz muvaffaqiyatli yangilandi.",
+      "login": "Kirish"
     },
     "signup": {
       "badge": "Mentiylar uchun",
@@ -630,7 +658,7 @@
       "step1Title": "Rahnamoni va vaqtni tanlang",
       "step1Body": "Katalogdan o'zingizga ma'qul bo'lgan mutaxassisni tanlang, Standart yoki Premium paketni ko'rsatib, mos keladigan vaqtni belgilang.",
       "step2Title": "To'lov va ma'lumotlarni to'ldirish",
-      "step2Body": "Payme, Click yoki Uzum Bank orqali xavfsiz to'lovni amalga oshiring. Rahnamoga beriladigan asosiy savolingizni yozing.",
+      "step2Body": "Ko‘rsatilgan kartaga Payme, Click yoki Uzum Bank orqali qo‘lda o‘tkazma qiling va chek ID sini yuboring. Rahnamoga beriladigan asosiy savolingizni yozing.",
       "step3Title": "1-ga-1 Video muloqot",
       "step3Body": "Chipta va video uchrashuv havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang."
     },

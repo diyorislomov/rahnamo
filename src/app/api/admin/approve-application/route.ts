@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { isSameOrigin } from '@/lib/serverSecurity';
 
 // Approving an application now does three things atomically from the
 // server: invite a real mentor account (needs the service_role key, so
@@ -16,29 +17,20 @@ async function requireAdmin() {
   return verifyAdminSession(token);
 }
 
-interface ApproveApplicationBody {
-  applicationId: string | null;
-  fullName: string;
-  headline: string;
-  specialties?: string;
-  category?: string;
-  bio: string;
-  company?: string | null;
-  email: string;
-  expectedStandardPrice?: number;
-  expectedPremiumPrice?: number;
-  expectedPricePerQuestion?: number | null;
-  expectedSoftCap?: number | null;
-  photoUrl?: string | null;
-}
-
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
   if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  const body = (await request.json()) as ApproveApplicationBody;
-  if (!body.email || !body.fullName || !body.bio || !body.headline) {
+  let input: unknown;
+  try {
+    input = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
+  }
+  const applicationId = (input as Record<string, unknown>).applicationId;
+  if (typeof applicationId !== 'string' || !applicationId || applicationId.length > 100) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
@@ -50,9 +42,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
   }
 
+  const { data: application, error: applicationError } = await supabase
+    .from('counselor_applications')
+    .select('*')
+    .eq('id', applicationId)
+    .eq('status', 'pending')
+    .maybeSingle();
+  if (applicationError || !application) {
+    return NextResponse.json({ success: false, error: 'application_not_found' }, { status: 404 });
+  }
+  if (
+    typeof application.email !== 'string' ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(application.email) ||
+    typeof application.full_name !== 'string' ||
+    application.full_name.trim().length < 3 ||
+    application.full_name.length > 120 ||
+    typeof application.headline !== 'string' ||
+    application.headline.length > 200 ||
+    typeof application.bio !== 'string' ||
+    application.bio.length > 4_000 ||
+    typeof application.specialties !== 'string' ||
+    application.specialties.length > 500
+  ) {
+    return NextResponse.json({ success: false, error: 'invalid_application' }, { status: 400 });
+  }
+
   const redirectTo = `${new URL(request.url).origin}/mentor/set-password`;
-  const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(body.email, {
-    data: { role: 'mentor', full_name: body.fullName },
+  const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(application.email, {
+    data: { role: 'mentor', full_name: application.full_name },
     redirectTo,
   });
 
@@ -64,7 +81,7 @@ export async function POST(request: Request) {
     // isn't built for v1. The admin gets a clear, distinct error instead of
     // either a silent failure or an incorrect guess.
     const alreadyRegistered = (inviteError?.message || '').toLowerCase().includes('already');
-    console.error('[APPROVE_APPLICATION_INVITE_FAILED]', body.email, inviteError);
+    console.error('[APPROVE_APPLICATION_INVITE_FAILED]', application.email, inviteError);
     return NextResponse.json(
       {
         success: false,
@@ -77,7 +94,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const counselorId = `c-${body.fullName
+  const counselorId = `c-${application.full_name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')}-${Date.now().toString(36)}`;
@@ -85,48 +102,46 @@ export async function POST(request: Request) {
   const { error: insertError } = await supabase.from('counselors').insert({
     id: counselorId,
     auth_id: inviteData.user.id,
-    email: body.email,
-    full_name: body.fullName,
-    headline: body.headline,
+    email: application.email,
+    full_name: application.full_name,
+    headline: application.headline,
     avatar_url:
-      body.photoUrl || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-    specialties: body.specialties
-      ? body.specialties.split(',').map((s) => s.trim()).filter(Boolean)
-      : [body.category || 'Umumiy'],
-    bio: body.bio,
-    standard_price: body.expectedStandardPrice || 45000,
-    premium_price: body.expectedPremiumPrice || 130000,
+      application.photo_url || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
+    specialties: application.specialties.split(',').map((specialty: string) => specialty.trim()).filter(Boolean),
+    bio: application.bio,
+    standard_price: application.expected_standard_price || 45000,
+    premium_price: application.expected_premium_price || 130000,
     rating: 5.0,
     reviews_count: 0,
     // Same placeholder-slots reasoning as before this route existed -- real
     // availability editing ships in the mentor dashboard (this same stage).
     available_slots: ['Dushanba, 19:00 - 19:30', 'Chorshanba, 19:00 - 19:30', 'Shanba, 12:00 - 12:30'],
-    company: body.company || null,
-    price_per_question: body.expectedPricePerQuestion || null,
-    soft_cap: body.expectedSoftCap || null,
+    company: null,
+    price_per_question: application.expected_price_per_question || null,
+    soft_cap: application.expected_soft_cap || null,
   });
 
   if (insertError) {
-    // The invite already went out at this point -- a retry of this whole
-    // route will hit "email_already_registered" above, not a fresh invite.
-    // Acceptable for v1 (flagged, not silently glossed over): the admin
-    // sees a distinct insert_failed error here and can create the
-    // counselors row manually, linking auth_id by hand, rather than the
-    // route being able to cleanly resume.
+    await supabase.auth.admin.deleteUser(inviteData.user.id);
     console.error('[APPROVE_APPLICATION_INSERT_FAILED]', counselorId, insertError);
     return NextResponse.json({ success: false, error: 'insert_failed' }, { status: 500 });
   }
 
-  if (body.applicationId) {
-    const { error: statusError } = await supabase
+  {
+    const { data: updated, error: statusError } = await supabase
       .from('counselor_applications')
       .update({ status: 'approved' })
-      .eq('id', body.applicationId);
-    if (statusError) {
-      console.error('[APPROVE_APPLICATION_STATUS_UPDATE_FAILED]', body.applicationId, statusError);
-      // Non-fatal: the counselor row and invite are real and correct at
-      // this point, so report success -- the application's status label
-      // in the admin list may lag, not the actual approval.
+      .eq('id', applicationId)
+      .eq('status', 'pending')
+      .select('id')
+      .single();
+    if (statusError || !updated) {
+      console.error('[APPROVE_APPLICATION_STATUS_UPDATE_FAILED]', applicationId, statusError);
+      await Promise.all([
+        supabase.from('counselors').delete().eq('id', counselorId),
+        supabase.auth.admin.deleteUser(inviteData.user.id),
+      ]);
+      return NextResponse.json({ success: false, error: 'status_update_failed' }, { status: 500 });
     }
   }
 

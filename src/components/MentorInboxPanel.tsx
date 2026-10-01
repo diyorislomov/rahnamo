@@ -47,35 +47,43 @@ export default function MentorInboxPanel() {
     return data.session?.access_token || null;
   }
 
-  async function loadInbox() {
+  async function loadInbox(): Promise<boolean> {
     const token = await getAccessToken();
-    if (!token) return;
+    if (!token) return false;
 
-    const res = await fetch('/api/threads/mentor-view', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (!data.success) {
+    try {
+      const res = await fetch('/api/threads/mentor-view', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.status === 401) {
+        setIsMentor(false);
+        return false;
+      }
+      if (!res.ok || !data.success) throw new Error(data.error || 'load_failed');
+      setIsMentor(true);
+      setLoadError('');
+      setThreads(data.threads);
+      setMessages(data.messages);
+      return true;
+    } catch (error) {
+      console.error('[MENTOR_INBOX_LOAD_FAILED]', error);
       setLoadError(t('loadFailed'));
-      return;
+      return false;
     }
-    setLoadError('');
-    setThreads(data.threads);
-    setMessages(data.messages);
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       const isReal = !!data.session?.user && !data.session.user.is_anonymous;
-      setIsMentor(isReal);
+      if (isReal) await loadInbox();
+      else setIsMentor(false);
       setCheckingSession(false);
-      if (isReal) loadInbox();
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
-        setIsMentor(true);
         loadInbox();
       }
       if (event === 'SIGNED_OUT') {
@@ -180,6 +188,7 @@ export default function MentorInboxPanel() {
                     <input
                       type="text"
                       value={drafts[th.id] || ''}
+                      maxLength={4000}
                       onChange={(e) => setDrafts((prev) => ({ ...prev, [th.id]: e.target.value }))}
                       placeholder={t('replyPlaceholder')}
                       className="flex-1 p-2 text-[11px] bg-amber-50/40 border border-amber-900/15 rounded-lg outline-none focus:ring-2 focus:ring-amber-700"

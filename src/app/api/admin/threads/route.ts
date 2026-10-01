@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { isSameOrigin } from '@/lib/serverSecurity';
 
 // Admin's own thread actions (list, manually flag an uncapped thread for
 // payment, confirm payment) all go through the service_role key -- anon
@@ -44,12 +45,19 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
   if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  const { action, threadId } = await request.json();
-  if (typeof threadId !== 'string' || !['flag', 'confirm_payment'].includes(action)) {
+  let input: Record<string, unknown>;
+  try {
+    input = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
+  }
+  const { action, threadId } = input;
+  if (typeof threadId !== 'string' || typeof action !== 'string' || !['flag', 'confirm_payment'].includes(action)) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
@@ -69,12 +77,15 @@ export async function POST(request: Request) {
   // Same discipline as every other admin action in this app: a clean
   // "no error" is not proof the row actually changed, so the update must
   // come back with the row it touched, not just a null error.
-  const { data, error } = await supabase
+  let query = supabase
     .from('question_threads')
     .update(update)
-    .eq('id', threadId)
-    .select('id, payment_status')
-    .single();
+    .eq('id', threadId);
+  query =
+    action === 'flag'
+      ? query.eq('payment_status', 'active')
+      : query.eq('payment_status', 'awaiting_payment').not('payment_receipt', 'is', null);
+  const { data, error } = await query.select('id, payment_status').single();
 
   if (error || !data) {
     console.error('[ADMIN_THREAD_ACTION_FAILED]', action, threadId, error);

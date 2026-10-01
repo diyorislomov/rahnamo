@@ -8,7 +8,7 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 
 - **Counselor catalog** (`/`) — browse and filter mentors by specialty.
 - **Booking flow** (`/counselors/[id]`) — Standard/Premium video session tiers with manual payment confirmation (student sends proof, admin confirms — no live payment gateway yet).
-- **Matnli maslahat (Text Q&A)** — a running-tab alternative to booked sessions: a student opens a free thread, each question adds to a live total billed at the mentor's own per-question rate, with an optional mentor-set question cap that pauses new questions until payment is confirmed. 18+ only, gated by a persisted self-attestation. Mentors reply through a passcode-gated inbox on their own profile page.
+- **Matnli maslahat (Text Q&A)** — a running-tab alternative to booked sessions: each question adds to a live total billed at the mentor's own per-question rate, with an optional cap that pauses new questions until payment is confirmed. Students and mentors use their own Supabase Auth accounts.
 - **Become a counselor** (`/become-counselor`) — mentor application form, reviewed and approved/rejected from the admin panel.
 - **Forum** (`/forum`) — public Q&A between students and counselors.
 - **Admin panel** (`/admin`) — password-gated; manages bookings, applications, forum moderation, and Text Q&A threads (confirm payment, or manually flag an uncapped thread for payment as a safety valve).
@@ -21,8 +21,7 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 - TypeScript, Tailwind CSS 4
 - [Supabase](https://supabase.com) (Postgres + RLS, Auth, used via `@supabase/supabase-js`)
 - `next-intl` for i18n
-- `react-three-fiber` / `three` for the landing page's 3D scene
-- Playwright for end-to-end verification (see `scratch/` for ad hoc test scripts — not a committed test suite)
+- Playwright for browser verification
 
 ## Getting started
 
@@ -37,26 +36,30 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Environment variables
 
-Create `.env.local` in the project root:
+Copy `.env.example` to `.env.local` and replace every placeholder:
 
 | Variable | Purpose |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key (client-side) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key — **server-only**, never exposed to the client. Used by a handful of API routes (mentor inbox, admin thread actions) that need to bypass RLS under controlled server-side checks. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical public origin used by metadata, robots and sitemap |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key — **server-only**, never exposed to the client. |
 | `ADMIN_PASSWORD` | Shared passcode gating `/admin` |
-| `SESSION_SECRET` | Signs the admin session cookie |
+| `SESSION_SECRET` | Signs admin/site session cookies; use at least 32 random characters |
 | `SITE_PASSWORD` | Legacy site-wide gate; currently unused (site is public) |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Outbound email via [Resend](https://resend.com) |
-| `NEXT_PUBLIC_TELEGRAM_BOT_TOKEN` / `NEXT_PUBLIC_TELEGRAM_CHAT_ID` | Telegram notifications for new bookings/applications |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Server-only Telegram notifications for bookings/applications |
+| `NEXT_PUBLIC_PAYMENT_CARD_NUMBER` / `NEXT_PUBLIC_PAYMENT_CARD_OWNER` | Public manual-payment details shown to customers |
 
 ### Database
 
-Schema, RLS policies, and triggers live in [`supabase/schema.sql`](supabase/schema.sql) — run it against your Supabase project's SQL editor. The file is additive (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`), so it's safe to re-run.
+For a new database, run [`supabase/schema.sql`](supabase/schema.sql), then apply every file in [`supabase/migrations`](supabase/migrations) in filename order. For an existing database, apply only migrations that have not run yet. Do not treat `schema.sql` as a re-runnable migration: it contains historical setup steps and policy names.
 
-Two RLS patterns are in use, deliberately:
-- Most tables (`bookings`, `counselor_applications`, `forum_*`) use permissive `USING (true)` policies with client-side `device_id` scoping — a known, accepted tradeoff given there's no real user auth in this app.
-- `question_threads` / `thread_messages` (Text Q&A) use real `auth.uid()`-based RLS backed by Supabase Anonymous Auth, since a student's thread privacy is a hard requirement. Pricing/payment-status columns are additionally protected by column-scoped `GRANT`s and `BEFORE INSERT/UPDATE` triggers so a client can't set its own price or flip its own payment status.
+The final migration closes direct client writes to bookings, applications, surveys and forum data. Those writes go through validated server routes. Student booking/thread reads remain scoped to `auth.uid()`, mentor actions are resolved from `counselors.auth_id`, and admin actions require the signed HTTP-only admin session.
+
+Create a public Supabase Storage bucket named `avatars` with a 5 MB limit and JPEG/PNG/WebP MIME allow-list. Application and mentor uploads go through authenticated/validated server routes.
+
+In Supabase Auth URL Configuration, add the deployed `/reset-password` URL to the redirect allow-list so password recovery links can complete.
 
 ## Scripts
 
@@ -65,6 +68,7 @@ npm run dev     # start dev server (Turbopack)
 npm run build   # production build
 npm run start   # run a production build
 npm run lint    # eslint
+npm test        # unit tests
 ```
 
 ## Notes for AI coding agents

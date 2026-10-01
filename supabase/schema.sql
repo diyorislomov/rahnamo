@@ -238,7 +238,9 @@ ALTER TABLE public.forum_answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.survey_responses ENABLE ROW LEVEL SECURITY;
 
 -- Public RLS Policies
+DROP POLICY IF EXISTS "Allow public read counselors" ON public.counselors;
 CREATE POLICY "Allow public read counselors" ON public.counselors FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read bookings" ON public.bookings;
 CREATE POLICY "Allow public read bookings" ON public.bookings FOR SELECT USING (true);
 -- NOTE: the live database's actual INSERT policy on bookings is currently
 -- named "Anyone can create a booking", not this name -- discovered via
@@ -247,6 +249,7 @@ CREATE POLICY "Allow public read bookings" ON public.bookings FOR SELECT USING (
 -- from a manual edit made directly in the Supabase dashboard at some point).
 -- Same INSERT WITH CHECK (true) semantics either way; this file is only out
 -- of sync on the name. Kept here unchanged for a fresh install.
+DROP POLICY IF EXISTS "Allow public insert bookings" ON public.bookings;
 CREATE POLICY "Allow public insert bookings" ON public.bookings FOR INSERT WITH CHECK (true);
 -- No UPDATE policy existed until now, so admin's "confirm payment" button was
 -- silently failing against Supabase the whole time (RLS default-denies).
@@ -256,20 +259,28 @@ CREATE POLICY "Allow public insert bookings" ON public.bookings FOR INSERT WITH 
 -- an adjacent line that silently skipped past without rolling back the
 -- rest) -- confirmed with a real insert+update+read-back showing
 -- payment_status silently staying 'pending' with no error, then restored.
+DROP POLICY IF EXISTS "Allow public update bookings" ON public.bookings;
 CREATE POLICY "Allow public update bookings" ON public.bookings FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update applications" ON public.counselor_applications;
 CREATE POLICY "Allow public update applications" ON public.counselor_applications FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public insert counselors" ON public.counselors;
 CREATE POLICY "Allow public insert counselors" ON public.counselors FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public insert applications" ON public.counselor_applications;
 CREATE POLICY "Allow public insert applications" ON public.counselor_applications FOR INSERT WITH CHECK (true);
 -- No SELECT policy existed until now, so admin's applications tab could
 -- never actually read a real row back (RLS silently returns zero rows,
 -- no error) -- it was always rendering the localStorage/mock fallback,
 -- which is also why approve/reject's status updates looked like they
 -- worked in the UI but never reliably matched a real row by id.
+DROP POLICY IF EXISTS "Allow public read applications" ON public.counselor_applications;
 CREATE POLICY "Allow public read applications" ON public.counselor_applications FOR SELECT USING (true);
 -- Needed for admin's delete-application action.
+DROP POLICY IF EXISTS "Allow public delete applications" ON public.counselor_applications;
 CREATE POLICY "Allow public delete applications" ON public.counselor_applications FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "Allow public read reviews" ON public.reviews;
 CREATE POLICY "Allow public read reviews" ON public.reviews FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert reviews" ON public.reviews;
 CREATE POLICY "Allow public insert reviews" ON public.reviews FOR INSERT WITH CHECK (true);
 
 -- Forum: fully public read + write (no counselor auth yet — answering is
@@ -278,9 +289,13 @@ CREATE POLICY "Allow public insert reviews" ON public.reviews FOR INSERT WITH CH
 -- itself has no way to verify who's really posting. Moderation happens via
 -- the admin panel's Forum tab, not at the database layer, until a real
 -- counselor-auth pass exists.)
+DROP POLICY IF EXISTS "Allow public read forum questions" ON public.forum_questions;
 CREATE POLICY "Allow public read forum questions" ON public.forum_questions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert forum questions" ON public.forum_questions;
 CREATE POLICY "Allow public insert forum questions" ON public.forum_questions FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public read forum answers" ON public.forum_answers;
 CREATE POLICY "Allow public read forum answers" ON public.forum_answers FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert forum answers" ON public.forum_answers;
 CREATE POLICY "Allow public insert forum answers" ON public.forum_answers FOR INSERT WITH CHECK (true);
 
 -- Survey: public insert (anyone can submit) + public read (same actual
@@ -288,7 +303,9 @@ CREATE POLICY "Allow public insert forum answers" ON public.forum_answers FOR IN
 -- admin's new tab would hit the identical "reads back empty, no error"
 -- bug those two just got fixed for). The only real gate is the
 -- password-protected admin UI, not RLS.
+DROP POLICY IF EXISTS "Allow public insert survey responses" ON public.survey_responses;
 CREATE POLICY "Allow public insert survey responses" ON public.survey_responses FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public read survey responses" ON public.survey_responses;
 CREATE POLICY "Allow public read survey responses" ON public.survey_responses FOR SELECT USING (true);
 
 -- Seed Initial Counselors
@@ -411,13 +428,17 @@ ALTER TABLE public.thread_messages ENABLE ROW LEVEL SECURITY;
 -- role read access -- that happens exclusively through service_role in the
 -- admin/counselor server routes, deliberately outside RLS, not by loosening
 -- these policies.
+DROP POLICY IF EXISTS "Students can read their own threads" ON public.question_threads;
 CREATE POLICY "Students can read their own threads" ON public.question_threads
   FOR SELECT USING (auth.uid() = student_auth_id);
+DROP POLICY IF EXISTS "Students can create their own threads" ON public.question_threads;
 CREATE POLICY "Students can create their own threads" ON public.question_threads
   FOR INSERT WITH CHECK (auth.uid() = student_auth_id);
+DROP POLICY IF EXISTS "Students can update their own thread progress" ON public.question_threads;
 CREATE POLICY "Students can update their own thread progress" ON public.question_threads
   FOR UPDATE USING (auth.uid() = student_auth_id) WITH CHECK (auth.uid() = student_auth_id);
 
+DROP POLICY IF EXISTS "Students can read messages in their own threads" ON public.thread_messages;
 CREATE POLICY "Students can read messages in their own threads" ON public.thread_messages
   FOR SELECT USING (
     thread_id IN (SELECT id FROM public.question_threads WHERE student_auth_id = auth.uid())
@@ -426,6 +447,7 @@ CREATE POLICY "Students can read messages in their own threads" ON public.thread
 -- (or anywhere else on this table) that permits a 'counselor' row via the
 -- anon/authenticated roles. See the writeup above for why that's the real
 -- enforcement, not the passcode check in /api/threads/reply.
+DROP POLICY IF EXISTS "Students can ask questions in their own threads" ON public.thread_messages;
 CREATE POLICY "Students can ask questions in their own threads" ON public.thread_messages
   FOR INSERT WITH CHECK (
     sender_role = 'student'
@@ -583,8 +605,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles
     FOR SELECT USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles
     FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
@@ -634,6 +658,7 @@ ALTER TABLE public.counselor_applications ADD COLUMN IF NOT EXISTS photo_url TEX
 ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS auth_id UUID REFERENCES auth.users(id);
 ALTER TABLE public.counselors ADD COLUMN IF NOT EXISTS email TEXT;
 
+DROP POLICY IF EXISTS "Mentors can update their own profile" ON public.counselors;
 CREATE POLICY "Mentors can update their own profile" ON public.counselors
     FOR UPDATE USING (auth.uid() = auth_id) WITH CHECK (auth.uid() = auth_id);
 
@@ -668,6 +693,7 @@ ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS mentee_auth_id UUID REFEREN
 -- this pair any earlier would have broken admin's own anon-client
 -- payment-confirm action. Read section 10's comments for why the INSERT
 -- policy was rewritten rather than left as it shipped here.
+DROP POLICY IF EXISTS "Mentees read their own bookings" ON public.bookings;
 CREATE POLICY "Mentees read their own bookings" ON public.bookings
     FOR SELECT USING (auth.uid() = mentee_auth_id);
 
@@ -689,9 +715,11 @@ CREATE POLICY "Mentees read their own bookings" ON public.bookings
 -- exposed as plain SQL; the two policies below can be run here once the
 -- bucket exists.
 
+DROP POLICY IF EXISTS "app photo upload" ON storage.objects;
 CREATE POLICY "app photo upload" ON storage.objects FOR INSERT TO anon
     WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'applications');
 
+DROP POLICY IF EXISTS "mentor own photo" ON storage.objects;
 CREATE POLICY "mentor own photo" ON storage.objects FOR ALL TO authenticated
     USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'mentors' AND (storage.foldername(name))[2] = auth.uid()::text)
     WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = 'mentors' AND (storage.foldername(name))[2] = auth.uid()::text);

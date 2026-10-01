@@ -1,25 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { Tier, Review, Counselor } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { isSupabaseConfigured, mapCounselorRow } from '@/lib/counselors';
-import { getDeviceId } from '@/lib/deviceId';
-import { getMenteeAuthId } from '@/lib/menteeAuth';
+import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, CreditCard, Lock, Loader2, X, MessageCircleHeart, Send, LogIn } from 'lucide-react';
+import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, Lock, Loader2, X, MessageCircleHeart, Send, LogIn } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
-import { generateMeetLink } from '@/lib/meeting';
-import { sendTelegramNotification } from '@/lib/telegram';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
 import TextQaPanel from '@/components/TextQaPanel';
 import MentorInboxPanel from '@/components/MentorInboxPanel';
+import { isPaymentConfigured, paymentCardDigits, paymentCardDisplay, paymentCardOwner } from '@/lib/paymentConfig';
 
 type PaymentMethod = 'payme' | 'click' | 'uzum';
 
@@ -65,29 +63,28 @@ export default function CounselorPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const params = useParams();
-  const router = useRouter();
   
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
-  // Seed from the mock list (instant, no flash), then let a real Supabase
-  // row -- covering a newly approved counselor who was never in the mock
-  // list at all -- override it once the fetch resolves.
   const [counselor, setCounselor] = useState<Counselor | undefined>(() =>
-    INITIAL_COUNSELORS.find((c) => c.id === rawId)
+    isSupabaseConfigured() ? undefined : INITIAL_COUNSELORS.find((c) => c.id === rawId)
   );
   const [counselorLoading, setCounselorLoading] = useState(() => isSupabaseConfigured());
 
   useEffect(() => {
     if (!rawId || !isSupabaseConfigured()) return;
 
-    Promise.resolve(supabase.from('counselors').select('*').eq('id', rawId).maybeSingle())
+    Promise.resolve(supabase.from('counselors').select(PUBLIC_COUNSELOR_COLUMNS).eq('id', rawId).maybeSingle())
       .then(({ data, error }) => {
-        if (!error && data) {
-          setCounselor((prev) => (prev ? { ...prev, ...mapCounselorRow(data) } : mapCounselorRow(data)));
-        }
+        if (error) throw error;
+        setCounselor(data ? mapCounselorRow(data) : undefined);
         setCounselorLoading(false);
       })
-      .catch(() => setCounselorLoading(false));
+      .catch((error) => {
+        console.error('[COUNSELOR_FETCH_FAILED]', error);
+        setCounselor(undefined);
+        setCounselorLoading(false);
+      });
   }, [rawId]);
 
   // Reviews — read-only for now, no submission flow exists yet. Empty by
@@ -140,28 +137,6 @@ export default function CounselorPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
-  // Mandatory-login gate for the video booking wizard only (Stage 3) --
-  // Text Q&A keeps its own separate anonymous-auth path untouched until
-  // Stage 4. null = still checking; false = not logged in as a real
-  // (non-anonymous) mentee; a string = that mentee's email.
-  const [menteeEmail, setMenteeEmail] = useState<string | null | false>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const user = data.session?.user;
-      setMenteeEmail(user && !user.is_anonymous ? user.email || 'mentee' : false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
-        setMenteeEmail(session.user.email || 'mentee');
-      }
-      if (event === 'SIGNED_OUT') {
-        setMenteeEmail(false);
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
   // Form State
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -169,6 +144,30 @@ export default function CounselorPage() {
   const [telegram, setTelegram] = useState('');
   const [education, setEducation] = useState('');
   const [question, setQuestion] = useState('');
+
+  // Mandatory-login gate for the video booking wizard. Text Q&A applies
+  // the same real-account requirement in its own panel. null = still
+  // checking; false = not logged in as a real
+  // (non-anonymous) mentee; a string = that mentee's email.
+  const [menteeEmail, setMenteeEmail] = useState<string | null | false>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      setMenteeEmail(user && !user.is_anonymous ? user.email || 'mentee' : false);
+      if (user && !user.is_anonymous) setEmail(user.email || '');
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
+        setMenteeEmail(session.user.email || 'mentee');
+        setEmail(session.user.email || '');
+      }
+      if (event === 'SIGNED_OUT') {
+        setMenteeEmail(false);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   // Errors & Ticket state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -178,17 +177,9 @@ export default function CounselorPage() {
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
   const [receiptRef, setReceiptRef] = useState('');
   const [copiedCard, setCopiedCard] = useState(false);
   const [cardError, setCardError] = useState('');
-
-  const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawDigits = e.target.value.replace(/\D/g, '').slice(0, 16);
-    const formatted = rawDigits.replace(/(\d{4})(?=\d)/g, '$1 ');
-    setCardNumber(formatted);
-    if (cardError) setCardError('');
-  };
 
   if (!counselor) {
     if (counselorLoading) {
@@ -263,7 +254,7 @@ export default function CounselorPage() {
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let input = e.target.value;
+    const input = e.target.value;
     const digits = input.replace(/\D/g, '');
     let phoneDigits = digits.startsWith('998') ? digits.slice(3) : digits;
     phoneDigits = phoneDigits.slice(0, 9);
@@ -289,9 +280,8 @@ export default function CounselorPage() {
   };
 
   const handleConfirmPayment = async () => {
-    const rawCardDigits = cardNumber.replace(/\D/g, '');
-    if (rawCardDigits.length !== 16) {
-      setCardError(t('modal.cardError'));
+    if (receiptRef.trim().length < 3) {
+      setCardError(t('modal.receiptRequired'));
       return;
     }
 
@@ -316,136 +306,66 @@ export default function CounselorPage() {
       cleanedTelegram = '@' + cleanedTelegram;
     }
 
-    const bookingId = `RNM-${Math.floor(1000 + Math.random() * 9000)}`;
-    const price = selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice;
-    const meetLink = generateMeetLink(bookingId);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setIsProcessingPayment(false);
+      setCardError(t('bookingInsertError'));
+      return;
+    }
 
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        counselorId: counselor.id,
+        tier: selectedTier,
+        paymentMethod,
+        slot: selectedSlot,
+        studentName: fullName,
+        phone,
+        telegram: cleanedTelegram,
+        education,
+        question,
+        paymentReceipt: receiptRef.trim(),
+        locale,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result?.booking) {
+      setIsProcessingPayment(false);
+      setCardError(result?.error === 'slot_unavailable' ? t('slotUnavailable') : t('bookingInsertError'));
+      return;
+    }
+
+    const row = result.booking;
     const newBooking: BookingTicketData = {
-      id: bookingId,
-      counselorId: counselor.id,
-      counselorName: counselor.fullName,
-      counselorHeadline: counselor.headline,
-      counselorAvatar: counselor.avatarUrl,
-      tier: selectedTier,
-      price: price,
-      paymentMethod: paymentMethod,
-      slot: selectedSlot,
-      studentName: fullName,
-      email: email,
-      phone: phone,
-      telegram: cleanedTelegram,
-      education: education,
-      question: question,
-      meetLink: meetLink,
-      paymentStatus: 'pending',
-      paymentReceipt: receiptRef.trim() || cardNumber.trim() || 'KARTA_OTKAZMASI',
-      createdAt: new Date().toISOString(),
-      locale,
+      id: row.id,
+      counselorId: row.counselor_id,
+      counselorName: row.counselor_name,
+      counselorHeadline: row.counselor_headline,
+      counselorAvatar: row.counselor_avatar,
+      tier: row.tier,
+      price: row.price,
+      paymentMethod: row.payment_method,
+      slot: row.slot,
+      studentName: row.student_name,
+      email: row.email,
+      phone: row.phone,
+      telegram: row.telegram,
+      education: row.education,
+      question: row.question,
+      paymentStatus: row.payment_status,
+      paymentReceipt: row.payment_receipt,
+      createdAt: row.created_at,
+      locale: row.locale,
     };
 
-    // Save to LocalStorage immediately
-    try {
-      const existing = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-      localStorage.setItem('rahnamo_bookings', JSON.stringify([newBooking, ...existing]));
-    } catch (err) {
-      console.error('LocalStorage save error:', err);
-    }
-
-    // Telegram alert to admin -- secondary channel, never blocks the booking
-    // itself. Its own resolved-false case (not just a thrown error) is now
-    // logged distinctly so a silent Telegram failure doesn't go unnoticed.
-    sendTelegramNotification({
-      id: newBooking.id,
-      studentName: newBooking.studentName,
-      counselorName: newBooking.counselorName,
-      tier: newBooking.tier,
-      price: newBooking.price,
-      slot: newBooking.slot,
-      paymentMethod: newBooking.paymentMethod,
-      phone: newBooking.phone,
-      telegram: newBooking.telegram,
-      email: newBooking.email,
-      education: newBooking.education,
-      question: newBooking.question,
-      meetLink: newBooking.meetLink || meetLink,
-    })
-      .then((ok) => {
-        if (!ok) console.error('[TELEGRAM_NOTIFY_FAILED] booking created, admin alert did not send:', newBooking.id);
-      })
-      .catch((err) => console.error('[TELEGRAM_NOTIFY_FAILED] booking created, threw:', newBooking.id, err));
-
-    // Send Email Receipt (non-blocking -- a best-effort courtesy copy of what
-    // the on-screen ticket already tells the student; not the core write).
-    fetch('/api/send-email', {
+    void fetch('/api/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        kind: 'booking_created',
-        id: newBooking.id,
-        studentName: newBooking.studentName,
-        counselorName: newBooking.counselorName,
-        tier: newBooking.tier,
-        price: newBooking.price,
-        slot: newBooking.slot,
-        paymentMethod: newBooking.paymentMethod,
-        email: newBooking.email,
-        telegram: newBooking.telegram,
-        question: newBooking.question,
-        meetLink: newBooking.meetLink || meetLink,
-        locale: newBooking.locale,
-      }),
-    }).catch((err) => console.warn('Email receipt error:', err));
-
-    // The booking write itself -- this is the core function of the entire
-    // platform. Awaited on purpose: a success ticket must never appear
-    // unless this actually persisted, since that was the exact silent-failure
-    // incident this whole session traced back to a misconfigured connection.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-      // Bridge stage: device_id is still always written (nothing reads it
-      // any less because of this), and mentee_auth_id is attached on top
-      // whenever a real (non-anonymous) mentee session already exists.
-      const { error } = await supabase.from('bookings').insert({
-        id: newBooking.id,
-        device_id: getDeviceId(),
-        mentee_auth_id: await getMenteeAuthId(),
-        counselor_id: newBooking.counselorId,
-        counselor_name: newBooking.counselorName,
-        counselor_headline: newBooking.counselorHeadline,
-        counselor_avatar: newBooking.counselorAvatar,
-        tier: newBooking.tier,
-        price: newBooking.price,
-        payment_method: newBooking.paymentMethod,
-        slot: newBooking.slot,
-        student_name: newBooking.studentName,
-        email: newBooking.email,
-        phone: newBooking.phone,
-        telegram: newBooking.telegram,
-        education: newBooking.education,
-        question: newBooking.question,
-        meet_link: newBooking.meetLink,
-        locale: newBooking.locale,
-      });
-
-      if (error) {
-        console.error('[BOOKING_INSERT_FAILED]', newBooking.id, error);
-        // Undo the optimistic localStorage write -- it must not look booked
-        // anywhere (including this device's own /my-bookings) if the
-        // authoritative write never actually happened.
-        try {
-          const existing = JSON.parse(localStorage.getItem('rahnamo_bookings') || '[]');
-          localStorage.setItem(
-            'rahnamo_bookings',
-            JSON.stringify(existing.filter((b: BookingTicketData) => b.id !== newBooking.id))
-          );
-        } catch (err) {
-          console.error(err);
-        }
-        setIsProcessingPayment(false);
-        setCardError(t('bookingInsertError'));
-        return;
-      }
-    }
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ kind: 'booking_created', id: row.id }),
+    });
 
     setIsProcessingPayment(false);
     setShowPaymentModal(false);
@@ -500,9 +420,11 @@ export default function CounselorPage() {
       <div className="max-w-4xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
         {/* Left Column: Counselor Profile Card */}
         <div className="md:col-span-1 bg-white/95 p-6 rounded-3xl border border-amber-900/10 shadow-sm h-fit">
-          <img
+          <Image
             src={counselor.avatarUrl}
             alt={counselor.fullName}
+            width={96}
+            height={96}
             className="w-24 h-24 rounded-2xl object-cover mx-auto border-2 border-amber-200 shadow-xs"
           />
           <div className="text-center mt-4">
@@ -643,9 +565,7 @@ export default function CounselorPage() {
           {!bookingTicket && viewMode === 'text_qa' && counselor.pricePerQuestion != null ? (
             <TextQaPanel counselor={counselor} />
           ) : !bookingTicket && viewMode === 'video' && !menteeEmail ? (
-            /* Mandatory-login gate for the video booking wizard (Stage 3) --
-               Text Q&A above keeps its own separate anonymous-auth path,
-               untouched until Stage 4. */
+            /* Mandatory login gate for the video booking wizard. */
             <div className="bg-white/95 rounded-3xl border-2 border-amber-900/20 p-8 shadow-md text-center space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto shadow-sm">
                 <Lock className="w-7 h-7 text-amber-300" />
@@ -965,13 +885,12 @@ export default function CounselorPage() {
                     id="student-email"
                     type="email"
                     value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
-                    }}
+                    readOnly
+                    maxLength={254}
+                    autoComplete="email"
                     placeholder={t('form.emailPlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.email ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
+                      errors.email ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 text-stone-600 cursor-not-allowed'
                     }`}
                   />
                   {errors.email && <p className="text-[11px] text-red-600 mt-1">{errors.email}</p>}
@@ -1171,7 +1090,7 @@ export default function CounselorPage() {
         </div>
       </div>
 
-      {/* Simulated Interactive Payment Processing Modal */}
+      {/* Manual transfer receipt modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-900/10 relative animate-in fade-in zoom-in duration-200">
@@ -1212,22 +1131,27 @@ export default function CounselorPage() {
             <div className="my-4 p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
               <span className="text-[10px] uppercase font-bold text-amber-900 block">{t('modal.cardBoxLabel')}</span>
               <div className="flex items-center justify-between">
-                <span className="font-mono font-extrabold text-sm text-amber-950">8600 5555 4444 3333</span>
+                <span className="font-mono font-extrabold text-sm text-amber-950">
+                  {isPaymentConfigured ? paymentCardDisplay : t('modal.paymentUnavailable')}
+                </span>
                 <button
                   type="button"
+                  disabled={!isPaymentConfigured}
                   onClick={() => {
-                    if (typeof navigator !== 'undefined') {
-                      navigator.clipboard.writeText('8600555544443333');
+                    if (typeof navigator !== 'undefined' && isPaymentConfigured) {
+                      navigator.clipboard.writeText(paymentCardDigits);
                       setCopiedCard(true);
                       setTimeout(() => setCopiedCard(false), 2000);
                     }
                   }}
-                  className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer"
+                  className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer disabled:opacity-40"
                 >
                   {copiedCard ? t('modal.copiedButton') : t('modal.copyButton')}
                 </button>
               </div>
-              <span className="text-[10px] text-stone-600 block">{t('modal.cardOwnerLabel')}</span>
+              <span className="text-[10px] text-stone-600 block">
+                {isPaymentConfigured ? paymentCardOwner : t('modal.paymentUnavailableHint')}
+              </span>
             </div>
 
             <div className="space-y-3">
@@ -1240,6 +1164,7 @@ export default function CounselorPage() {
                   placeholder={t('modal.receiptPlaceholder')}
                   value={receiptRef}
                   onChange={(e) => setReceiptRef(e.target.value)}
+                  maxLength={200}
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
                 />
                 <span className="text-[10px] text-stone-500 block mt-1">
@@ -1247,30 +1172,12 @@ export default function CounselorPage() {
                 </span>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-stone-700 block mb-1">
-                  {t('modal.cardNumberLabel')}
-                </label>
-                <div className="relative">
-                  <CreditCard className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    maxLength={19}
-                    placeholder={t('modal.cardNumberPlaceholder')}
-                    value={cardNumber}
-                    onChange={handleCardChange}
-                    className={`w-full pl-9 pr-3 py-2.5 bg-stone-50 border rounded-xl text-xs outline-none transition-all ${
-                      cardError ? 'border-red-500 bg-red-50/20' : 'border-stone-300 focus:ring-2 focus:ring-amber-700'
-                    }`}
-                  />
-                </div>
-                {cardError && <p className="text-[11px] text-red-600 mt-1">{cardError}</p>}
-              </div>
+              {cardError && <p className="text-[11px] text-red-600">{cardError}</p>}
 
               <button
                 type="button"
                 onClick={handleConfirmPayment}
-                disabled={isProcessingPayment}
+                disabled={isProcessingPayment || !isPaymentConfigured}
                 className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
               >
                 {isProcessingPayment ? (

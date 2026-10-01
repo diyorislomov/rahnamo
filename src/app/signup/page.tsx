@@ -8,12 +8,13 @@ import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { KeyRound, Mail, User, UserPlus, Loader2, MailCheck } from 'lucide-react';
+import { safeRedirectPath } from '@/lib/safeRedirect';
 
 function SignupForm() {
   const t = useTranslations('menteeAuth');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/my-bookings';
+  const redirectTo = safeRedirectPath(searchParams.get('redirect'), '/my-bookings');
 
   const [checkingSession, setCheckingSession] = useState(true);
   const [fullName, setFullName] = useState('');
@@ -113,6 +114,8 @@ function SignupForm() {
                     <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
                     <input
                       type="text"
+                      maxLength={120}
+                      autoComplete="name"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder={t('signup.fullNamePlaceholder')}
@@ -126,6 +129,8 @@ function SignupForm() {
                     <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
                     <input
                       type="email"
+                      maxLength={254}
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
@@ -138,6 +143,8 @@ function SignupForm() {
                     <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
                     <input
                       type="password"
+                      maxLength={200}
+                      autoComplete="new-password"
                       placeholder="••••••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -151,6 +158,8 @@ function SignupForm() {
                     <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
                     <input
                       type="password"
+                      maxLength={200}
+                      autoComplete="new-password"
                       placeholder="••••••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}

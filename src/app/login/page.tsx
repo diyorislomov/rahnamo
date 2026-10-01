@@ -8,12 +8,13 @@ import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { KeyRound, Mail, Lock, Loader2 } from 'lucide-react';
+import { safeRedirectPath } from '@/lib/safeRedirect';
 
 function LoginForm() {
   const t = useTranslations('menteeAuth');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/my-bookings';
+  const redirectTo = safeRedirectPath(searchParams.get('redirect'), '/my-bookings');
 
   const [checkingSession, setCheckingSession] = useState(true);
   const [email, setEmail] = useState('');
@@ -77,6 +78,8 @@ function LoginForm() {
                 <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
                 <input
                   type="email"
+                  maxLength={254}
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
@@ -89,6 +92,8 @@ function LoginForm() {
                 <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
                 <input
                   type="password"
+                  maxLength={200}
+                  autoComplete="current-password"
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -96,6 +101,9 @@ function LoginForm() {
                 />
               </div>
               {error && <p className="text-[11px] text-red-600 font-semibold mt-1.5">{error}</p>}
+              <Link href="/forgot-password" className="text-[11px] font-semibold text-amber-800 hover:text-amber-950 mt-2 inline-block">
+                {t('login.forgotPassword')}
+              </Link>
             </div>
             <button
               type="submit"

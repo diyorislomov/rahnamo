@@ -2,6 +2,7 @@
 
 import { Playfair_Display } from 'next/font/google';
 import { useTranslations } from 'next-intl';
+import Image from 'next/image';
 import { ArrowRight, ArrowDown, Building2, Clock, ShieldCheck, Sparkles, Star, Zap } from 'lucide-react';
 import { Counselor } from '@/types';
 
@@ -86,9 +87,11 @@ export default function CleanHero({ counselors }: CleanHeroProps) {
               </div>
 
               <div className="flex items-start gap-4 mt-4">
-                <img
+                <Image
                   src={featured.avatarUrl}
                   alt={featured.fullName}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-200 flex-shrink-0"
                 />
                 <div className="min-w-0">

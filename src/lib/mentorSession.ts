@@ -1,3 +1,4 @@
+import 'server-only';
 import { getServiceRoleClient } from './supabaseServiceRole';
 
 // Stage 5 of the real-auth migration: resolves the REAL, authenticated

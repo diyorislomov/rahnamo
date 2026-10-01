@@ -78,6 +78,7 @@ export interface ForumAnswer {
   counselorId: string;
   body: string;
   createdAt: string;
+  counselorName?: string;
 }
 
 export interface SurveyResponse {

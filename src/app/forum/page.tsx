@@ -1,20 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
-import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
-import {
-  isSupabaseConfigured,
-  mapForumQuestion,
-  mapForumAnswer,
-  loadLocalForumQuestions,
-  loadLocalForumAnswers,
-} from '@/lib/forum';
+import { mapForumQuestion, mapForumAnswer } from '@/lib/forum';
 import { ForumQuestion, ForumAnswer } from '@/types';
 import {
   MessageCircleQuestion,
@@ -34,6 +27,7 @@ export default function ForumPage() {
   const [questions, setQuestions] = useState<ForumQuestion[]>([]);
   const [answers, setAnswers] = useState<ForumAnswer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   // Ask-a-question form
   const [title, setTitle] = useState('');
@@ -69,12 +63,11 @@ export default function ForumPage() {
         setCheckingMentorSession(false);
         return;
       }
-      const { data: counselorRow } = await supabase
-        .from('counselors')
-        .select('full_name')
-        .eq('auth_id', user.id)
-        .maybeSingle();
-      setMentorSession(counselorRow ? { fullName: counselorRow.full_name } : null);
+      const response = await fetch('/api/mentor/profile', {
+        headers: { Authorization: `Bearer ${data.session?.access_token}` },
+      });
+      const result = await response.json();
+      setMentorSession(response.ok && result.success ? { fullName: result.counselor.full_name } : null);
       setCheckingMentorSession(false);
     }
     loadMentorSession();
@@ -85,39 +78,27 @@ export default function ForumPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Pure .then()/.catch() chains, not async/await — every branch's setState
-  // calls need to sit inside a Promise callback, not just after an await
-  // inside a function the effect calls directly, for React's
-  // set-state-in-effect check to recognize them as genuinely deferred.
-  const loadData = () => {
-    if (isSupabaseConfigured()) {
-      Promise.all([
-        supabase.from('forum_questions').select('*').order('created_at', { ascending: false }),
-        supabase.from('forum_answers').select('*').order('created_at', { ascending: true }),
-      ])
-        .then(([{ data: qData, error: qErr }, { data: aData, error: aErr }]) => {
-          if (qErr || aErr) throw qErr || aErr;
-          setQuestions((qData || []).map(mapForumQuestion));
-          setAnswers((aData || []).map(mapForumAnswer));
-        })
-        .catch((err) => {
-          console.warn('Forum fetch error, falling back to local storage:', err);
-          setQuestions(loadLocalForumQuestions());
-          setAnswers(loadLocalForumAnswers());
-        })
-        .finally(() => setLoading(false));
-    } else {
-      Promise.resolve().then(() => {
-        setQuestions(loadLocalForumQuestions());
-        setAnswers(loadLocalForumAnswers());
-        setLoading(false);
-      });
-    }
-  };
+  const loadData = useCallback(() => {
+    fetch('/api/forum/questions')
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'query_failed');
+        setQuestions((result.questions || []).map(mapForumQuestion));
+        setAnswers((result.answers || []).map(mapForumAnswer));
+        setLoadError('');
+      })
+      .catch((error) => {
+        console.error('[FORUM_LIST_FAILED]', error);
+        setQuestions([]);
+        setAnswers([]);
+        setLoadError(t('submitError'));
+      })
+      .finally(() => setLoading(false));
+  }, [t]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const validateQuestion = () => {
     const newErrors: { [key: string]: string } = {};
@@ -144,46 +125,21 @@ export default function ForumPage() {
     setSubmitting(true);
     setSubmitError('');
 
-    const newQuestion: ForumQuestion = {
-      id: crypto.randomUUID(),
-      studentNameOrAnonymous: isAnonymous ? t('anonymousName') : name.trim(),
-      email: email.trim(),
-      category,
-      title: title.trim(),
-      body: body.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    // Awaited and gated on purpose: the question must not appear posted
-    // (optimistic local state) unless it actually persisted -- previously
-    // this only console.warn'd and added it to local state regardless,
-    // so the poster could believe it was public when no one else could
-    // ever see it.
-    if (isSupabaseConfigured()) {
-      const { error } = await supabase.from('forum_questions').insert({
-        id: newQuestion.id,
-        student_name_or_anonymous: newQuestion.studentNameOrAnonymous,
-        email: newQuestion.email,
-        category: newQuestion.category,
-        title: newQuestion.title,
-        body: newQuestion.body,
-      });
-      if (error) {
-        console.error('[FORUM_QUESTION_INSERT_FAILED]', error);
-        setSubmitting(false);
-        setSubmitError(t('submitError'));
-        return;
-      }
-    }
-
     try {
-      const existing = loadLocalForumQuestions();
-      localStorage.setItem('rahnamo_forum_questions', JSON.stringify([newQuestion, ...existing]));
-    } catch (err) {
-      console.error(err);
+      const response = await fetch('/api/forum/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, category, title, body, isAnonymous }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'insert_failed');
+      setQuestions((prev) => [mapForumQuestion(result.question), ...prev]);
+    } catch (error) {
+      console.error('[FORUM_QUESTION_INSERT_FAILED]', error);
+      setSubmitting(false);
+      setSubmitError(t('submitError'));
+      return;
     }
-
-    setQuestions((prev) => [newQuestion, ...prev]);
     setTitle('');
     setBody('');
     setName('');
@@ -224,16 +180,7 @@ export default function ForumPage() {
       return;
     }
 
-    const newAnswer: ForumAnswer = result.answer;
-
-    if (!result.persisted) {
-      try {
-        const existing = loadLocalForumAnswers();
-        localStorage.setItem('rahnamo_forum_answers', JSON.stringify([...existing, newAnswer]));
-      } catch (err) {
-        console.error(err);
-      }
-    }
+    const newAnswer: ForumAnswer = { ...result.answer, counselorName: mentorSession?.fullName };
 
     setAnswers((prev) => [...prev, newAnswer]);
     setAnswerDrafts((prev) => ({ ...prev, [questionId]: '' }));
@@ -277,6 +224,7 @@ export default function ForumPage() {
             <input
               id="forum-title"
               type="text"
+              maxLength={160}
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
@@ -315,6 +263,7 @@ export default function ForumPage() {
             <textarea
               id="forum-body"
               rows={4}
+              maxLength={4000}
               value={body}
               onChange={(e) => {
                 setBody(e.target.value);
@@ -350,6 +299,7 @@ export default function ForumPage() {
                 <input
                   id="forum-name"
                   type="text"
+                  maxLength={80}
                   value={name}
                   onChange={(e) => {
                     setName(e.target.value);
@@ -371,6 +321,8 @@ export default function ForumPage() {
               <input
                 id="forum-email"
                 type="email"
+                maxLength={254}
+                autoComplete="email"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -424,6 +376,10 @@ export default function ForumPage() {
             <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
               <p className="text-xs text-stone-500">{t('loadingQuestions')}</p>
             </div>
+          ) : loadError ? (
+            <div className="bg-red-50 rounded-3xl p-8 text-center border border-red-200 shadow-xs">
+              <p className="text-xs font-semibold text-red-700">{loadError}</p>
+            </div>
           ) : sortedQuestions.length === 0 ? (
             <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
               <MessageCircleQuestion className="w-10 h-10 text-stone-400 mx-auto mb-3" />
@@ -458,12 +414,11 @@ export default function ForumPage() {
                   {questionAnswers.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-amber-900/10 space-y-3">
                       {questionAnswers.map((a) => {
-                        const responder = INITIAL_COUNSELORS.find((c) => c.id === a.counselorId);
                         return (
                           <div key={a.id} className="bg-amber-50/60 border border-amber-900/10 rounded-xl p-3.5">
                             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
                               <ShieldCheck className="w-3.5 h-3.5 text-amber-700 fill-amber-100" />
-                              <span>{responder?.fullName || t('defaultResponderName')}</span>
+                              <span>{a.counselorName || t('defaultResponderName')}</span>
                             </div>
                             <p className="text-xs text-stone-700 mt-1.5 leading-relaxed">{a.body}</p>
                           </div>
@@ -481,6 +436,7 @@ export default function ForumPage() {
                         </p>
                         <textarea
                           rows={2}
+                          maxLength={4000}
                           value={draftBody}
                           onChange={(e) => setAnswerDrafts((prev) => ({ ...prev, [q.id]: e.target.value }))}
                           placeholder={t('answer.bodyPlaceholder')}

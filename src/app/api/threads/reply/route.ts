@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
 import { resolveMentorFromRequest } from '@/lib/mentorSession';
+import { allowRequest } from '@/lib/rateLimit';
 
 // Stage 5: identity now comes only from the caller's real mentor session
 // (resolveMentorFromRequest), never from a client-supplied counselorId --
@@ -15,8 +16,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  const { threadId, body } = await request.json();
-  if (typeof threadId !== 'string' || typeof body !== 'string' || body.trim().length < 1) {
+  if (!(await allowRequest(`thread-reply:${mentor.authId}`, 60, 15 * 60 * 1000))) {
+    return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
+  }
+
+  let input: unknown;
+  try {
+    input = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
+  }
+  const { threadId, body } = input as Record<string, unknown>;
+  if (
+    typeof threadId !== 'string' ||
+    threadId.length > 100 ||
+    typeof body !== 'string' ||
+    body.trim().length < 1 ||
+    body.trim().length > 4000
+  ) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
@@ -33,7 +50,7 @@ export async function POST(request: Request) {
   // not just internal consistency against a client-claimed id.
   const { data: thread, error: threadError } = await supabase
     .from('question_threads')
-    .select('id, counselor_id')
+    .select('id, counselor_id, payment_status')
     .eq('id', threadId)
     .single();
 
@@ -42,6 +59,9 @@ export async function POST(request: Request) {
   }
   if (thread.counselor_id !== mentor.counselorId) {
     return NextResponse.json({ success: false, error: 'counselor_mismatch' }, { status: 403 });
+  }
+  if (thread.payment_status === 'closed') {
+    return NextResponse.json({ success: false, error: 'thread_closed' }, { status: 409 });
   }
 
   const { data: inserted, error } = await supabase

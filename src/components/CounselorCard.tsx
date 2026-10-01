@@ -6,6 +6,7 @@ import { ArrowRight, UserRound } from 'lucide-react';
 import { Counselor } from '@/types';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import { useTilt } from '@/hooks/useTilt';
+import Image from 'next/image';
 
 // Deliberately uncluttered: avatar, name, one specialty label, a short
 // description, one price, one CTA. Rating/verified badge/outcomes/company
@@ -34,9 +35,11 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
       <div className="relative flex-1">
         <div className="flex items-start gap-4">
           {counselor.avatarUrl ? (
-            <img
+            <Image
               src={counselor.avatarUrl}
               alt={counselor.fullName}
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-200 shadow-xs group-hover:border-amber-400 group-hover:scale-105 transition-all flex-shrink-0"
             />
           ) : (

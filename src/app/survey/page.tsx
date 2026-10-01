@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import RahnamoLogo from '@/components/RahnamoLogo';
-import { supabase } from '@/lib/supabase';
-import { isSupabaseConfigured } from '@/lib/counselors';
 import { ClipboardList, CheckCircle2, Sparkles } from 'lucide-react';
 
 const AGE_RANGES = ["18 dan kichik", '18-24', '25-34', '35-44', "45 va undan katta"];
@@ -95,34 +93,31 @@ export default function SurveyPage() {
     setIsSubmitting(true);
     setSubmitError('');
 
-    // No localStorage fallback here on purpose -- unlike the booking and
-    // application forms (which predate a reliable Supabase connection and
-    // carry a local-cache fallback for that reason), this is a brand-new
-    // form with no such history. A real error is shown on failure instead
-    // of a fallback that could quietly mask one.
-    if (!isSupabaseConfigured()) {
-      setIsSubmitting(false);
-      setSubmitError("So'rovnoma hozircha ishlamayapti. Birozdan so'ng qayta urinib ko'ring.");
-      return;
-    }
-
-    const { error } = await supabase.from('survey_responses').insert({
-      age_range: ageRange || null,
-      status: status || null,
-      field_of_study: fieldOfStudy.trim() || null,
-      interest_area: interestArea === 'Other' ? interestAreaOther.trim() || 'Other' : interestArea || null,
-      biggest_challenge: biggestChallenge.trim() || null,
-      prior_advice_source:
-        priorAdviceSource === 'Other' ? priorAdviceSourceOther.trim() || 'Other' : priorAdviceSource || null,
-      interested_in_service: interestedInService,
-      price_willingness: priceWillingness || null,
-      preferred_format: preferredFormat || null,
-      contact_info: contactInfo.trim(),
-      willing_to_refer: willingToRefer,
-    });
-
-    if (error) {
-      console.error('[SURVEY_INSERT_FAILED]', error);
+    // A failed server write is shown as an error; contact details are never
+    // cached in the browser.
+    try {
+      const response = await fetch('/api/survey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          age_range: ageRange || null,
+          status: status || null,
+          field_of_study: fieldOfStudy.trim() || null,
+          interest_area: interestArea === 'Other' ? interestAreaOther.trim() || 'Other' : interestArea || null,
+          biggest_challenge: biggestChallenge.trim() || null,
+          prior_advice_source:
+            priorAdviceSource === 'Other' ? priorAdviceSourceOther.trim() || 'Other' : priorAdviceSource || null,
+          interested_in_service: interestedInService,
+          price_willingness: priceWillingness || null,
+          preferred_format: preferredFormat || null,
+          contact_info: contactInfo.trim(),
+          willing_to_refer: willingToRefer,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'submit_failed');
+    } catch (error) {
+      console.error('[SURVEY_SUBMIT_FAILED]', error);
       setIsSubmitting(false);
       setSubmitError(
         "So'rovnomani yuborishda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring."
