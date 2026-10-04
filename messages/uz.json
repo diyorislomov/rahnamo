@@ -554,7 +554,8 @@
       "google": "Google orqali davom etish",
       "telegram": "Telegram orqali davom etish",
       "failed": "Kirish amalga oshmadi. Qayta urinib ko‘ring.",
-      "privacy": "Davom etish orqali faqat profilingizdagi asosiy ma’lumotlar olinadi. Parolingiz Rahnamo serveriga berilmaydi."
+      "privacy": "Davom etish orqali faqat profilingizdagi asosiy ma’lumotlar olinadi. Parolingiz Rahnamo serveriga berilmaydi.",
+      "unavailable": "Google va Telegram orqali kirish hozir sozlanmoqda. Administrator OAuth kalitlarini qo‘shgach tugmalar avtomatik ochiladi."
     }
   },
   "admin": {

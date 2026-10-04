@@ -27,11 +27,25 @@ export default function SocialAuthCard({ mode }: { mode: 'login' | 'signup' }) {
   const { status } = useSession();
   const redirectTo = safeRedirectPath(searchParams.get('redirect'), '/my-bookings');
   const [pending, setPending] = useState<'google' | 'telegram' | null>(null);
+  const [providers, setProviders] = useState<Set<string> | null>(null);
   const hasError = Boolean(searchParams.get('error'));
 
   useEffect(() => {
     if (status === 'authenticated') router.replace(redirectTo);
   }, [redirectTo, router, status]);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/providers')
+      .then((response) => response.json())
+      .then((result) => {
+        if (active) setProviders(new Set(Object.keys(result || {})));
+      })
+      .catch(() => {
+        if (active) setProviders(new Set());
+      });
+    return () => { active = false; };
+  }, []);
 
   async function start(provider: 'google' | 'telegram') {
     setPending(provider);
@@ -64,7 +78,7 @@ export default function SocialAuthCard({ mode }: { mode: 'login' | 'signup' }) {
           </div>
 
           <div className="space-y-3">
-            <button
+            {providers?.has('google') && <button
               type="button"
               onClick={() => start('google')}
               disabled={pending !== null}
@@ -72,8 +86,8 @@ export default function SocialAuthCard({ mode }: { mode: 'login' | 'signup' }) {
             >
               {pending === 'google' ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
               {t('google')}
-            </button>
-            <button
+            </button>}
+            {providers?.has('telegram') && <button
               type="button"
               onClick={() => start('telegram')}
               disabled={pending !== null}
@@ -81,7 +95,13 @@ export default function SocialAuthCard({ mode }: { mode: 'login' | 'signup' }) {
             >
               {pending === 'telegram' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               {t('telegram')}
-            </button>
+            </button>}
+            {providers === null && <Loader2 className="h-5 w-5 animate-spin text-amber-800 mx-auto" />}
+            {providers?.size === 0 && (
+              <p className="text-xs font-semibold text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-3">
+                {t('unavailable')}
+              </p>
+            )}
           </div>
 
           {hasError && (
@@ -96,4 +116,3 @@ export default function SocialAuthCard({ mode }: { mode: 'login' | 'signup' }) {
     </div>
   );
 }
-

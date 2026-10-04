@@ -15,8 +15,8 @@ const Telegram = {
   name: 'Telegram',
   type: 'oidc' as const,
   issuer: 'https://oauth.telegram.org',
-  clientId: process.env.AUTH_TELEGRAM_ID || 'telegram-not-configured',
-  clientSecret: process.env.AUTH_TELEGRAM_SECRET || 'telegram-not-configured',
+  clientId: process.env.AUTH_TELEGRAM_ID as string,
+  clientSecret: process.env.AUTH_TELEGRAM_SECRET as string,
   authorization: { params: { scope: 'openid profile' } },
   profile(profile: TelegramProfile) {
     return {
@@ -28,11 +28,20 @@ const Telegram = {
   },
 };
 
+const googleConfigured = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+const telegramConfigured = Boolean(process.env.AUTH_TELEGRAM_ID && process.env.AUTH_TELEGRAM_SECRET);
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PostgresAdapter(postgres),
   session: { strategy: 'database' },
   trustHost: true,
-  providers: [Google, Telegram],
+  providers: [
+    ...(googleConfigured ? [Google({
+      clientId: process.env.AUTH_GOOGLE_ID as string,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET as string,
+    })] : []),
+    ...(telegramConfigured ? [Telegram] : []),
+  ],
   pages: {
     signIn: '/login',
     error: '/login',
@@ -44,4 +53,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
-

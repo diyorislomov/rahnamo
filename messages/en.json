@@ -554,7 +554,8 @@
       "google": "Continue with Google",
       "telegram": "Continue with Telegram",
       "failed": "Sign-in failed. Please try again.",
-      "privacy": "Only basic profile information is used. Your password is never shared with the Rahnamo server."
+      "privacy": "Only basic profile information is used. Your password is never shared with the Rahnamo server.",
+      "unavailable": "Google and Telegram sign-in is being configured. The buttons will appear automatically after OAuth credentials are added."
     }
   },
   "admin": {
