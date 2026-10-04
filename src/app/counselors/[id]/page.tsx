@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useTranslations, useLocale } from 'next-intl';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { Tier, Review, Counselor } from '@/types';
@@ -63,6 +64,7 @@ export default function CounselorPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const params = useParams();
+  const { data: authSession, status: authStatus } = useSession();
   
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
@@ -101,15 +103,12 @@ export default function CounselorPage() {
   useEffect(() => {
     if (!counselor || !reviewsLoading) return;
 
-    supabase
-      .from('reviews')
-      .select('*')
-      .eq('counselor_id', counselor.id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!error && data) {
+    fetch(`/api/reviews?counselorId=${encodeURIComponent(counselor.id)}`)
+      .then(async (response) => {
+        const result = await response.json();
+        if (response.ok && result.reviews) {
           setReviews(
-            (data as ReviewRow[]).map((r) => ({
+            (result.reviews as ReviewRow[]).map((r) => ({
               id: r.id,
               bookingId: r.booking_id,
               counselorId: r.counselor_id,
@@ -121,7 +120,8 @@ export default function CounselorPage() {
           );
         }
         setReviewsLoading(false);
-      });
+      })
+      .catch(() => setReviewsLoading(false));
   }, [counselor, reviewsLoading]);
 
   const [selectedTier, setSelectedTier] = useState<Tier>('standard');
@@ -149,25 +149,12 @@ export default function CounselorPage() {
   // the same real-account requirement in its own panel. null = still
   // checking; false = not logged in as a real
   // (non-anonymous) mentee; a string = that mentee's email.
-  const [menteeEmail, setMenteeEmail] = useState<string | null | false>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const user = data.session?.user;
-      setMenteeEmail(user && !user.is_anonymous ? user.email || 'mentee' : false);
-      if (user && !user.is_anonymous) setEmail(user.email || '');
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
-        setMenteeEmail(session.user.email || 'mentee');
-        setEmail(session.user.email || '');
-      }
-      if (event === 'SIGNED_OUT') {
-        setMenteeEmail(false);
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  const menteeEmail: string | null | false =
+    authStatus === 'loading'
+      ? null
+      : authStatus === 'authenticated' && authSession?.user
+        ? authSession.user.email || authSession.user.name || 'mentee'
+        : false;
 
   // Errors & Ticket state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -306,9 +293,7 @@ export default function CounselorPage() {
       cleanedTelegram = '@' + cleanedTelegram;
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
+    if (authStatus !== 'authenticated') {
       setIsProcessingPayment(false);
       setCardError(t('bookingInsertError'));
       return;
@@ -316,13 +301,14 @@ export default function CounselorPage() {
 
     const response = await fetch('/api/bookings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         counselorId: counselor.id,
         tier: selectedTier,
         paymentMethod,
         slot: selectedSlot,
         studentName: fullName,
+        email: email.trim(),
         phone,
         telegram: cleanedTelegram,
         education,
@@ -363,7 +349,7 @@ export default function CounselorPage() {
 
     void fetch('/api/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'booking_created', id: row.id }),
     });
 
@@ -885,12 +871,15 @@ export default function CounselorPage() {
                     id="student-email"
                     type="email"
                     value={email}
-                    readOnly
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errors.email) setErrors({ ...errors, email: '' });
+                    }}
                     maxLength={254}
                     autoComplete="email"
                     placeholder={t('form.emailPlaceholder')}
                     className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.email ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 text-stone-600 cursor-not-allowed'
+                      errors.email ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 text-stone-800 focus:ring-2 focus:ring-amber-700'
                     }`}
                   />
                   {errors.email && <p className="text-[11px] text-red-600 mt-1">{errors.email}</p>}

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { generateMeetLink } from '@/lib/meeting';
 import { resolveMenteeFromRequest } from '@/lib/menteeSession';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { postgres } from '@/lib/postgres';
+import { supabase } from '@/lib/supabase';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { isValidLocale } from '@/i18n/config';
 
@@ -12,6 +13,7 @@ type BookingInput = {
   paymentMethod?: unknown;
   slot?: unknown;
   studentName?: unknown;
+  email?: unknown;
   phone?: unknown;
   telegram?: unknown;
   education?: unknown;
@@ -50,6 +52,7 @@ export async function POST(request: Request) {
     typeof body.paymentMethod === 'string' && METHODS.has(body.paymentMethod) ? body.paymentMethod : null;
   const slot = textValue(body.slot, 1, 200);
   const studentName = textValue(body.studentName, 3, 120);
+  const email = textValue(body.email, 3, 254);
   const phone = textValue(body.phone, 7, 30);
   const telegram = textValue(body.telegram, 2, 80);
   const education = textValue(body.education, 1, 300);
@@ -68,17 +71,12 @@ export async function POST(request: Request) {
     !education ||
     !question ||
     !paymentReceipt ||
-    !mentee.email
+    !email ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   ) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
   const { data: counselor, error: counselorError } = await supabase
     .from('counselors')
     .select(
@@ -94,46 +92,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'slot_unavailable' }, { status: 409 });
   }
 
-  const { data: occupied } = await supabase
-    .from('bookings')
-    .select('id')
-    .eq('counselor_id', counselorId)
-    .eq('slot', slot)
-    .eq('status', 'confirmed')
-    .limit(1);
-  if (occupied && occupied.length > 0) {
+  const occupied = await postgres.query(
+    `SELECT id FROM bookings
+     WHERE counselor_id = $1 AND slot = $2 AND status = 'confirmed'
+     LIMIT 1`,
+    [counselorId, slot]
+  );
+  if ((occupied.rowCount ?? 0) > 0) {
     return NextResponse.json({ success: false, error: 'slot_unavailable' }, { status: 409 });
   }
 
   const id = `RNM-${crypto.randomUUID()}`;
   const price = tier === 'standard' ? counselor.standard_price : counselor.premium_price;
   const meetLink = generateMeetLink(id);
-  const row = {
-    id,
-    device_id: `auth-${mentee.userId}`,
-    mentee_auth_id: mentee.userId,
-    counselor_id: counselor.id,
-    counselor_name: counselor.full_name,
-    counselor_headline: counselor.headline,
-    counselor_avatar: counselor.avatar_url,
-    tier,
-    price,
-    payment_method: paymentMethod,
-    payment_receipt: paymentReceipt,
-    slot,
-    student_name: studentName,
-    email: mentee.email,
-    phone,
-    telegram,
-    education,
-    question,
-    meet_link: meetLink,
-    locale,
-  };
-
-  const { data: inserted, error } = await supabase.from('bookings').insert(row).select('*').single();
-  if (error || !inserted) {
-    const conflict = error?.code === '23505';
+  let inserted;
+  try {
+    const result = await postgres.query(
+      `INSERT INTO bookings (
+         id, user_id, counselor_id, counselor_name, counselor_headline,
+         counselor_avatar, tier, price, payment_method, payment_receipt,
+         slot, student_name, email, phone, telegram, education, question,
+         meet_link, locale
+       ) VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+         $11, $12, $13, $14, $15, $16, $17, $18, $19
+       ) RETURNING *`,
+      [
+        id, mentee.userId, counselor.id, counselor.full_name, counselor.headline,
+        counselor.avatar_url, tier, price, paymentMethod, paymentReceipt,
+        slot, studentName, email, phone, telegram, education, question,
+        meetLink, locale,
+      ]
+    );
+    inserted = result.rows[0];
+  } catch (error) {
+    const conflict = Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23505');
     return NextResponse.json(
       { success: false, error: conflict ? 'slot_unavailable' : 'insert_failed' },
       { status: conflict ? 409 : 500 }
@@ -150,11 +143,26 @@ export async function POST(request: Request) {
     paymentMethod,
     phone,
     telegram,
-    email: mentee.email,
+    email,
     education,
     question,
     meetLink,
   });
 
   return NextResponse.json({ success: true, booking: inserted });
+}
+
+export async function GET(request: Request) {
+  const mentee = await resolveMenteeFromRequest(request);
+  if (!mentee) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+
+  const [bookings, reviews] = await Promise.all([
+    postgres.query('SELECT * FROM bookings WHERE user_id = $1 ORDER BY created_at DESC', [mentee.userId]),
+    postgres.query('SELECT booking_id FROM reviews WHERE user_id = $1', [mentee.userId]),
+  ]);
+  return NextResponse.json({
+    success: true,
+    bookings: bookings.rows,
+    reviewedBookingIds: reviews.rows.map((row: { booking_id: string }) => row.booking_id),
+  });
 }

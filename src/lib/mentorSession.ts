@@ -1,5 +1,5 @@
 import 'server-only';
-import { getServiceRoleClient } from './supabaseServiceRole';
+import { supabase } from './supabase';
 
 // Stage 5 of the real-auth migration: resolves the REAL, authenticated
 // mentor behind an incoming request's `Authorization: Bearer <access
@@ -18,14 +18,6 @@ export async function resolveMentorFromRequest(
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
   if (!token) return null;
-
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('[MENTOR_SESSION_SERVICE_ROLE_UNAVAILABLE]', err);
-    return null;
-  }
 
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
   if (userError || !userData.user) return null;

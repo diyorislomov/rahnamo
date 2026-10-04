@@ -522,6 +522,17 @@
       "loginLink": "Kirish",
       "emailAlreadyRegistered": "Bu elektron pochta allaqachon ro'yxatdan o'tgan. Kirishga urinib ko'ring.",
       "checkEmail": "Deyarli tayyor! Kirishdan oldin tasdiqlash havolasi uchun {email} pochtangizni tekshiring."
+    },
+    "social": {
+      "badge": "Xavfsiz kirish",
+      "loginTitle": "Kirish",
+      "signupTitle": "Ro‘yxatdan o‘tish",
+      "loginSubtitle": "Google yoki Telegram orqali hisobingizga kiring.",
+      "signupSubtitle": "Google yoki Telegram orqali bir necha soniyada hisob yarating.",
+      "google": "Google orqali davom etish",
+      "telegram": "Telegram orqali davom etish",
+      "failed": "Kirish amalga oshmadi. Qayta urinib ko‘ring.",
+      "privacy": "Davom etish orqali faqat profilingizdagi asosiy ma’lumotlar olinadi. Parolingiz Rahnamo serveriga berilmaydi."
     }
   },
   "admin": {

@@ -1,107 +1,81 @@
 import { NextResponse } from 'next/server';
 import { resolveMenteeFromRequest } from '@/lib/menteeSession';
 import { allowRequest } from '@/lib/rateLimit';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { postgres } from '@/lib/postgres';
+import { supabase } from '@/lib/supabase';
+import { isSameOrigin } from '@/lib/serverSecurity';
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
   const mentee = await resolveMenteeFromRequest(request);
-  if (!mentee) {
-    return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
-  }
+  if (!mentee) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   if (!(await allowRequest(`thread-start:${mentee.userId}`, 6, 60 * 60 * 1000))) {
     return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
   }
 
-  let input: unknown;
+  let input: Record<string, unknown>;
   try {
-    input = await request.json();
+    input = (await request.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
   }
-  const counselorId = (input as Record<string, unknown>).counselorId;
-  if (typeof counselorId !== 'string' || !counselorId || counselorId.length > 100) {
+  const counselorId = typeof input.counselorId === 'string' ? input.counselorId : '';
+  if (!counselorId || counselorId.length > 100) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
+  const existing = await postgres.query(
+    `SELECT id FROM question_threads
+     WHERE counselor_id = $1 AND user_id = $2 AND payment_status <> 'closed' LIMIT 1`,
+    [counselorId, mentee.userId]
+  );
+  if (existing.rows[0]) {
+    return NextResponse.json({ success: false, error: 'thread_already_open', threadId: existing.rows[0].id }, { status: 409 });
   }
 
-  const [{ data: counselor, error: counselorError }, { data: existing }] = await Promise.all([
-    supabase
-      .from('counselors')
-      .select('id, full_name, headline, avatar_url, price_per_question')
-      .eq('id', counselorId)
-      .maybeSingle(),
-    supabase
-      .from('question_threads')
-      .select('id')
-      .eq('counselor_id', counselorId)
-      .eq('student_auth_id', mentee.userId)
-      .neq('payment_status', 'closed')
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  if (existing) {
-    return NextResponse.json({ success: false, error: 'thread_already_open', threadId: existing.id }, { status: 409 });
-  }
+  const { data: counselor, error: counselorError } = await supabase
+    .from('counselors')
+    .select('id, full_name, headline, avatar_url, price_per_question, soft_cap')
+    .eq('id', counselorId)
+    .maybeSingle();
   if (counselorError || !counselor || counselor.price_per_question == null || counselor.price_per_question <= 0) {
     return NextResponse.json({ success: false, error: 'counselor_unavailable' }, { status: 404 });
   }
 
   const bookingId = crypto.randomUUID();
-  const { error: bookingError } = await supabase.from('bookings').insert({
-    id: bookingId,
-    device_id: mentee.userId,
-    mentee_auth_id: mentee.userId,
-    counselor_id: counselor.id,
-    counselor_name: counselor.full_name,
-    counselor_headline: counselor.headline,
-    counselor_avatar: counselor.avatar_url,
-    tier: 'text_qa',
-    price: 0,
-    payment_method: 'payme',
-    slot: 'Ochiq matnli maslahat',
-    student_name: mentee.email?.split('@')[0] || 'Mentee',
-    email: mentee.email || '',
-    phone: '',
-    telegram: '',
-    education: '',
-    question: 'Matnli maslahat',
-    payment_status: 'pending',
-    status: 'confirmed',
-  });
-
-  if (bookingError) {
-    console.error('[TEXT_QA_BOOKING_INSERT_FAILED]', bookingError);
-    return NextResponse.json({ success: false, error: 'booking_insert_failed' }, { status: 500 });
-  }
-
-  const { data: thread, error: threadError } = await supabase
-    .from('question_threads')
-    .insert({
-      booking_id: bookingId,
-      counselor_id: counselor.id,
-      student_auth_id: mentee.userId,
-      device_id: mentee.userId,
-      age_confirmed_at: new Date().toISOString(),
-    })
-    .select('*')
-    .single();
-
-  if (threadError || !thread) {
-    await supabase.from('bookings').delete().eq('id', bookingId);
-    console.error('[TEXT_QA_THREAD_INSERT_FAILED]', threadError);
-    const conflict = threadError?.code === '23505';
-    return NextResponse.json(
-      { success: false, error: conflict ? 'thread_already_open' : 'thread_insert_failed' },
-      { status: conflict ? 409 : 500 }
+  const client = await postgres.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO bookings (
+         id, user_id, counselor_id, counselor_name, counselor_headline, counselor_avatar,
+         tier, price, payment_method, slot, student_name, email, phone, telegram,
+         education, question, locale
+       ) VALUES ($1, $2, $3, $4, $5, $6, 'text_qa', 0, 'payme', $7, $8, $9, '', '', '', $10, 'uz')`,
+      [
+        bookingId, mentee.userId, counselor.id, counselor.full_name, counselor.headline,
+        counselor.avatar_url, 'Ochiq matnli maslahat', mentee.name || mentee.email?.split('@')[0] || 'Mentee',
+        mentee.email || '', 'Matnli maslahat',
+      ]
     );
+    const threadResult = await client.query(
+      `INSERT INTO question_threads (
+         booking_id, counselor_id, user_id, price_per_question, soft_cap, age_confirmed_at
+       ) VALUES ($1, $2, $3, $4, $5, now()) RETURNING *`,
+      [bookingId, counselor.id, mentee.userId, counselor.price_per_question, counselor.soft_cap]
+    );
+    await client.query('COMMIT');
+    const thread = threadResult.rows[0];
+    return NextResponse.json({
+      success: true,
+      thread: { ...thread, student_auth_id: thread.user_id, device_id: thread.user_id },
+    }, { status: 201 });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    const conflict = Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23505');
+    console.error('[TEXT_QA_START_FAILED]', error);
+    return NextResponse.json({ success: false, error: conflict ? 'thread_already_open' : 'insert_failed' }, { status: conflict ? 409 : 500 });
+  } finally {
+    client.release();
   }
-
-  return NextResponse.json({ success: true, thread }, { status: 201 });
 }

@@ -1,58 +1,28 @@
 import { NextResponse } from 'next/server';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
 import { resolveMentorFromRequest } from '@/lib/mentorSession';
 import { allowRequest } from '@/lib/rateLimit';
+import { postgres } from '@/lib/postgres';
 
-// Stage 5: identity comes only from the caller's real mentor session now
-// -- the old shared COUNSELOR_PASSCODE plus a client-supplied counselorId
-// let anyone read any mentor's inbox. service_role remains necessary since
-// anon/authenticated have no read access to another mentor's view of
-// these tables at all; resolveMentorFromRequest is what gates it now,
-// not the passcode.
 export async function POST(request: Request) {
   const mentor = await resolveMentorFromRequest(request);
-  if (!mentor) {
-    return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
-  }
+  if (!mentor) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   if (!(await allowRequest(`mentor-view:${mentor.authId}`, 120, 15 * 60 * 1000))) {
     return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('Service role client unavailable:', err);
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
-  const { data: threads, error: threadsError } = await supabase
-    .from('question_threads')
-    .select('*')
-    .eq('counselor_id', mentor.counselorId)
-    .neq('payment_status', 'closed')
-    .order('created_at', { ascending: false });
-
-  if (threadsError) {
-    console.error('[MENTOR_INBOX_THREADS_FAILED]', mentor.counselorId, threadsError);
-    return NextResponse.json({ success: false, error: 'query_failed' }, { status: 500 });
-  }
-
-  const threadIds = (threads || []).map((th) => th.id);
-  let messages: unknown[] = [];
-  if (threadIds.length > 0) {
-    const { data: msgData, error: msgError } = await supabase
-      .from('thread_messages')
-      .select('*')
-      .in('thread_id', threadIds)
-      .order('created_at', { ascending: true });
-
-    if (msgError) {
-      console.error('[MENTOR_INBOX_MESSAGES_FAILED]', mentor.counselorId, msgError);
-      return NextResponse.json({ success: false, error: 'query_failed' }, { status: 500 });
-    }
-    messages = msgData || [];
-  }
-
+  const threadResult = await postgres.query(
+    `SELECT *, user_id AS student_auth_id, user_id::text AS device_id
+     FROM question_threads WHERE counselor_id = $1 AND payment_status <> 'closed'
+     ORDER BY created_at DESC`,
+    [mentor.counselorId]
+  );
+  const threads = threadResult.rows;
+  const threadIds = threads.map((thread) => thread.id);
+  const messages = threadIds.length > 0
+    ? (await postgres.query(
+        'SELECT * FROM thread_messages WHERE thread_id = ANY($1::uuid[]) ORDER BY created_at',
+        [threadIds]
+      )).rows
+    : [];
   return NextResponse.json({ success: true, threads, messages });
 }

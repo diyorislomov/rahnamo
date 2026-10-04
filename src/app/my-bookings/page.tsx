@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { signOut, useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { supabase } from '@/lib/supabase';
 import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Star, MessageSquareText, Lock, LogIn, LogOut } from 'lucide-react';
 
 interface SavedBooking {
@@ -42,6 +42,7 @@ type TabFilter = 'all' | 'upcoming' | 'completed';
 export default function MyBookingsPage() {
   const t = useTranslations('myBookings');
   const tCommon = useTranslations('common');
+  const { data: session, status: sessionStatus } = useSession();
   const [bookings, setBookings] = useState<SavedBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
@@ -54,62 +55,33 @@ export default function MyBookingsPage() {
   // sign-in gate instead of any bookings); a string = that mentee's email.
   // The device_id guest-lookup path is gone -- bookings are only ever
   // fetched by mentee_auth_id now, matching the tightened RLS.
-  const [menteeEmail, setMenteeEmail] = useState<string | null | false>(null);
+  const menteeEmail: string | null | false =
+    sessionStatus === 'loading'
+      ? null
+      : sessionStatus === 'authenticated' && session?.user
+        ? session.user.email || session.user.name || 'mentee'
+        : false;
 
   useEffect(() => {
-    async function loadBookings(menteeUserId: string) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-      if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-        try {
-          const res = await supabase
-            .from('bookings')
-            .select('*')
-            .eq('mentee_auth_id', menteeUserId)
-            .order('created_at', { ascending: false });
-          if (res.error) throw res.error;
-          const rows = (res.data || []) as SavedBooking[];
-          setBookings(rows);
-          setLoading(false);
-          loadReviewedIds(rows);
-          return;
-        } catch (err) {
-          console.warn('Supabase bookings fetch error:', err);
-        }
-      }
-
-      setBookings([]);
-      setLoading(false);
-    }
-
-    function loadReviewedIds(list: SavedBooking[]) {
-      const completedIds = list.filter((b) => b.status === 'completed').map((b) => b.id);
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (completedIds.length === 0 || !supabaseUrl || supabaseUrl.includes('placeholder')) return;
-
-      Promise.resolve(supabase.from('reviews').select('booking_id').in('booking_id', completedIds))
-        .then(({ data }: { data: { booking_id: string }[] | null }) => {
-          if (data) setReviewedBookingIds(new Set(data.map((r) => r.booking_id)));
-        })
-        .catch((err: unknown) => console.warn('Reviews fetch error:', err));
-    }
-
-    supabase.auth.getSession().then(({ data }) => {
-      const user = data.session?.user;
-      if (user && !user.is_anonymous) {
-        setMenteeEmail(user.email || 'mentee');
-        loadBookings(user.id);
-      } else {
-        setMenteeEmail(false);
-        setLoading(false);
-      }
-    });
-  }, []);
+    if (sessionStatus === 'loading') return;
+    if (sessionStatus !== 'authenticated' || !session?.user) return;
+    fetch('/api/bookings')
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result?.error || 'bookings_fetch_failed');
+        setBookings((result.bookings || []) as SavedBooking[]);
+        setReviewedBookingIds(new Set((result.reviewedBookingIds || []) as string[]));
+      })
+      .catch((error) => {
+        console.warn('Bookings fetch error:', error);
+        setBookings([]);
+      })
+      .finally(() => setLoading(false));
+  }, [session, sessionStatus]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     localStorage.removeItem('rahnamo_bookings');
-    setMenteeEmail(false);
     setBookings([]);
   };
 
@@ -124,8 +96,7 @@ export default function MyBookingsPage() {
       return;
     }
 
-    const counselorId = b.counselorId || b.counselor_id;
-    if (!counselorId) {
+    if (!(b.counselorId || b.counselor_id)) {
       setReviewErrors((prev) => ({ ...prev, [b.id]: t('review.counselorMissingError') }));
       return;
     }
@@ -133,19 +104,13 @@ export default function MyBookingsPage() {
     setReviewSubmitting(b.id);
     setReviewErrors((prev) => ({ ...prev, [b.id]: '' }));
 
-    const studentFirstName = (b.studentName || b.student_name || t('review.defaultStudentName')).trim().split(' ')[0];
-
-    Promise.resolve(
-      supabase.from('reviews').insert({
-        booking_id: b.id,
-        counselor_id: counselorId,
-        student_first_name: studentFirstName,
-        rating: draft.rating,
-        review_text: draft.text.trim(),
-      })
-    )
-      .then(({ error }: { error: { message: string } | null }) => {
-        if (error) {
+    fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingId: b.id, rating: draft.rating, reviewText: draft.text.trim() }),
+    })
+      .then((response) => {
+        if (!response.ok) {
           setReviewErrors((prev) => ({ ...prev, [b.id]: t('review.saveError') }));
           return;
         }

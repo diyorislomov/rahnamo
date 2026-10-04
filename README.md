@@ -8,7 +8,8 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 
 - **Counselor catalog** (`/`) — browse and filter mentors by specialty.
 - **Booking flow** (`/counselors/[id]`) — Standard/Premium video session tiers with manual payment confirmation (student sends proof, admin confirms — no live payment gateway yet).
-- **Matnli maslahat (Text Q&A)** — a running-tab alternative to booked sessions: each question adds to a live total billed at the mentor's own per-question rate, with an optional cap that pauses new questions until payment is confirmed. Students and mentors use their own Supabase Auth accounts.
+- **Mentee accounts** — registration and sign-in through Google or Telegram, with accounts and sessions stored in server-local PostgreSQL.
+- **Matnli maslahat (Text Q&A)** — a running-tab alternative to booked sessions: each question adds to a live total billed at the mentor's own per-question rate, with an optional cap that pauses new questions until payment is confirmed.
 - **Become a counselor** (`/become-counselor`) — mentor application form, reviewed and approved/rejected from the admin panel.
 - **Forum** (`/forum`) — public Q&A between students and counselors.
 - **Admin panel** (`/admin`) — password-gated; manages bookings, applications, forum moderation, and Text Q&A threads (confirm payment, or manually flag an uncapped thread for payment as a safety valve).
@@ -19,7 +20,9 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 
 - [Next.js 16](https://nextjs.org) (App Router, Turbopack)
 - TypeScript, Tailwind CSS 4
-- [Supabase](https://supabase.com) (Postgres + RLS, Auth, used via `@supabase/supabase-js`)
+- Auth.js with Google and Telegram OIDC providers
+- Local PostgreSQL for mentee accounts, sessions, bookings, reviews and rate limits
+- [Supabase](https://supabase.com) for the existing counselor catalog and legacy application/forum data
 - `next-intl` for i18n
 - Playwright for browser verification
 
@@ -50,8 +53,27 @@ Copy `.env.example` to `.env.local` and replace every placeholder:
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Outbound email via [Resend](https://resend.com) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Server-only Telegram notifications for bookings/applications |
 | `NEXT_PUBLIC_PAYMENT_CARD_NUMBER` / `NEXT_PUBLIC_PAYMENT_CARD_OWNER` | Public manual-payment details shown to customers |
+| `DATABASE_URL` | Server-local PostgreSQL connection string |
+| `AUTH_SECRET` | Auth.js session secret; use at least 32 random characters |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth web client credentials |
+| `AUTH_TELEGRAM_ID` / `AUTH_TELEGRAM_SECRET` | Telegram Login OIDC credentials from BotFather |
 
 ### Database
+
+Apply the local PostgreSQL schema before starting the app:
+
+```bash
+npm run db:migrate
+```
+
+Configure these OAuth callback URLs:
+
+- `https://myrahnamo.com/api/auth/callback/google`
+- `https://myrahnamo.com/api/auth/callback/telegram`
+
+In BotFather, add `https://myrahnamo.com` as an allowed Login Widget/OIDC URL.
+
+The existing Supabase-backed catalog and legacy tables still use the following schema files.
 
 For a new database, run [`supabase/schema.sql`](supabase/schema.sql), then apply every file in [`supabase/migrations`](supabase/migrations) in filename order. For an existing database, apply only migrations that have not run yet. Do not treat `schema.sql` as a re-runnable migration: it contains historical setup steps and policy names.
 
@@ -66,6 +88,7 @@ In Supabase Auth URL Configuration, add the deployed `/reset-password` URL to th
 ```bash
 npm run dev     # start dev server (Turbopack)
 npm run build   # production build
+npm run db:migrate # apply the local PostgreSQL schema
 npm run start   # run a production build
 npm run lint    # eslint
 npm test        # unit tests

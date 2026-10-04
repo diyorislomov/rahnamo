@@ -1,5 +1,5 @@
 import 'server-only';
-import { getServiceRoleClient } from './supabaseServiceRole';
+import { postgres } from './postgres';
 
 type Bucket = { count: number; resetAt: number };
 
@@ -36,17 +36,19 @@ export async function allowRequest(key: string, limit: number, windowMs: number)
   if (!allowLocalRequest(key, limit, windowMs)) return false;
 
   try {
-    const { data, error } = await getServiceRoleClient().rpc('consume_api_rate_limit', {
-      p_key: key,
-      p_limit: limit,
-      p_window_seconds: Math.max(1, Math.ceil(windowMs / 1000)),
-    });
-    if (error) {
-      console.error('[DISTRIBUTED_RATE_LIMIT_FAILED]', error.code);
-      return process.env.NODE_ENV !== 'production';
-    }
-    return data === true;
-  } catch {
+    const result = await postgres.query<{ count: number }>(
+      `INSERT INTO api_rate_limits (key, count, reset_at)
+       VALUES ($1, 1, now() + ($3 * interval '1 millisecond'))
+       ON CONFLICT (key) DO UPDATE SET
+         count = CASE WHEN api_rate_limits.reset_at <= now() THEN 1 ELSE api_rate_limits.count + 1 END,
+         reset_at = CASE WHEN api_rate_limits.reset_at <= now() THEN now() + ($3 * interval '1 millisecond') ELSE api_rate_limits.reset_at END
+       WHERE api_rate_limits.reset_at <= now() OR api_rate_limits.count < $2
+       RETURNING count`,
+      [key, limit, windowMs]
+    );
+    return result.rowCount === 1;
+  } catch (error) {
+    console.error('[DISTRIBUTED_RATE_LIMIT_FAILED]', error);
     return process.env.NODE_ENV !== 'production';
   }
 }

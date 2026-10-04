@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { postgres } from '@/lib/postgres';
 import { isSameOrigin } from '@/lib/serverSecurity';
 
 // Stage 3 of the real-auth migration: bookings RLS is being tightened so
@@ -25,22 +25,13 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  let supabase;
   try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('Service role client unavailable:', err);
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
-  const { data, error } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
-
-  if (error) {
+    const result = await postgres.query('SELECT * FROM bookings ORDER BY created_at DESC');
+    return NextResponse.json({ success: true, bookings: result.rows });
+  } catch (error) {
     console.error('[ADMIN_BOOKINGS_LIST_FAILED]', error);
     return NextResponse.json({ success: false, error: 'query_failed' }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true, bookings: data });
 }
 
 export async function POST(request: Request) {
@@ -60,31 +51,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('Service role client unavailable:', err);
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
+  const query = action === 'confirm_payment'
+    ? `UPDATE bookings SET payment_status = 'confirmed' WHERE id = $1 AND payment_status = 'pending' RETURNING id, payment_status`
+    : `UPDATE bookings SET status = 'completed' WHERE id = $1 AND payment_status = 'confirmed' AND status = 'confirmed' RETURNING id, status`;
+  const result = await postgres.query(query, [id]);
+  const booking = result.rows[0];
+  if (!booking) {
+    console.error('[ADMIN_BOOKING_ACTION_FAILED]', action, id);
+    return NextResponse.json({ success: false, error: 'update_failed' }, { status: 409 });
   }
-
-  const update = action === 'confirm_payment' ? { payment_status: 'confirmed' } : { status: 'completed' };
-  const selectCols = action === 'confirm_payment' ? 'id, payment_status' : 'id, status';
-
-  // Same discipline as every other admin action here: a clean "no error"
-  // is not proof the row actually changed, so the update must come back
-  // with the row it touched, not just a null error.
-  let query = supabase.from('bookings').update(update).eq('id', id);
-  query =
-    action === 'confirm_payment'
-      ? query.eq('payment_status', 'pending')
-      : query.eq('payment_status', 'confirmed').eq('status', 'confirmed');
-  const { data, error } = await query.select(selectCols).single();
-
-  if (error || !data) {
-    console.error('[ADMIN_BOOKING_ACTION_FAILED]', action, id, error);
-    return NextResponse.json({ success: false, error: 'update_failed' }, { status: 500 });
-  }
-
-  return NextResponse.json({ success: true, booking: data });
+  return NextResponse.json({ success: true, booking });
 }

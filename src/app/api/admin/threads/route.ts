@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { postgres } from '@/lib/postgres';
 import { isSameOrigin } from '@/lib/serverSecurity';
 
 // Admin's own thread actions (list, manually flag an uncapped thread for
@@ -21,27 +21,19 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  let supabase;
   try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('Service role client unavailable:', err);
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
-  const { data, error } = await supabase
-    .from('question_threads')
-    .select(
-      '*, booking:bookings(student_name, email, telegram), counselor:counselors(full_name, headline)'
-    )
-    .order('created_at', { ascending: false });
-
-  if (error) {
+    const result = await postgres.query(
+      `SELECT qt.*, qt.user_id AS student_auth_id, qt.user_id::text AS device_id,
+        json_build_object('student_name', b.student_name, 'email', b.email, 'telegram', b.telegram) AS booking,
+        json_build_object('full_name', b.counselor_name, 'headline', b.counselor_headline) AS counselor
+       FROM question_threads qt JOIN bookings b ON b.id = qt.booking_id
+       ORDER BY qt.created_at DESC`
+    );
+    return NextResponse.json({ success: true, threads: result.rows });
+  } catch (error) {
     console.error('[ADMIN_THREADS_LIST_FAILED]', error);
     return NextResponse.json({ success: false, error: 'query_failed' }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true, threads: data });
 }
 
 export async function POST(request: Request) {
@@ -61,36 +53,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('Service role client unavailable:', err);
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
+  const query = action === 'flag'
+    ? `UPDATE question_threads SET payment_status = 'awaiting_payment'
+       WHERE id = $1 AND payment_status = 'active' RETURNING id, payment_status`
+    : `UPDATE question_threads SET payment_status = 'closed', closed_at = now()
+       WHERE id = $1 AND payment_status = 'awaiting_payment' AND payment_receipt IS NOT NULL
+       RETURNING id, payment_status`;
+  const result = await postgres.query(query, [threadId]);
+  const thread = result.rows[0];
+  if (!thread) {
+    console.error('[ADMIN_THREAD_ACTION_FAILED]', action, threadId);
+    return NextResponse.json({ success: false, error: 'update_failed' }, { status: 409 });
   }
-
-  const update =
-    action === 'flag'
-      ? { payment_status: 'awaiting_payment' }
-      : { payment_status: 'closed', closed_at: new Date().toISOString() };
-
-  // Same discipline as every other admin action in this app: a clean
-  // "no error" is not proof the row actually changed, so the update must
-  // come back with the row it touched, not just a null error.
-  let query = supabase
-    .from('question_threads')
-    .update(update)
-    .eq('id', threadId);
-  query =
-    action === 'flag'
-      ? query.eq('payment_status', 'active')
-      : query.eq('payment_status', 'awaiting_payment').not('payment_receipt', 'is', null);
-  const { data, error } = await query.select('id, payment_status').single();
-
-  if (error || !data) {
-    console.error('[ADMIN_THREAD_ACTION_FAILED]', action, threadId, error);
-    return NextResponse.json({ success: false, error: 'update_failed' }, { status: 500 });
-  }
-
-  return NextResponse.json({ success: true, thread: data });
+  return NextResponse.json({ success: true, thread });
 }

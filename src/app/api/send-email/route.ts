@@ -5,7 +5,7 @@ import { defaultLocale, isValidLocale } from '@/i18n/config';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
 import { resolveMenteeFromRequest } from '@/lib/menteeSession';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { postgres } from '@/lib/postgres';
 import { isSameOrigin } from '@/lib/serverSecurity';
 
 interface EmailRequestBody {
@@ -142,19 +142,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
     }
 
-    const supabase = getServiceRoleClient();
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    if (bookingError || !booking) {
+    const bookingResult = await postgres.query('SELECT * FROM bookings WHERE id = $1', [id]);
+    const booking = bookingResult.rows[0];
+    if (!booking) {
       return NextResponse.json({ success: false, error: 'booking_not_found' }, { status: 404 });
     }
 
     if (kind === 'booking_created') {
       const mentee = await resolveMenteeFromRequest(request);
-      if (!mentee || booking.mentee_auth_id !== mentee.userId) {
+      if (!mentee || booking.user_id !== mentee.userId) {
         return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
       }
     } else {

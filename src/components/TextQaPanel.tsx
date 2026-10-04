@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { Lock, Send, Loader2, CheckCircle2, LogIn } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { Counselor, QuestionThread, ThreadMessage } from '@/types';
 import { isPaymentConfigured, paymentCardDigits, paymentCardDisplay, paymentCardOwner } from '@/lib/paymentConfig';
 
@@ -46,6 +46,7 @@ function mapThread(r: QuestionThreadRow): QuestionThread {
 
 export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
   const t = useTranslations('textQa');
+  const { status: sessionStatus } = useSession();
 
   const [phase, setPhase] = useState<'checking' | 'login_required' | 'start' | 'thread'>('checking');
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -66,12 +67,12 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function loadThread(threadId: string) {
-    const [{ data: threadRow }, { data: msgRows }] = await Promise.all([
-      supabase.from('question_threads').select('*').eq('id', threadId).single(),
-      supabase.from('thread_messages').select('*').eq('thread_id', threadId).order('created_at', { ascending: true }),
-    ]);
+    const response = await fetch(`/api/threads?threadId=${encodeURIComponent(threadId)}`);
+    const result = await response.json();
+    const threadRow = result.thread as QuestionThreadRow | null;
+    const msgRows = result.messages as Array<{ id: string; thread_id: string; sender_role: 'student' | 'counselor'; body: string; created_at: string }>;
     if (threadRow) setThread(mapThread(threadRow as QuestionThreadRow));
-    if (msgRows) {
+    if (Array.isArray(msgRows)) {
       setMessages(
         msgRows.map((m) => ({ id: m.id, threadId: m.thread_id, senderRole: m.sender_role, body: m.body, createdAt: m.created_at }))
       );
@@ -86,22 +87,14 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      const uid = user && !user.is_anonymous ? user.id : null;
-      if (!uid) {
+      if (sessionStatus === 'loading') return;
+      if (sessionStatus !== 'authenticated') {
         if (!cancelled) setPhase('login_required');
         return;
       }
-      const { data } = await supabase
-        .from('question_threads')
-        .select('*')
-        .eq('counselor_id', counselor.id)
-        .eq('student_auth_id', uid)
-        .neq('payment_status', 'closed')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const response = await fetch(`/api/threads?counselorId=${encodeURIComponent(counselor.id)}`);
+      const result = await response.json();
+      const data = result.thread as QuestionThreadRow | null;
 
       if (cancelled) return;
       if (data) {
@@ -113,21 +106,10 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
       }
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous && !cancelled) {
-        setPhase('start');
-      }
-      if (event === 'SIGNED_OUT' && !cancelled) {
-        setPhase('login_required');
-        setThread(null);
-      }
-    });
-
     return () => {
       cancelled = true;
-      sub.subscription.unsubscribe();
     };
-  }, [counselor.id]);
+  }, [counselor.id, sessionStatus]);
 
   // Polling, not Realtime -- consistent with the rest of this app, which
   // uses no websocket subscriptions anywhere. Refetches while the thread
@@ -152,12 +134,9 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     setStartError('');
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error('missing_session');
       const response = await fetch('/api/threads/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ counselorId: counselor.id }),
       });
       const result = await response.json();
@@ -188,13 +167,14 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     setIsAsking(true);
     setAskError('');
 
-    const { data, error } = await supabase.rpc('ask_thread_question', {
-      p_thread_id: thread.id,
-      p_body: newQuestion.trim(),
+    const response = await fetch('/api/threads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'ask', threadId: thread.id, body: newQuestion.trim() }),
     });
-
-    if (error || !data?.success) {
-      console.error('[TEXT_QA_ASK_FAILED]', error, data);
+    const data = await response.json();
+    if (!response.ok || !data?.success) {
+      console.error('[TEXT_QA_ASK_FAILED]', data);
       setAskError(t('thread.askFailedGeneric'));
       setIsAsking(false);
       return;
@@ -210,13 +190,13 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     setIsSubmittingReceipt(true);
     setReceiptError('');
 
-    const { error } = await supabase
-      .from('question_threads')
-      .update({ payment_receipt: receiptRef.trim() })
-      .eq('id', thread.id);
-
-    if (error) {
-      console.error('[TEXT_QA_RECEIPT_SUBMIT_FAILED]', error);
+    const response = await fetch('/api/threads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'receipt', threadId: thread.id, receipt: receiptRef.trim() }),
+    });
+    if (!response.ok) {
+      console.error('[TEXT_QA_RECEIPT_SUBMIT_FAILED]');
       setReceiptError(t('thread.askFailedGeneric'));
       setIsSubmittingReceipt(false);
       return;

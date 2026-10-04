@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import StaleBuildWatcher from "@/components/StaleBuildWatcher";
+import AuthProvider from "@/components/AuthProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,8 +38,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
-          <StaleBuildWatcher />
+          <AuthProvider>
+            {children}
+            <StaleBuildWatcher />
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

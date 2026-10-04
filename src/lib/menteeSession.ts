@@ -1,23 +1,16 @@
 import 'server-only';
 
-import { getServiceRoleClient } from './supabaseServiceRole';
+import { auth } from '@/auth';
 
 export async function resolveMenteeFromRequest(
-  request: Request
-): Promise<{ userId: string; email: string | null } | null> {
-  const authHeader = request.headers.get('authorization');
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
-  if (!token) return null;
-
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return null;
-  }
-
-  const { data, error } = await supabase.auth.getUser(token);
-  const user = data.user;
-  if (error || !user || user.is_anonymous) return null;
-  return { userId: user.id, email: user.email ?? null };
+  request?: Request
+): Promise<{ userId: string; email: string | null; name: string | null } | null> {
+  void request;
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  return {
+    userId: session.user.id,
+    email: session.user.email ?? null,
+    name: session.user.name ?? null,
+  };
 }
