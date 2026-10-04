@@ -4,6 +4,7 @@ import { allowRequest } from '@/lib/rateLimit';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
 import { isSameOrigin } from '@/lib/serverSecurity';
 import { isAllowedAvatarUrl } from '@/lib/avatarUrl';
+import { normalizeSlots } from '@/lib/slots';
 
 const COLUMNS =
   'id, full_name, headline, avatar_url, specialties, bio, standard_price, premium_price, available_slots, why_work_with_me, price_per_question, soft_cap';
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     ? input.specialties.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 20)
     : null;
   const availableSlots = Array.isArray(input.available_slots)
-    ? input.available_slots.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 50)
+    ? normalizeSlots(input.available_slots.filter((value): value is string => typeof value === 'string')).slice(0, 50)
     : null;
 
   if (

@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { KeyRound, Mail, Lock, Loader2, LogOut, CheckCircle2, Camera } from 'lucide-react';
+import { KeyRound, Mail, Lock, Loader2, LogOut, CheckCircle2, Camera, CalendarPlus, Trash2 } from 'lucide-react';
+import { formatSlot, normalizeSlots } from '@/lib/slots';
+import MentorServicesEditor from '@/components/MentorServicesEditor';
 
 interface MentorRow {
   id: string;
@@ -26,6 +28,7 @@ interface MentorRow {
 export default function MentorDashboardPage() {
   const t = useTranslations('mentorAuth');
   const td = useTranslations('mentorDashboard');
+  const locale = useLocale();
 
   const [checkingSession, setCheckingSession] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -49,7 +52,8 @@ export default function MentorDashboardPage() {
   const [premiumPrice, setPremiumPrice] = useState('');
   const [pricePerQuestion, setPricePerQuestion] = useState('');
   const [softCap, setSoftCap] = useState('');
-  const [availableSlots, setAvailableSlots] = useState('');
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [slotDraft, setSlotDraft] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
 
   const [saving, setSaving] = useState(false);
@@ -76,7 +80,7 @@ export default function MentorDashboardPage() {
     setPremiumPrice(String(row.premium_price ?? ''));
     setPricePerQuestion(row.price_per_question != null ? String(row.price_per_question) : '');
     setSoftCap(row.soft_cap != null ? String(row.soft_cap) : '');
-    setAvailableSlots((row.available_slots || []).join('\n'));
+    setAvailableSlots(normalizeSlots(row.available_slots || []));
     setAvatarUrl(row.avatar_url || '');
   };
 
@@ -176,7 +180,7 @@ export default function MentorDashboardPage() {
         premium_price: Number(premiumPrice) || 0,
         price_per_question: pricePerQuestion ? Number(pricePerQuestion) : null,
         soft_cap: softCap ? Number(softCap) : null,
-        available_slots: availableSlots.split('\n').map((s) => s.trim()).filter(Boolean),
+        available_slots: normalizeSlots(availableSlots),
         avatar_url: avatarUrl,
       }),
     });
@@ -192,6 +196,18 @@ export default function MentorDashboardPage() {
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  };
+
+  const addAvailableSlot = () => {
+    if (!slotDraft) return;
+    const date = new Date(slotDraft);
+    if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
+      setSaveError(td('slotFutureError'));
+      return;
+    }
+    setAvailableSlots((current) => normalizeSlots([...current, date.toISOString()]));
+    setSlotDraft('');
+    setSaveError('');
   };
 
   if (checkingSession) {
@@ -275,6 +291,7 @@ export default function MentorDashboardPage() {
         {loadError && <p className="text-sm text-red-600 font-semibold">{loadError}</p>}
 
         {counselor && (
+          <>
           <form onSubmit={handleSave} className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-5">
             <div className="flex items-center gap-4">
               <Image
@@ -377,13 +394,41 @@ export default function MentorDashboardPage() {
 
             <div>
               <label className="text-xs font-semibold text-stone-700 block mb-1">{td('availableSlotsLabel')}</label>
-              <textarea
-                rows={4}
-                value={availableSlots}
-                onChange={(e) => setAvailableSlots(e.target.value)}
-                placeholder={td('availableSlotsPlaceholder')}
-                className="w-full p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700 font-mono"
-              />
+              <p className="text-[11px] text-stone-500 mb-2">{td('availableSlotsHint')}</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="datetime-local"
+                  value={slotDraft}
+                  onChange={(e) => setSlotDraft(e.target.value)}
+                  className="flex-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                />
+                <button
+                  type="button"
+                  onClick={addAvailableSlot}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-xs font-bold text-amber-950 cursor-pointer"
+                >
+                  <CalendarPlus className="w-4 h-4" /> {td('addSlot')}
+                </button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {availableSlots.length === 0 ? (
+                  <p className="text-[11px] text-stone-500 bg-stone-50 border border-stone-200 rounded-xl p-3">
+                    {td('noSlots')}
+                  </p>
+                ) : availableSlots.map((slot) => (
+                  <div key={slot} className="flex items-center justify-between gap-3 bg-amber-50/60 border border-amber-900/10 rounded-xl px-3 py-2">
+                    <span className="text-xs font-semibold text-stone-700">{formatSlot(slot, locale)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAvailableSlots((current) => current.filter((value) => value !== slot))}
+                      aria-label={td('removeSlot')}
+                      className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {saveError && <p className="text-[11px] text-red-600 font-semibold">{saveError}</p>}
@@ -401,6 +446,8 @@ export default function MentorDashboardPage() {
               <span>{saved ? td('saved') : td('save')}</span>
             </button>
           </form>
+          <MentorServicesEditor />
+          </>
         )}
       </main>
       <Footer />

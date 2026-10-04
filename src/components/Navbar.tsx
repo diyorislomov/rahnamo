@@ -49,6 +49,9 @@ export default function Navbar() {
           >
             {t('howItWorks')}
           </Link>
+          <Link href="/match" className="transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60">
+            {t('findMyMentor')}
+          </Link>
           <Link href="/forum" className="transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60">
             {t('forum')}
           </Link>
@@ -110,6 +113,13 @@ export default function Navbar() {
             className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
           >
             {t('howItWorks')}
+          </Link>
+          <Link
+            href="/match"
+            onClick={() => setIsOpen(false)}
+            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
+          >
+            {t('findMyMentor')}
           </Link>
           <Link
             href="/forum"

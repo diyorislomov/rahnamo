@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Star, MessageSquareText, Lock, LogIn, LogOut } from 'lucide-react';
+import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Star, MessageSquareText, Lock, LogIn, LogOut, Loader2, CalendarClock, XCircle } from 'lucide-react';
+import { formatSlot } from '@/lib/slots';
 
 interface SavedBooking {
   id: string;
@@ -20,6 +21,10 @@ interface SavedBooking {
   counselorAvatar?: string;
   counselor_avatar?: string;
   tier: string;
+  serviceTitle?: string;
+  service_title?: string;
+  durationMinutes?: number;
+  duration_minutes?: number;
   price: number;
   paymentMethod?: string;
   payment_method?: string;
@@ -42,6 +47,7 @@ type TabFilter = 'all' | 'upcoming' | 'completed';
 export default function MyBookingsPage() {
   const t = useTranslations('myBookings');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { data: session, status: sessionStatus } = useSession();
   const [bookings, setBookings] = useState<SavedBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +57,11 @@ export default function MyBookingsPage() {
   const [reviewDrafts, setReviewDrafts] = useState<{ [bookingId: string]: { rating: number; text: string } }>({});
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null);
   const [reviewErrors, setReviewErrors] = useState<{ [bookingId: string]: string }>({});
+  const [bookingActionId, setBookingActionId] = useState<string | null>(null);
+  const [bookingActionErrors, setBookingActionErrors] = useState<{ [bookingId: string]: string }>({});
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [rescheduleSlots, setRescheduleSlots] = useState<string[]>([]);
+  const [rescheduleSlot, setRescheduleSlot] = useState('');
   // Stage 3: null = still checking; false = not logged in (page shows a
   // sign-in gate instead of any bookings); a string = that mentee's email.
   // The device_id guest-lookup path is gone -- bookings are only ever
@@ -123,8 +134,70 @@ export default function MyBookingsPage() {
       .finally(() => setReviewSubmitting(null));
   };
 
+  const handleCancelBooking = async (booking: SavedBooking) => {
+    if (!window.confirm(t('manage.cancelConfirm'))) return;
+    setBookingActionId(booking.id);
+    setBookingActionErrors((current) => ({ ...current, [booking.id]: '' }));
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel', id: booking.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.booking) throw new Error(result.error || 'cancel_failed');
+      setBookings((current) => current.map((item) => item.id === booking.id ? { ...item, status: 'cancelled' } : item));
+      setReschedulingId(null);
+    } catch {
+      setBookingActionErrors((current) => ({ ...current, [booking.id]: t('manage.changeError') }));
+    } finally {
+      setBookingActionId(null);
+    }
+  };
+
+  const openReschedule = async (booking: SavedBooking) => {
+    const counselorId = booking.counselorId || booking.counselor_id;
+    if (!counselorId) return;
+    setBookingActionId(booking.id);
+    setBookingActionErrors((current) => ({ ...current, [booking.id]: '' }));
+    try {
+      const response = await fetch(`/api/counselors/${encodeURIComponent(counselorId)}/availability`, { cache: 'no-store' });
+      const result = await response.json();
+      if (!response.ok || !Array.isArray(result.availableSlots)) throw new Error('availability_failed');
+      const slots = result.availableSlots.filter((slot: unknown): slot is string => typeof slot === 'string' && slot !== booking.slot);
+      setRescheduleSlots(slots);
+      setRescheduleSlot(slots[0] || '');
+      setReschedulingId(booking.id);
+    } catch {
+      setBookingActionErrors((current) => ({ ...current, [booking.id]: t('manage.changeError') }));
+    } finally {
+      setBookingActionId(null);
+    }
+  };
+
+  const submitReschedule = async (booking: SavedBooking) => {
+    if (!rescheduleSlot) return;
+    setBookingActionId(booking.id);
+    setBookingActionErrors((current) => ({ ...current, [booking.id]: '' }));
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reschedule', id: booking.id, slot: rescheduleSlot }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.booking) throw new Error(result.error || 'reschedule_failed');
+      setBookings((current) => current.map((item) => item.id === booking.id ? { ...item, slot: result.booking.slot } : item));
+      setReschedulingId(null);
+    } catch {
+      setBookingActionErrors((current) => ({ ...current, [booking.id]: t('manage.changeError') }));
+    } finally {
+      setBookingActionId(null);
+    }
+  };
+
   const filteredBookings = bookings.filter((b) => {
-    if (activeTab === 'upcoming') return b.status !== 'completed';
+    if (activeTab === 'upcoming') return b.status !== 'completed' && b.status !== 'cancelled';
     if (activeTab === 'completed') return b.status === 'completed';
     return true;
   });
@@ -261,8 +334,11 @@ export default function MyBookingsPage() {
                 const meetUrl = b.meetLink || b.meet_link || 'https://meet.jit.si';
                 const paymentMethod = b.paymentMethod || b.payment_method;
                 const paymentStatus = b.paymentStatus || b.payment_status || 'pending';
+                const serviceTitle = b.serviceTitle || b.service_title;
+                const durationMinutes = b.durationMinutes || b.duration_minutes;
                 const isPaymentConfirmed = paymentStatus === 'confirmed';
                 const isCompleted = b.status === 'completed';
+                const isCancelled = b.status === 'cancelled';
                 const alreadyReviewed = reviewedBookingIds.has(b.id);
                 const isReviewing = reviewingId === b.id;
                 const draft = reviewDrafts[b.id] || { rating: 0, text: '' };
@@ -324,7 +400,11 @@ export default function MyBookingsPage() {
                           <span className="text-[10px] font-bold px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-md uppercase font-mono">
                             {b.id}
                           </span>
-                          {isPaymentConfirmed ? (
+                          {isCancelled ? (
+                            <span className="text-[11px] font-semibold text-red-700 flex items-center gap-1">
+                              <XCircle className="w-3.5 h-3.5" /> {t('manage.cancelled')}
+                            </span>
+                          ) : isPaymentConfirmed ? (
                             <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
                               <ShieldCheck className="w-3.5 h-3.5" /> {t('paymentConfirmed')}
                             </span>
@@ -338,11 +418,13 @@ export default function MyBookingsPage() {
                         <p className="text-xs text-stone-500">{headline}</p>
                         <div className="flex flex-wrap items-center gap-3 mt-2 text-xs font-medium text-amber-950">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-amber-800" /> {b.slot}
+                            <Calendar className="w-3.5 h-3.5 text-amber-800" /> {formatSlot(b.slot, locale)}
                           </span>
                           <span>•</span>
                           <span className="capitalize font-bold text-amber-900">
-                            {b.tier === 'standard' || b.tier === 'premium' ? tCommon(b.tier) : b.tier} ({b.price.toLocaleString()} UZS {paymentMethod ? `via ${paymentMethod.toUpperCase()}` : ''})
+                            {serviceTitle || (b.tier === 'standard' || b.tier === 'premium' ? tCommon(b.tier) : b.tier)}
+                            {durationMinutes ? ` · ${durationMinutes} ${t('minutes')}` : ''}
+                            {' '}({b.price.toLocaleString()} UZS {paymentMethod ? `via ${paymentMethod.toUpperCase()}` : ''})
                           </span>
                         </div>
                       </div>
@@ -350,7 +432,12 @@ export default function MyBookingsPage() {
 
                     <div className="border-t md:border-t-0 md:border-l border-amber-900/10 pt-4 md:pt-0 md:pl-6 flex flex-col justify-center min-w-[180px]">
                       <span className="text-[11px] text-stone-500">{t('contactLabel', { telegram: b.telegram })}</span>
-                      {isPaymentConfirmed ? (
+                      {isCancelled ? (
+                        <div className="mt-2 flex items-center gap-1.5 bg-red-50 text-red-700 text-[11px] font-semibold px-3 py-2.5 rounded-xl text-center border border-red-200">
+                          <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>{t('manage.slotReleased')}</span>
+                        </div>
+                      ) : isPaymentConfirmed ? (
                         <a
                           href={meetUrl}
                           target="_blank"
@@ -367,6 +454,74 @@ export default function MyBookingsPage() {
                       )}
                     </div>
                   </div>
+
+                  {!isCompleted && !isCancelled && !isPaymentConfirmed && (
+                    <div className="mt-4 pt-4 border-t border-amber-900/10">
+                      {bookingActionErrors[b.id] && (
+                        <p className="text-[11px] text-red-600 font-semibold mb-2">{bookingActionErrors[b.id]}</p>
+                      )}
+                      {reschedulingId === b.id ? (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          {rescheduleSlots.length > 0 ? (
+                            <>
+                              <select
+                                value={rescheduleSlot}
+                                onChange={(event) => setRescheduleSlot(event.target.value)}
+                                className="flex-1 p-2.5 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                              >
+                                {rescheduleSlots.map((slot) => (
+                                  <option key={slot} value={slot}>{formatSlot(slot, locale)}</option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={bookingActionId === b.id}
+                                onClick={() => submitReschedule(b)}
+                                className="px-3.5 py-2.5 rounded-xl bg-amber-900 text-amber-50 text-xs font-bold cursor-pointer disabled:opacity-60"
+                              >
+                                {bookingActionId === b.id ? t('manage.saving') : t('manage.saveTime')}
+                              </button>
+                            </>
+                          ) : (
+                            <p className="text-xs text-stone-500">{t('manage.noAlternativeSlots')}</p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setReschedulingId(null)}
+                            className="px-3.5 py-2.5 rounded-xl bg-stone-100 text-stone-600 text-xs font-bold cursor-pointer"
+                          >
+                            {t('manage.close')}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={bookingActionId === b.id}
+                            onClick={() => openReschedule(b)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold cursor-pointer disabled:opacity-60"
+                          >
+                            {bookingActionId === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarClock className="w-3.5 h-3.5" />}
+                            {t('manage.reschedule')}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={bookingActionId === b.id}
+                            onClick={() => handleCancelBooking(b)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-50 text-red-700 border border-red-200 text-xs font-bold cursor-pointer disabled:opacity-60"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> {t('manage.cancelBooking')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!isCompleted && !isCancelled && isPaymentConfirmed && (
+                    <div className="mt-4 pt-4 border-t border-amber-900/10 text-[11px] text-stone-500">
+                      {t('manage.paidChangePolicy')}
+                    </div>
+                  )}
 
                   {isCompleted && !alreadyReviewed && (
                     <div className="mt-4 pt-4 border-t border-amber-900/10">

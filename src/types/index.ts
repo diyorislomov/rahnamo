@@ -1,4 +1,4 @@
-export type Tier = 'standard' | 'premium' | 'text_qa';
+export type Tier = 'standard' | 'premium' | 'text_qa' | 'service';
 export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
 export type ThreadPaymentStatus = 'active' | 'awaiting_payment' | 'closed';
 export type ThreadSenderRole = 'student' | 'counselor';
@@ -62,6 +62,17 @@ export interface Review {
   createdAt: string;
 }
 
+export interface CounselorService {
+  id: string;
+  counselorId: string;
+  title: string;
+  description: string;
+  serviceType: 'quick_call' | 'career_session' | 'cv_review' | 'mock_interview' | 'grant_guidance' | 'monthly_mentorship' | 'custom';
+  durationMinutes: number;
+  price: number;
+  active: boolean;
+}
+
 export interface ForumQuestion {
   id: string;
   studentNameOrAnonymous: string;
@@ -104,6 +115,9 @@ export interface BookingTicketData {
   counselorHeadline: string;
   counselorAvatar: string;
   tier: Tier;
+  serviceId?: string;
+  serviceTitle?: string;
+  durationMinutes?: number;
   price: number;
   paymentMethod: string;
   slot: string;
@@ -116,7 +130,7 @@ export interface BookingTicketData {
   meetLink?: string;
   paymentStatus?: PaymentStatus;
   paymentReceipt?: string;
-  status?: 'confirmed' | 'completed';
+  status?: 'confirmed' | 'completed' | 'cancelled';
   // Captured once, at submission time, from the student's own browser --
   // never re-derived from whoever's request later triggers an email (e.g.
   // an admin confirming payment days afterward, from their own session).

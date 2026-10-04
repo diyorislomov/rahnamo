@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useTranslations, useLocale } from 'next-intl';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { Tier, Review, Counselor } from '@/types';
+import { Tier, Review, Counselor, CounselorService } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
 import Navbar from '@/components/Navbar';
@@ -19,6 +19,7 @@ import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
 import TextQaPanel from '@/components/TextQaPanel';
 import MentorInboxPanel from '@/components/MentorInboxPanel';
 import { isPaymentConfigured, paymentCardDigits, paymentCardDisplay, paymentCardOwner } from '@/lib/paymentConfig';
+import { formatSlot } from '@/lib/slots';
 
 type PaymentMethod = 'payme' | 'click' | 'uzum';
 
@@ -29,6 +30,7 @@ interface BookingTicketData {
   counselorHeadline: string;
   counselorAvatar: string;
   tier: Tier;
+  serviceTitle?: string;
   price: number;
   paymentMethod: PaymentMethod;
   slot: string;
@@ -99,6 +101,9 @@ export default function CounselorPage() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     return !!url && !url.includes('placeholder');
   });
+  const verifiedRating = reviews.length > 0
+    ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
+    : '—';
 
   useEffect(() => {
     if (!counselor || !reviewsLoading) return;
@@ -125,15 +130,19 @@ export default function CounselorPage() {
   }, [counselor, reviewsLoading]);
 
   const [selectedTier, setSelectedTier] = useState<Tier>('standard');
+  const [services, setServices] = useState<CounselorService[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const selectedService = services.find((service) => service.id === selectedServiceId) || null;
   // Only meaningful when the counselor actually offers text Q&A
   // (pricePerQuestion set) -- switches the whole right column between the
   // existing video booking flow and TextQaPanel below.
   const [viewMode, setViewMode] = useState<'video' | 'text_qa'>('video');
-  // Derived, not stateful -- so it stays correct if the live Supabase fetch
-  // above changes counselor.availableSlots after this component already
-  // mounted (e.g. the mock had no match but the live row does).
+  const [availability, setAvailability] = useState<{ counselorId: string; slots: string[] } | null>(null);
+  const availableSlots = availability && availability.counselorId === counselor?.id
+    ? availability.slots
+    : counselor?.availableSlots || [];
   const [selectedSlotOverride, setSelectedSlot] = useState<string>('');
-  const selectedSlot = selectedSlotOverride || counselor?.availableSlots?.[0] || '';
+  const selectedSlot = selectedSlotOverride || availableSlots[0] || '';
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
@@ -167,6 +176,47 @@ export default function CounselorPage() {
   const [receiptRef, setReceiptRef] = useState('');
   const [copiedCard, setCopiedCard] = useState(false);
   const [cardError, setCardError] = useState('');
+
+  useEffect(() => {
+    if (!counselor) return;
+    let active = true;
+    fetch(`/api/counselors/${encodeURIComponent(counselor.id)}/availability`, { cache: 'no-store' })
+      .then(async (response) => {
+        const result = await response.json();
+        if (active && response.ok && Array.isArray(result.availableSlots)) {
+          setAvailability({ counselorId: counselor.id, slots: result.availableSlots });
+          setSelectedSlot((current) => result.availableSlots.includes(current) ? current : '');
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [counselor]);
+
+  useEffect(() => {
+    if (!counselor) return;
+    let active = true;
+    fetch(`/api/counselors/${encodeURIComponent(counselor.id)}/services`, { cache: 'no-store' })
+      .then(async (response) => {
+        const result = await response.json();
+        if (active && response.ok && Array.isArray(result.services)) {
+          setServices(result.services);
+          if (result.services[0]?.id) {
+            setSelectedServiceId(result.services[0].id);
+            setSelectedTier('service');
+          }
+        }
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [counselor]);
+
+  const bookingPrice = selectedTier === 'service' && selectedService
+    ? selectedService.price
+    : selectedTier === 'standard'
+      ? counselor?.standardPrice || 0
+      : counselor?.premiumPrice || 0;
 
   if (!counselor) {
     if (counselorLoading) {
@@ -305,6 +355,7 @@ export default function CounselorPage() {
       body: JSON.stringify({
         counselorId: counselor.id,
         tier: selectedTier,
+        serviceId: selectedTier === 'service' ? selectedServiceId : undefined,
         paymentMethod,
         slot: selectedSlot,
         studentName: fullName,
@@ -325,6 +376,7 @@ export default function CounselorPage() {
     }
 
     const row = result.booking;
+    setAvailability({ counselorId: counselor.id, slots: availableSlots.filter((slot) => slot !== row.slot) });
     const newBooking: BookingTicketData = {
       id: row.id,
       counselorId: row.counselor_id,
@@ -332,6 +384,7 @@ export default function CounselorPage() {
       counselorHeadline: row.counselor_headline,
       counselorAvatar: row.counselor_avatar,
       tier: row.tier,
+      serviceTitle: row.service_title || undefined,
       price: row.price,
       paymentMethod: row.payment_method,
       slot: row.slot,
@@ -421,8 +474,8 @@ export default function CounselorPage() {
             <p className="text-xs text-stone-600 mt-1">{counselor.headline}</p>
             <div className="flex items-center justify-center gap-1 mt-2 text-xs font-semibold text-amber-800">
               <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-              <span>{counselor.rating}</span>
-              <span className="text-stone-400 font-normal">({t('reviewsCountSuffix', { count: counselor.reviewsCount })})</span>
+              <span>{verifiedRating}</span>
+              <span className="text-stone-400 font-normal">({t('reviewsCountSuffix', { count: reviews.length })})</span>
             </div>
           </div>
 
@@ -612,12 +665,12 @@ export default function CounselorPage() {
                 </div>
                 <div>
                   <span className="text-stone-500 block">{t('ticket.slotLabel')}</span>
-                  <span className="font-bold text-amber-900">{bookingTicket.slot}</span>
+                  <span className="font-bold text-amber-900">{formatSlot(bookingTicket.slot, locale)}</span>
                 </div>
                 <div>
                   <span className="text-stone-500 block">{t('ticket.tierPaymentLabel')}</span>
                   <span className="font-bold text-amber-900 uppercase">
-                    {bookingTicket.tier} ({bookingTicket.price.toLocaleString()} UZS via {bookingTicket.paymentMethod.toUpperCase()})
+                    {bookingTicket.serviceTitle || bookingTicket.tier} ({bookingTicket.price.toLocaleString()} UZS via {bookingTicket.paymentMethod.toUpperCase()})
                   </span>
                 </div>
               </div>
@@ -738,6 +791,33 @@ export default function CounselorPage() {
               <div className={currentStep === 1 ? '' : 'hidden'}>
                 <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step1Heading')}</h3>
                 <div className="grid grid-cols-2 gap-3 mt-3">
+                  {services.map((service) => (
+                    <label
+                      key={service.id}
+                      className={`col-span-2 sm:col-span-1 cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
+                        selectedTier === 'service' && selectedServiceId === service.id
+                          ? 'border-amber-800 bg-amber-50/70 ring-2 ring-amber-800/20'
+                          : 'border-amber-900/10 hover:bg-amber-50/30'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="tier"
+                        value={service.id}
+                        checked={selectedTier === 'service' && selectedServiceId === service.id}
+                        onChange={() => { setSelectedTier('service'); setSelectedServiceId(service.id); }}
+                        className="mt-1 accent-amber-800 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-amber-900 block">{service.title}</span>
+                        <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{service.price.toLocaleString()} UZS</div>
+                        <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-700" /> {service.durationMinutes} {t('form.minutes')}
+                        </p>
+                        {service.description && <p className="text-[11px] text-stone-500 mt-1 line-clamp-2">{service.description}</p>}
+                      </div>
+                    </label>
+                  ))}
                   <label
                     className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
                       selectedTier === 'standard'
@@ -750,7 +830,7 @@ export default function CounselorPage() {
                       name="tier"
                       value="standard"
                       checked={selectedTier === 'standard'}
-                      onChange={() => setSelectedTier('standard')}
+                      onChange={() => { setSelectedTier('standard'); setSelectedServiceId(''); }}
                       className="mt-1 accent-amber-800 cursor-pointer"
                     />
                     <div>
@@ -774,7 +854,7 @@ export default function CounselorPage() {
                       name="tier"
                       value="premium"
                       checked={selectedTier === 'premium'}
-                      onChange={() => setSelectedTier('premium')}
+                      onChange={() => { setSelectedTier('premium'); setSelectedServiceId(''); }}
                       className="mt-1 accent-amber-800 cursor-pointer"
                     />
                     <div>
@@ -799,7 +879,12 @@ export default function CounselorPage() {
                   )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                  {counselor.availableSlots.map((slot) => (
+                  {availableSlots.length === 0 && (
+                    <p className="sm:col-span-2 text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl p-4 text-center">
+                      {t('noAvailableSlots')}
+                    </p>
+                  )}
+                  {availableSlots.map((slot) => (
                     <label
                       key={slot}
                       className={`cursor-pointer p-3 rounded-xl text-xs font-medium border transition-all flex items-center gap-2.5 ${
@@ -819,7 +904,7 @@ export default function CounselorPage() {
                         }}
                         className="accent-amber-500 cursor-pointer"
                       />
-                      <span>{slot}</span>
+                      <span>{formatSlot(slot, locale)}</span>
                     </label>
                   ))}
                 </div>
@@ -1069,7 +1154,7 @@ export default function CounselorPage() {
                     className="flex-1 py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
                   >
                     {t('form.submit', {
-                      price: (selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString(),
+                      price: bookingPrice.toLocaleString(),
                     })}
                   </button>
                 </div>
@@ -1104,15 +1189,15 @@ export default function CounselorPage() {
             <div className="my-5 p-4 bg-amber-50/70 rounded-2xl border border-amber-900/10 space-y-1.5 text-xs">
               <div className="flex justify-between text-stone-600">
                 <span>{t('modal.serviceLabel')}</span>
-                <span className="font-semibold text-stone-900">{t('modal.serviceValue', { name: counselor.fullName })}</span>
+                <span className="font-semibold text-stone-900">{selectedService?.title || t('modal.serviceValue', { name: counselor.fullName })}</span>
               </div>
               <div className="flex justify-between text-stone-600">
                 <span>{t('modal.timeLabel')}</span>
-                <span className="font-semibold text-stone-900">{selectedSlot}</span>
+                <span className="font-semibold text-stone-900">{formatSlot(selectedSlot, locale)}</span>
               </div>
               <div className="flex justify-between text-amber-950 font-bold text-sm pt-2 border-t border-amber-900/10">
                 <span>{t('modal.totalLabel')}</span>
-                <span>{(selectedTier === 'standard' ? counselor.standardPrice : counselor.premiumPrice).toLocaleString()} UZS</span>
+                <span>{bookingPrice.toLocaleString()} UZS</span>
               </div>
             </div>
 

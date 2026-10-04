@@ -7,7 +7,9 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 ## Features
 
 - **Counselor catalog** (`/`) — browse and filter mentors by specialty.
-- **Booking flow** (`/counselors/[id]`) — Standard/Premium video session tiers with manual payment confirmation (student sends proof, admin confirms — no live payment gateway yet).
+- **Guided mentor matching** (`/match`) — recommends mentors from the student's field, goal, preferred format and budget.
+- **Booking flow** (`/counselors/[id]`) — live availability, collision-safe slot booking, rescheduling/cancellation for unpaid bookings, and manual payment confirmation (no live payment gateway yet).
+- **Mentor services** — mentors can publish priced services such as quick calls, CV reviews, mock interviews, grant guidance and monthly mentorship from their dashboard.
 - **Mentee accounts** — registration and sign-in through Google or Telegram, with accounts and sessions stored in server-local PostgreSQL.
 - **Matnli maslahat (Text Q&A)** — a running-tab alternative to booked sessions: each question adds to a live total billed at the mentor's own per-question rate, with an optional cap that pauses new questions until payment is confirmed.
 - **Become a counselor** (`/become-counselor`) — mentor application form, reviewed and approved/rejected from the admin panel.
@@ -21,7 +23,7 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 - [Next.js 16](https://nextjs.org) (App Router, Turbopack)
 - TypeScript, Tailwind CSS 4
 - Auth.js with Google and Telegram OIDC providers
-- Local PostgreSQL for mentee accounts, sessions, bookings, reviews and rate limits
+- Local PostgreSQL for mentee accounts, sessions, bookings, mentor services, reviews and rate limits
 - [Supabase](https://supabase.com) for the existing counselor catalog and legacy application/forum data
 - `next-intl` for i18n
 - Playwright for browser verification

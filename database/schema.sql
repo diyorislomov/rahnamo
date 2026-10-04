@@ -42,6 +42,24 @@ CREATE TABLE IF NOT EXISTS verification_token (
 CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions ("userId");
 CREATE INDEX IF NOT EXISTS accounts_user_id_idx ON accounts ("userId");
 
+CREATE TABLE IF NOT EXISTS counselor_services (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  counselor_id TEXT NOT NULL,
+  title TEXT NOT NULL CHECK (char_length(title) BETWEEN 3 AND 120),
+  description TEXT NOT NULL DEFAULT '' CHECK (char_length(description) <= 1000),
+  service_type TEXT NOT NULL DEFAULT 'career_session' CHECK (
+    service_type IN ('quick_call', 'career_session', 'cv_review', 'mock_interview', 'grant_guidance', 'monthly_mentorship', 'custom')
+  ),
+  duration_minutes INTEGER NOT NULL CHECK (duration_minutes BETWEEN 15 AND 180),
+  price INTEGER NOT NULL CHECK (price > 0),
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS counselor_services_public_idx
+  ON counselor_services (counselor_id, active, created_at);
+
 CREATE TABLE IF NOT EXISTS bookings (
   id TEXT PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -49,7 +67,10 @@ CREATE TABLE IF NOT EXISTS bookings (
   counselor_name TEXT NOT NULL,
   counselor_headline TEXT NOT NULL,
   counselor_avatar TEXT NOT NULL,
-  tier TEXT NOT NULL CHECK (tier IN ('standard', 'premium', 'text_qa')),
+  tier TEXT NOT NULL CHECK (tier IN ('standard', 'premium', 'text_qa', 'service')),
+  service_id UUID REFERENCES counselor_services(id) ON DELETE SET NULL,
+  service_title TEXT,
+  duration_minutes INTEGER,
   price INTEGER NOT NULL CHECK (price >= 0),
   payment_method TEXT NOT NULL CHECK (payment_method IN ('payme', 'click', 'uzum')),
   payment_status TEXT NOT NULL DEFAULT 'pending',
@@ -67,9 +88,17 @@ CREATE TABLE IF NOT EXISTS bookings (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS bookings_one_active_slot
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_id UUID REFERENCES counselor_services(id) ON DELETE SET NULL;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_title TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
+ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_tier_check;
+ALTER TABLE bookings ADD CONSTRAINT bookings_tier_check
+  CHECK (tier IN ('standard', 'premium', 'text_qa', 'service'));
+
+DROP INDEX IF EXISTS bookings_one_active_slot;
+CREATE UNIQUE INDEX bookings_one_active_slot
   ON bookings (counselor_id, slot)
-  WHERE tier IN ('standard', 'premium') AND status = 'confirmed';
+  WHERE tier IN ('standard', 'premium', 'service') AND status = 'confirmed';
 CREATE INDEX IF NOT EXISTS bookings_user_created_idx ON bookings (user_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS reviews (

@@ -14,7 +14,8 @@
     "standard": "Standart",
     "premium": "Premium",
     "signIn": "Kirish",
-    "signOut": "Chiqish"
+    "signOut": "Chiqish",
+    "findMyMentor": "Mos Rahnamo topish"
   },
   "navbar": {
     "banner": "Buyuk Ipak Yo'li karyera konsultatsiyasi va 1-ga-1 mentorlik platformasi",
@@ -226,7 +227,8 @@
       "paymeSubLabel": "Uzcard / Humo",
       "clickSubLabel": "Click Up / Karta",
       "uzumSubLabel": "Uzum kartasi",
-      "submit": "To'lovni amalga oshirish ({price} UZS)"
+      "submit": "To'lovni amalga oshirish ({price} UZS)",
+      "minutes": "daqiqa"
     },
     "validation": {
       "slot": "Iltimos, uchrashuv vaqtini tanlang.",
@@ -263,7 +265,8 @@
       "receiptRequired": "To'lov cheki yoki tranzaksiya raqamini kiriting.",
       "processing": "To'lov amalga oshirilmoqda...",
       "confirm": "To'lovni tasdiqlash"
-    }
+    },
+    "noAvailableSlots": "Hozircha bo‘sh vaqt yo‘q. Rahnamo yangi vaqt qo‘shganda bu yerda ko‘rinadi."
   },
   "myBookings": {
     "backToCatalog": "Barcha Rahnamolar ro'yxatiga qaytish",
@@ -300,7 +303,21 @@
       "leaveReview": "Sharh qoldirish",
       "thankYou": "Sharhingiz uchun rahmat!",
       "defaultStudentName": "Talaba"
-    }
+    },
+    "manage": {
+      "cancelled": "Bekor qilingan",
+      "slotReleased": "Bu vaqt qayta bo‘shatildi",
+      "cancelConfirm": "Bu qabulni bekor qilmoqchimisiz? Band qilingan vaqt yana boshqalarga ochiladi.",
+      "changeError": "Qabulni o‘zgartirib bo‘lmadi. Sahifani yangilab qayta urinib ko‘ring.",
+      "reschedule": "Vaqtni o‘zgartirish",
+      "cancelBooking": "Qabulni bekor qilish",
+      "saving": "Saqlanmoqda...",
+      "saveTime": "Yangi vaqtni saqlash",
+      "noAlternativeSlots": "Hozircha boshqa bo‘sh vaqt yo‘q.",
+      "close": "Yopish",
+      "paidChangePolicy": "To‘langan qabulni o‘zgartirish yoki bekor qilish uchun @rahnamo_admin bilan bog‘laning."
+    },
+    "minutes": "daqiqa"
   },
   "forum": {
     "badge": "Rahnamodan So'rang",
@@ -464,11 +481,16 @@
     "pricePerQuestionLabel": "Bitta savol narxi (ixtiyoriy)",
     "softCapLabel": "Savollar chegarasi (ixtiyoriy)",
     "optionalPlaceholder": "Ixtiyoriy",
-    "availableSlotsLabel": "Bo'sh vaqtlar (har birini alohida qatorga yozing)",
+    "availableSlotsLabel": "Bo‘sh vaqtlar",
     "availableSlotsPlaceholder": "Dushanba, 19:00 - 19:30",
     "save": "Saqlash",
     "saved": "Saqlandi",
-    "saveFailed": "Saqlashda xatolik yuz berdi."
+    "saveFailed": "Saqlashda xatolik yuz berdi.",
+    "availableSlotsHint": "Sana va vaqt brauzeringizdagi mahalliy vaqt bo‘yicha olinadi.",
+    "addSlot": "Vaqt qo‘shish",
+    "removeSlot": "Vaqtni o‘chirish",
+    "noSlots": "Hali bo‘sh vaqt qo‘shilmagan.",
+    "slotFutureError": "Faqat kelajakdagi vaqtni qo‘shish mumkin."
   },
   "menteeAuth": {
     "passwordTooShort": "Parol kamida 8 belgidan iborat bo'lishi kerak.",
@@ -689,6 +711,71 @@
           "a": "Agar siz ham o'z sohangizda tajribali bo'lsangiz, menyudagi 'Rahnamo bo'lish' tugmasini bosib anketani to'ldirishingiz mumkin. 24 soat ichida profilingiz tasdiqlanadi."
         }
       ]
+    }
+  },
+  "mentorServices": {
+    "title": "Xizmatlar",
+    "subtitle": "Talabalar profilingizda tanlay oladigan konsultatsiya xizmatlarini yarating.",
+    "loading": "Xizmatlar yuklanmoqda...",
+    "loadFailed": "Xizmatlarni yuklab bo‘lmadi.",
+    "empty": "Hali xizmat qo‘shilmagan. Birinchi xizmatingizni yarating.",
+    "active": "Faol",
+    "hidden": "Yashirilgan",
+    "minutes": "daqiqa",
+    "hide": "Yashirish",
+    "show": "Ko‘rsatish",
+    "delete": "O‘chirish",
+    "deleteConfirm": "“{title}” xizmatini o‘chirmoqchimisiz?",
+    "newService": "Yangi xizmat",
+    "typeLabel": "Xizmat turi",
+    "titleLabel": "Xizmat nomi",
+    "descriptionLabel": "Qisqa tavsif",
+    "durationLabel": "Davomiyligi (daqiqa)",
+    "priceLabel": "Narxi (so‘m)",
+    "add": "Xizmat qo‘shish",
+    "saved": "Qo‘shildi",
+    "saveFailed": "Xizmatni saqlab bo‘lmadi.",
+    "invalidService": "Maydonlarni tekshiring: nom kamida 3 belgi, vaqt 15–180 daqiqa va narx musbat bo‘lishi kerak.",
+    "types": {
+      "quick_call": "Tezkor konsultatsiya",
+      "career_session": "Kasb konsultatsiyasi",
+      "cv_review": "CV / portfolio tahlili",
+      "mock_interview": "Sinov intervyusi",
+      "grant_guidance": "Grant / universitet maslahati",
+      "monthly_mentorship": "Oylik mentorlik",
+      "custom": "Boshqa xizmat"
+    }
+  },
+  "matching": {
+    "badge": "2 daqiqalik yo‘naltirish",
+    "title": "Sizga mos Rahnamoni toping",
+    "subtitle": "Maqsadingiz va budjetingizni belgilang — Rahnamo sizga eng mos mutaxassislarni tavsiya qiladi.",
+    "categoryLabel": "1. Qaysi soha sizni qiziqtiradi?",
+    "goalLabel": "2. Hozirgi asosiy maqsadingiz nima?",
+    "formatLabel": "3. Qanday yordam xohlaysiz?",
+    "budgetLabel": "4. Budjetingiz qancha?",
+    "find": "Mos Rahnamolarni topish",
+    "resultsTitle": "Sizga tavsiya etilgan Rahnamolar",
+    "resultsSubtitle": "Javoblaringiz, narx va mutaxassislik mosligiga asoslangan natija.",
+    "empty": "Hozircha mos Rahnamo topilmadi. Boshqa yo‘nalishni tanlab ko‘ring.",
+    "goals": {
+      "explore": "Qaysi kasbni tanlashni aniqlash",
+      "education": "Universitet, grant yoki chet elda o‘qish",
+      "job": "Ish topish yoki kasbni almashtirish",
+      "interview": "CV, portfolio yoki intervyuga tayyorlanish",
+      "business": "Biznes yoki freelancing boshlash"
+    },
+    "formats": {
+      "quick": "Bitta tezkor konsultatsiya",
+      "deep": "Chuqur 45–60 daqiqalik sessiya",
+      "ongoing": "Davomli / oylik mentorlik",
+      "text": "Matn orqali savol-javob"
+    },
+    "budgets": {
+      "100000": "100 000 so‘mgacha",
+      "250000": "250 000 so‘mgacha",
+      "500000": "500 000 so‘mgacha",
+      "unlimited": "Narxdan ko‘ra tajriba muhim"
     }
   }
 }

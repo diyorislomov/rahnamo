@@ -14,7 +14,8 @@
     "standard": "Standard",
     "premium": "Premium",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "findMyMentor": "Find my Rahnamo"
   },
   "navbar": {
     "banner": "The Silk Road career counseling and 1-on-1 mentorship platform",
@@ -226,7 +227,8 @@
       "paymeSubLabel": "Uzcard / Humo",
       "clickSubLabel": "Click Up / Card",
       "uzumSubLabel": "Uzum card",
-      "submit": "Complete payment ({price} UZS)"
+      "submit": "Complete payment ({price} UZS)",
+      "minutes": "min"
     },
     "validation": {
       "slot": "Please choose a meeting time.",
@@ -263,7 +265,8 @@
       "receiptRequired": "Enter the payment receipt or transaction reference.",
       "processing": "Processing payment...",
       "confirm": "Confirm payment"
-    }
+    },
+    "noAvailableSlots": "There are no available times yet. New slots will appear here when the Rahnamo adds them."
   },
   "myBookings": {
     "backToCatalog": "Back to all Rahnamo",
@@ -300,7 +303,21 @@
       "leaveReview": "Leave a review",
       "thankYou": "Thank you for your review!",
       "defaultStudentName": "Student"
-    }
+    },
+    "manage": {
+      "cancelled": "Cancelled",
+      "slotReleased": "This time is available again",
+      "cancelConfirm": "Cancel this booking? The reserved time will become available to others again.",
+      "changeError": "The booking could not be changed. Refresh the page and try again.",
+      "reschedule": "Change time",
+      "cancelBooking": "Cancel booking",
+      "saving": "Saving...",
+      "saveTime": "Save new time",
+      "noAlternativeSlots": "There are no other available times right now.",
+      "close": "Close",
+      "paidChangePolicy": "Contact @rahnamo_admin to change or cancel a paid booking."
+    },
+    "minutes": "min"
   },
   "forum": {
     "badge": "Ask a Rahnamo",
@@ -464,11 +481,16 @@
     "pricePerQuestionLabel": "Price per question (optional)",
     "softCapLabel": "Question cap (optional)",
     "optionalPlaceholder": "Optional",
-    "availableSlotsLabel": "Available slots (one per line)",
+    "availableSlotsLabel": "Available times",
     "availableSlotsPlaceholder": "Monday, 19:00 - 19:30",
     "save": "Save",
     "saved": "Saved",
-    "saveFailed": "Save failed."
+    "saveFailed": "Save failed.",
+    "availableSlotsHint": "The date and time use your browser's local time zone.",
+    "addSlot": "Add time",
+    "removeSlot": "Remove time",
+    "noSlots": "No available times have been added yet.",
+    "slotFutureError": "You can only add a future time."
   },
   "menteeAuth": {
     "passwordTooShort": "Password must be at least 8 characters.",
@@ -689,6 +711,71 @@
           "a": "If you're also an experienced professional in your field, you can fill out the application by clicking \"Become a Rahnamo\" in the menu. Your profile will be reviewed within 24 hours."
         }
       ]
+    }
+  },
+  "mentorServices": {
+    "title": "Services",
+    "subtitle": "Create consultation services that students can choose on your profile.",
+    "loading": "Loading services...",
+    "loadFailed": "Services could not be loaded.",
+    "empty": "No services yet. Create your first service.",
+    "active": "Active",
+    "hidden": "Hidden",
+    "minutes": "min",
+    "hide": "Hide",
+    "show": "Show",
+    "delete": "Delete",
+    "deleteConfirm": "Delete the “{title}” service?",
+    "newService": "New service",
+    "typeLabel": "Service type",
+    "titleLabel": "Service name",
+    "descriptionLabel": "Short description",
+    "durationLabel": "Duration (minutes)",
+    "priceLabel": "Price (UZS)",
+    "add": "Add service",
+    "saved": "Added",
+    "saveFailed": "The service could not be saved.",
+    "invalidService": "Check the fields: title must be at least 3 characters, duration 15–180 minutes, and price positive.",
+    "types": {
+      "quick_call": "Quick consultation",
+      "career_session": "Career consultation",
+      "cv_review": "CV / portfolio review",
+      "mock_interview": "Mock interview",
+      "grant_guidance": "Grant / university guidance",
+      "monthly_mentorship": "Monthly mentorship",
+      "custom": "Other service"
+    }
+  },
+  "matching": {
+    "badge": "2-minute matching",
+    "title": "Find the right Rahnamo for you",
+    "subtitle": "Choose your goal and budget, and Rahnamo will recommend the best-fitting experts.",
+    "categoryLabel": "1. Which field interests you?",
+    "goalLabel": "2. What is your main goal right now?",
+    "formatLabel": "3. What kind of help do you want?",
+    "budgetLabel": "4. What is your budget?",
+    "find": "Find matching Rahnamo",
+    "resultsTitle": "Recommended Rahnamo for you",
+    "resultsSubtitle": "Based on your answers, price, and specialty fit.",
+    "empty": "No matching Rahnamo was found yet. Try another field.",
+    "goals": {
+      "explore": "Figure out which career to choose",
+      "education": "University, grants, or studying abroad",
+      "job": "Find a job or change careers",
+      "interview": "Prepare a CV, portfolio, or interview",
+      "business": "Start a business or freelance career"
+    },
+    "formats": {
+      "quick": "One quick consultation",
+      "deep": "An in-depth 45–60 minute session",
+      "ongoing": "Ongoing / monthly mentorship",
+      "text": "Text questions and answers"
+    },
+    "budgets": {
+      "100000": "Up to 100,000 UZS",
+      "250000": "Up to 250,000 UZS",
+      "500000": "Up to 500,000 UZS",
+      "unlimited": "Experience matters more than price"
     }
   }
 }
