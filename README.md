@@ -8,7 +8,7 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 
 - **Counselor catalog** (`/`) — browse and filter mentors by specialty.
 - **Guided mentor matching** (`/match`) — recommends mentors from the student's field, goal, preferred format and budget.
-- **Booking flow** (`/counselors/[id]`) — live availability, collision-safe slot booking, rescheduling/cancellation for unpaid bookings, and manual payment confirmation (no live payment gateway yet).
+- **Booking flow** (`/counselors/[id]`) — live availability, collision-safe slot booking, rescheduling/cancellation for unpaid bookings, and signed Click Business checkout confirmation.
 - **Mentor services** — mentors can publish priced services such as quick calls, CV reviews, mock interviews, grant guidance and monthly mentorship from their dashboard.
 - **Mentee accounts** — registration and sign-in through Google or Telegram, with accounts and sessions stored in server-local PostgreSQL.
 - **Matnli maslahat (Text Q&A)** — a running-tab alternative to booked sessions: each question adds to a live total billed at the mentor's own per-question rate, with an optional cap that pauses new questions until payment is confirmed.
@@ -59,6 +59,8 @@ Copy `.env.example` to `.env.local` and replace every placeholder:
 | `AUTH_SECRET` | Auth.js session secret; use at least 32 random characters |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth web client credentials |
 | `AUTH_TELEGRAM_ID` / `AUTH_TELEGRAM_SECRET` | Telegram Login OIDC credentials from BotFather |
+| `CLICK_SERVICE_ID` / `CLICK_MERCHANT_ID` | Click Business service and merchant identifiers |
+| `CLICK_MERCHANT_USER_ID` / `CLICK_SECRET_KEY` | Server-only Click Merchant API credentials |
 
 ### Database
 
@@ -72,6 +74,11 @@ Configure these OAuth callback URLs:
 
 - `https://myrahnamo.com/api/auth/callback/google`
 - `https://myrahnamo.com/api/auth/callback/telegram`
+
+Configure these Click Business SHOP API URLs:
+
+- Prepare: `https://myrahnamo.com/api/payments/click/prepare`
+- Complete: `https://myrahnamo.com/api/payments/click/complete`
 
 In BotFather, add `https://myrahnamo.com` as an allowed Login Widget/OIDC URL.
 

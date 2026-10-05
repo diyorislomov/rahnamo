@@ -315,6 +315,8 @@
       "saveTime": "Yangi vaqtni saqlash",
       "noAlternativeSlots": "Hozircha boshqa bo‘sh vaqt yo‘q.",
       "close": "Yopish",
+      "payWithClick": "Click orqali to‘lash",
+      "paymentError": "Click to‘lov sahifasini ochib bo‘lmadi. Qayta urinib ko‘ring.",
       "paidChangePolicy": "To‘langan qabulni o‘zgartirish yoki bekor qilish uchun @rahnamo_admin bilan bog‘laning."
     },
     "minutes": "daqiqa"

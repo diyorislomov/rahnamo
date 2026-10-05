@@ -315,6 +315,8 @@
       "saveTime": "Save new time",
       "noAlternativeSlots": "There are no other available times right now.",
       "close": "Close",
+      "payWithClick": "Pay with Click",
+      "paymentError": "The Click payment page could not be opened. Please try again.",
       "paidChangePolicy": "Contact @rahnamo_admin to change or cancel a paid booking."
     },
     "minutes": "min"

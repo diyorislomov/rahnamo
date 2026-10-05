@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Star, MessageSquareText, Lock, LogIn, LogOut, Loader2, CalendarClock, XCircle } from 'lucide-react';
+import { Calendar, ArrowLeft, CheckCircle, ExternalLink, ShieldCheck, Clock, Sparkles, Star, MessageSquareText, Lock, LogIn, LogOut, Loader2, CalendarClock, XCircle, CreditCard } from 'lucide-react';
 import { formatSlot } from '@/lib/slots';
 
 interface SavedBooking {
@@ -152,6 +152,26 @@ export default function MyBookingsPage() {
       setBookingActionErrors((current) => ({ ...current, [booking.id]: t('manage.changeError') }));
     } finally {
       setBookingActionId(null);
+    }
+  };
+
+  const handleClickPayment = async (booking: SavedBooking) => {
+    setBookingActionId(booking.id);
+    setBookingActionErrors((current) => ({ ...current, [booking.id]: '' }));
+    try {
+      const response = await fetch('/api/payments/click/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || typeof result.paymentUrl !== 'string' || !result.paymentUrl.startsWith('https://my.click.uz/')) {
+        throw new Error(result.error || 'click_checkout_failed');
+      }
+      window.location.assign(result.paymentUrl);
+    } catch {
+      setBookingActionId(null);
+      setBookingActionErrors((current) => ({ ...current, [booking.id]: t('manage.paymentError') }));
     }
   };
 
@@ -446,6 +466,16 @@ export default function MyBookingsPage() {
                         >
                           {t('joinVideoRoom')} <ExternalLink className="w-3 h-3" />
                         </a>
+                      ) : paymentMethod === 'click' ? (
+                        <button
+                          type="button"
+                          disabled={bookingActionId === b.id}
+                          onClick={() => handleClickPayment(b)}
+                          className="mt-2 inline-flex items-center justify-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-60"
+                        >
+                          {bookingActionId === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+                          {t('manage.payWithClick')}
+                        </button>
                       ) : (
                         <div className="mt-2 flex items-center gap-1.5 bg-stone-100 text-stone-500 text-[11px] font-semibold px-3 py-2.5 rounded-xl text-center">
                           <Lock className="w-3.5 h-3.5 flex-shrink-0" />

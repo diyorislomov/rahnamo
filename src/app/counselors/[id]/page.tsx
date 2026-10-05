@@ -11,14 +11,13 @@ import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from 
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, Lock, Loader2, X, MessageCircleHeart, Send, LogIn } from 'lucide-react';
+import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, Lock, Loader2, MessageCircleHeart, Send, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
 import TextQaPanel from '@/components/TextQaPanel';
 import MentorInboxPanel from '@/components/MentorInboxPanel';
-import { isPaymentConfigured, paymentCardDigits, paymentCardDisplay, paymentCardOwner } from '@/lib/paymentConfig';
 import { formatSlot } from '@/lib/slots';
 
 type PaymentMethod = 'payme' | 'click' | 'uzum';
@@ -143,7 +142,7 @@ export default function CounselorPage() {
     : counselor?.availableSlots || [];
   const [selectedSlotOverride, setSelectedSlot] = useState<string>('');
   const selectedSlot = selectedSlotOverride || availableSlots[0] || '';
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payme');
+  const [paymentMethod] = useState<PaymentMethod>('click');
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   // Form State
@@ -167,14 +166,10 @@ export default function CounselorPage() {
 
   // Errors & Ticket state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [bookingTicket, setBookingTicket] = useState<BookingTicketData | null>(null);
+  const [bookingTicket] = useState<BookingTicketData | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Payment Modal State
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [receiptRef, setReceiptRef] = useState('');
-  const [copiedCard, setCopiedCard] = useState(false);
   const [cardError, setCardError] = useState('');
 
   useEffect(() => {
@@ -306,19 +301,11 @@ export default function CounselorPage() {
     if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
   };
 
-  const handleInitiatePayment = (e: React.FormEvent) => {
+  const handleInitiatePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
       setCurrentStep(stepForErrors(newErrors));
-      return;
-    }
-    setShowPaymentModal(true);
-  };
-
-  const handleConfirmPayment = async () => {
-    if (receiptRef.trim().length < 3) {
-      setCardError(t('modal.receiptRequired'));
       return;
     }
 
@@ -364,7 +351,6 @@ export default function CounselorPage() {
         telegram: cleanedTelegram,
         education,
         question,
-        paymentReceipt: receiptRef.trim(),
         locale,
       }),
     });
@@ -377,38 +363,19 @@ export default function CounselorPage() {
 
     const row = result.booking;
     setAvailability({ counselorId: counselor.id, slots: availableSlots.filter((slot) => slot !== row.slot) });
-    const newBooking: BookingTicketData = {
-      id: row.id,
-      counselorId: row.counselor_id,
-      counselorName: row.counselor_name,
-      counselorHeadline: row.counselor_headline,
-      counselorAvatar: row.counselor_avatar,
-      tier: row.tier,
-      serviceTitle: row.service_title || undefined,
-      price: row.price,
-      paymentMethod: row.payment_method,
-      slot: row.slot,
-      studentName: row.student_name,
-      email: row.email,
-      phone: row.phone,
-      telegram: row.telegram,
-      education: row.education,
-      question: row.question,
-      paymentStatus: row.payment_status,
-      paymentReceipt: row.payment_receipt,
-      createdAt: row.created_at,
-      locale: row.locale,
-    };
+    if (typeof result.paymentUrl !== 'string' || !result.paymentUrl.startsWith('https://my.click.uz/')) {
+      setIsProcessingPayment(false);
+      setCardError(t('bookingInsertError'));
+      return;
+    }
 
-    void fetch('/api/send-email', {
+    await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'booking_created', id: row.id }),
-    });
+    }).catch(() => undefined);
 
-    setIsProcessingPayment(false);
-    setShowPaymentModal(false);
-    setBookingTicket(newBooking);
+    window.location.assign(result.paymentUrl);
   };
 
   const copyBookingId = () => {
@@ -429,17 +396,6 @@ export default function CounselorPage() {
       } catch (err) {
         console.error('Copy failed:', err);
       }
-    }
-  };
-
-  const getProviderName = () => {
-    switch (paymentMethod) {
-      case 'payme':
-        return 'Payme';
-      case 'click':
-        return 'Click';
-      case 'uzum':
-        return 'Uzum Bank';
     }
   };
 
@@ -1080,64 +1036,16 @@ export default function CounselorPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <label
-                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
-                      paymentMethod === 'payme'
-                        ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
-                        : 'border-amber-900/10 hover:bg-amber-50/30'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="payme"
-                      checked={paymentMethod === 'payme'}
-                      onChange={() => setPaymentMethod('payme')}
-                      className="sr-only"
-                    />
-                    <span className="font-bold text-xs text-amber-950 block">Payme</span>
-                    <span className="text-[10px] text-stone-500">{t('form.paymeSubLabel')}</span>
-                  </label>
-
-                  <label
-                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
-                      paymentMethod === 'click'
-                        ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
-                        : 'border-amber-900/10 hover:bg-amber-50/30'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="click"
-                      checked={paymentMethod === 'click'}
-                      onChange={() => setPaymentMethod('click')}
-                      className="sr-only"
-                    />
-                    <span className="font-bold text-xs text-amber-950 block">Click</span>
-                    <span className="text-[10px] text-stone-500">{t('form.clickSubLabel')}</span>
-                  </label>
-
-                  <label
-                    className={`cursor-pointer p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${
-                      paymentMethod === 'uzum'
-                        ? 'border-amber-800 bg-amber-50/80 ring-2 ring-amber-800/20 shadow-xs'
-                        : 'border-amber-900/10 hover:bg-amber-50/30'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="uzum"
-                      checked={paymentMethod === 'uzum'}
-                      onChange={() => setPaymentMethod('uzum')}
-                      className="sr-only"
-                    />
-                    <span className="font-bold text-xs text-amber-950 block">Uzum Bank</span>
-                    <span className="text-[10px] text-stone-500">{t('form.uzumSubLabel')}</span>
-                  </label>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="p-4 rounded-2xl border border-sky-500 bg-sky-50/80 ring-2 ring-sky-500/20 shadow-xs flex items-center justify-between gap-3">
+                    <div>
+                      <span className="font-extrabold text-sm text-sky-950 block">Click</span>
+                      <span className="text-[11px] text-sky-800">{t('form.clickSubLabel')}</span>
+                    </div>
+                    <ShieldCheck className="w-5 h-5 text-sky-700" />
+                  </div>
                 </div>
+                {cardError && <p className="text-[11px] text-red-600 font-semibold">{cardError}</p>}
               </div>
 
               {currentStep === 3 && (
@@ -1151,11 +1059,12 @@ export default function CounselorPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer"
+                    disabled={isProcessingPayment}
+                    className="flex-1 py-4 bg-gradient-to-r from-sky-700 to-sky-800 hover:from-sky-600 hover:to-sky-700 text-white font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-70 disabled:cursor-wait flex items-center justify-center gap-2"
                   >
-                    {t('form.submit', {
-                      price: bookingPrice.toLocaleString(),
-                    })}
+                    {isProcessingPayment ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> {t('modal.processing')}</>
+                    ) : t('form.submit', { price: bookingPrice.toLocaleString() })}
                   </button>
                 </div>
               )}
@@ -1163,113 +1072,6 @@ export default function CounselorPage() {
           )}
         </div>
       </div>
-
-      {/* Manual transfer receipt modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-900/10 relative animate-in fade-in zoom-in duration-200">
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              disabled={isProcessingPayment}
-              className="absolute right-4 top-4 text-stone-400 hover:text-stone-700 p-1 rounded-full hover:bg-stone-100 disabled:opacity-50"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 border-b border-amber-900/10 pb-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-sm font-serif">
-                {getProviderName()[0]}
-              </div>
-              <div>
-                <h3 className="font-serif font-bold text-base text-amber-950">{t('modal.providerSystem', { provider: getProviderName() })}</h3>
-                <p className="text-xs text-stone-500">{t('modal.secureGateway')}</p>
-              </div>
-            </div>
-
-            <div className="my-5 p-4 bg-amber-50/70 rounded-2xl border border-amber-900/10 space-y-1.5 text-xs">
-              <div className="flex justify-between text-stone-600">
-                <span>{t('modal.serviceLabel')}</span>
-                <span className="font-semibold text-stone-900">{selectedService?.title || t('modal.serviceValue', { name: counselor.fullName })}</span>
-              </div>
-              <div className="flex justify-between text-stone-600">
-                <span>{t('modal.timeLabel')}</span>
-                <span className="font-semibold text-stone-900">{formatSlot(selectedSlot, locale)}</span>
-              </div>
-              <div className="flex justify-between text-amber-950 font-bold text-sm pt-2 border-t border-amber-900/10">
-                <span>{t('modal.totalLabel')}</span>
-                <span>{bookingPrice.toLocaleString()} UZS</span>
-              </div>
-            </div>
-
-            {/* Central Platform Payment Box */}
-            <div className="my-4 p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
-              <span className="text-[10px] uppercase font-bold text-amber-900 block">{t('modal.cardBoxLabel')}</span>
-              <div className="flex items-center justify-between">
-                <span className="font-mono font-extrabold text-sm text-amber-950">
-                  {isPaymentConfigured ? paymentCardDisplay : t('modal.paymentUnavailable')}
-                </span>
-                <button
-                  type="button"
-                  disabled={!isPaymentConfigured}
-                  onClick={() => {
-                    if (typeof navigator !== 'undefined' && isPaymentConfigured) {
-                      navigator.clipboard.writeText(paymentCardDigits);
-                      setCopiedCard(true);
-                      setTimeout(() => setCopiedCard(false), 2000);
-                    }
-                  }}
-                  className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer disabled:opacity-40"
-                >
-                  {copiedCard ? t('modal.copiedButton') : t('modal.copyButton')}
-                </button>
-              </div>
-              <span className="text-[10px] text-stone-600 block">
-                {isPaymentConfigured ? paymentCardOwner : t('modal.paymentUnavailableHint')}
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-stone-700 block mb-1">
-                  {t('modal.receiptLabel')}
-                </label>
-                <input
-                  type="text"
-                  placeholder={t('modal.receiptPlaceholder')}
-                  value={receiptRef}
-                  onChange={(e) => setReceiptRef(e.target.value)}
-                  maxLength={200}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
-                />
-                <span className="text-[10px] text-stone-500 block mt-1">
-                  {t('modal.receiptHint')}
-                </span>
-              </div>
-
-              {cardError && <p className="text-[11px] text-red-600">{cardError}</p>}
-
-              <button
-                type="button"
-                onClick={handleConfirmPayment}
-                disabled={isProcessingPayment || !isPaymentConfigured}
-                className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
-              >
-                {isProcessingPayment ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-amber-200" />
-                    <span>{t('modal.processing')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>{t('modal.confirm')}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {counselor.pricePerQuestion != null && (
         <div className="max-w-4xl mx-auto px-6 mb-16">

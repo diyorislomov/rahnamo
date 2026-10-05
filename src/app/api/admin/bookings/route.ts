@@ -52,7 +52,9 @@ export async function POST(request: Request) {
   }
 
   const query = action === 'confirm_payment'
-    ? `UPDATE bookings SET payment_status = 'confirmed' WHERE id = $1 AND payment_status = 'pending' RETURNING id, payment_status`
+    ? `UPDATE bookings SET payment_status = 'confirmed'
+       WHERE id = $1 AND payment_status = 'pending' AND payment_method <> 'click'
+       RETURNING id, payment_status`
     : `UPDATE bookings SET status = 'completed' WHERE id = $1 AND payment_status = 'confirmed' AND status = 'confirmed' RETURNING id, status`;
   const result = await postgres.query(query, [id]);
   const booking = result.rows[0];

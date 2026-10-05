@@ -8,6 +8,7 @@ import { sendTelegramNotification } from '@/lib/telegram';
 import { isValidLocale } from '@/i18n/config';
 import { isFutureSlot } from '@/lib/slots';
 import { isSameOrigin } from '@/lib/serverSecurity';
+import { clickPaymentUrl } from '@/lib/click';
 
 type BookingInput = {
   counselorId?: unknown;
@@ -35,6 +36,9 @@ function textValue(value: unknown, min: number, max: number): string | null {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) {
+    return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
+  }
   const mentee = await resolveMenteeFromRequest(request);
   if (!mentee) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
 
@@ -75,7 +79,7 @@ export async function POST(request: Request) {
     !telegram ||
     !education ||
     !question ||
-    !paymentReceipt ||
+    (paymentMethod !== 'click' && !paymentReceipt) ||
     !email ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
     !isFutureSlot(slot)
@@ -124,6 +128,19 @@ export async function POST(request: Request) {
   const id = `RNM-${crypto.randomUUID()}`;
   const price = service?.price ?? (tier === 'standard' ? counselor.standard_price : counselor.premium_price);
   const meetLink = generateMeetLink(id);
+  let paymentUrl: string | undefined;
+  if (paymentMethod === 'click') {
+    try {
+      paymentUrl = clickPaymentUrl({
+        bookingId: id,
+        amount: price,
+        returnUrl: `${process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin}/my-bookings?payment=click&booking=${encodeURIComponent(id)}`,
+      });
+    } catch (error) {
+      console.error('[CLICK_CHECKOUT_CONFIG_FAILED]', error);
+      return NextResponse.json({ success: false, error: 'payment_not_configured' }, { status: 503 });
+    }
+  }
   let inserted;
   try {
     const result = await postgres.query(
@@ -168,7 +185,7 @@ export async function POST(request: Request) {
     meetLink,
   });
 
-  return NextResponse.json({ success: true, booking: inserted });
+  return NextResponse.json({ success: true, booking: inserted, paymentUrl });
 }
 
 export async function GET(request: Request) {

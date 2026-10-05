@@ -101,6 +101,22 @@ CREATE UNIQUE INDEX bookings_one_active_slot
   WHERE tier IN ('standard', 'premium', 'service') AND status = 'confirmed';
 CREATE INDEX IF NOT EXISTS bookings_user_created_idx ON bookings (user_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS click_transactions (
+  id BIGSERIAL PRIMARY KEY,
+  booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  click_trans_id BIGINT NOT NULL UNIQUE,
+  click_paydoc_id BIGINT NOT NULL,
+  amount NUMERIC(18, 2) NOT NULL CHECK (amount >= 0),
+  status TEXT NOT NULL DEFAULT 'prepared' CHECK (status IN ('prepared', 'paid', 'cancelled')),
+  click_error INTEGER,
+  error_note TEXT,
+  prepared_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS click_transactions_booking_idx
+  ON click_transactions (booking_id, prepared_at DESC);
+
 CREATE TABLE IF NOT EXISTS reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id TEXT NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,

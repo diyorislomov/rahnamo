@@ -765,14 +765,16 @@ export default function AdminDashboardPage() {
                                     <span>{bookingActionErrors[b.id]}</span>
                                   </div>
                                 )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleApprovePayment(b)}
-                                  disabled={bookingActionId === b.id}
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {bookingActionId === b.id ? t('bookings.approving') : t('bookings.approvePayment')}
-                                </button>
+                                {b.paymentMethod !== 'click' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApprovePayment(b)}
+                                    disabled={bookingActionId === b.id}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer block disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {bookingActionId === b.id ? t('bookings.approving') : t('bookings.approvePayment')}
+                                  </button>
+                                )}
                               </div>
                             )}
                           </td>
