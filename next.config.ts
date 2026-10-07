@@ -1,7 +1,22 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { execFileSync } from "node:child_process";
 
 const withNextIntl = createNextIntlPlugin();
+
+function currentBuildVersion(): string {
+  if (process.env.VERCEL && process.env.VERCEL_GIT_COMMIT_SHA) {
+    return process.env.VERCEL_GIT_COMMIT_SHA;
+  }
+
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() || 'dev';
+  } catch {
+    return process.env.VERCEL_GIT_COMMIT_SHA || 'dev';
+  }
+}
+
+const buildVersion = currentBuildVersion();
 
 function supabaseImageHostname(): string {
   try {
@@ -51,13 +66,14 @@ const nextConfig: NextConfig = {
     "localhost:3000",
     "127.0.0.1:3000"
   ],
-  // Vercel sets this automatically on every deploy -- no manual bumping.
-  // Bakes into the client bundle at build time, so a tab's own copy is
+  // Vercel supplies its commit SHA. Self-hosted builds read the checked-out
+  // Git HEAD so a stale VERCEL_GIT_COMMIT_SHA cannot leak across deploys.
+  // This is baked into the client bundle at build time, so a tab's own copy is
   // frozen at whatever commit was live when that tab last actually loaded
   // its JS, letting it be compared against /api/build-version's always-
   // current answer to detect a stale tab.
   env: {
-    NEXT_PUBLIC_BUILD_VERSION: process.env.VERCEL_GIT_COMMIT_SHA || "dev",
+    NEXT_PUBLIC_BUILD_VERSION: buildVersion,
   },
   async headers() {
     return [

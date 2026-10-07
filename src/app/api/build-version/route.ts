@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 // whatever was live when that tab last loaded its JS.
 export async function GET() {
   return NextResponse.json(
-    { version: process.env.VERCEL_GIT_COMMIT_SHA || 'dev' },
+    { version: process.env.NEXT_PUBLIC_BUILD_VERSION || process.env.VERCEL_GIT_COMMIT_SHA || 'dev' },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
