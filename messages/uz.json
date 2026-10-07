@@ -18,7 +18,7 @@
     "findMyMentor": "Mos Rahnamo topish"
   },
   "navbar": {
-    "banner": "Buyuk Ipak Yo'li karyera konsultatsiyasi va 1-ga-1 mentorlik platformasi",
+    "banner": "Markaziy Osiyo uchun karyera o‘sishi va 1-ga-1 mentorlik platformasi",
     "toggleMenuAriaLabel": "Navigatsiya menyusini ochish/yopish"
   },
   "footer": {
@@ -42,13 +42,18 @@
     "madeWithSuffix": "bilan yaratilgan."
   },
   "hero": {
-    "badge": "Ipak yo'li karyera platformasi",
-    "title": "Markaziy Osiyoning <strong>eng kuchli mutaxassislari</strong> bilan kelajagingizni quring.",
-    "subtitle": "Tibbiyot, Huquq, Arxitektura, Dasturlash va Xalqaro Grantlar bo'yicha tasdiqlangan Rahnamolardan 1-ga-1 shaxsiy maslahat oling.",
+    "badge": "Markaziy Osiyoning karyera o‘sish platformasi",
+    "title": "Maqsadingizni aniqlang va unga <strong>tezroq erishing</strong>.",
+    "subtitle": "Ish, stajirovka, xorijda o‘qish, startup yoki yangi karyera yo‘li uchun sizga mos Rahnamo va aniq keyingi qadamlarni toping.",
     "viewProfile": "Profilni ko'rish",
     "nextSlotLabel": "Yaqin bo'sh vaqt: {slot}",
     "statLabelLine1": "Tasdiqlangan",
-    "statLabelLine2": "Rahnamo"
+    "statLabelLine2": "Rahnamo",
+    "goalCta": "Maqsadimdan boshlash",
+    "emptyCardBadge": "Sizning natijangizdan boshlaymiz",
+    "emptyCardTitle": "Qaysi maqsadga erishmoqchisiz?",
+    "emptyCardBody": "Maqsadingiz va hozirgi darajangizni ayting. Biz yangi Rahnamolar ochilganda sizga eng mos yo‘lni va mutaxassisni tavsiya qilamiz.",
+    "emptyCardCta": "Erta kirishga yozilish"
   },
   "catalogIntro": {
     "eyebrow": "1-ga-1 shaxsiy mentorlik",
@@ -584,7 +589,8 @@
       "applications": "Rahnamolik Arizalari ({count})",
       "forum": "Forum ({count})",
       "survey": "So'rovnoma Javoblari ({count})",
-      "counselors": "Rahnamolar ({count})"
+      "counselors": "Rahnamolar ({count})",
+      "waitlist": "Maqsadlar ({count})"
     },
     "bookings": {
       "searchPlaceholder": "Talaba ismi, Rahnamo yoki Chipta ID bo'yicha...",
@@ -672,6 +678,40 @@
       "flagFailed": "To'lov uchun belgilashda xatolik yuz berdi. Qayta urinib ko'ring.",
       "confirmFailed": "To'lovni tasdiqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
       "networkError": "Tarmoq xatoligi yuz berdi. Qayta urinib ko'ring."
+    },
+    "metrics": {
+      "heading": "Platforma ko‘rsatkichlari",
+      "users": "Foydalanuvchilar",
+      "activeMentees": "Oxirgi 30 kunda faol: {count}",
+      "bookings": "Bookinglar",
+      "completed": "Yakunlangan sessiyalar: {count}",
+      "gmv": "Tasdiqlangan GMV",
+      "repeatRate": "Qayta booking darajasi: {rate}%",
+      "demand": "Kutilayotgan talab",
+      "mentors": "Faol Rahnamolar: {count}"
+    },
+    "waitlist": {
+      "emptyTitle": "Hali karyera maqsadlari yo‘q",
+      "emptyBody": "Landing formasi yuborilganda maqsadlar shu yerda ko‘rinadi.",
+      "person": "Foydalanuvchi",
+      "goal": "Maqsad",
+      "field": "Yo‘nalish",
+      "level": "Daraja",
+      "date": "Sana",
+      "goals": {
+        "job": "Ish topish",
+        "internship": "Stajirovka",
+        "study_abroad": "Xorijda o‘qish",
+        "startup": "Startup",
+        "switch_career": "Karyerani almashtirish"
+      },
+      "levels": {
+        "student": "Talaba",
+        "entry": "Boshlang‘ich",
+        "mid": "O‘rta",
+        "senior": "Senior",
+        "founder": "Founder"
+      }
     }
   },
   "home": {
@@ -693,10 +733,10 @@
       "subheading": "Markaziy Osiyoning eng yaxshi ekspertlaridan 1-ga-1 konsultatsiya olish tartibi",
       "step1Title": "Rahnamoni va vaqtni tanlang",
       "step1Body": "Katalogdan o'zingizga ma'qul bo'lgan mutaxassisni tanlang, Standart yoki Premium paketni ko'rsatib, mos keladigan vaqtni belgilang.",
-      "step2Title": "To'lov va ma'lumotlarni to'ldirish",
-      "step2Body": "Ko‘rsatilgan kartaga Payme, Click yoki Uzum Bank orqali qo‘lda o‘tkazma qiling va chek ID sini yuboring. Rahnamoga beriladigan asosiy savolingizni yozing.",
-      "step3Title": "1-ga-1 Video muloqot",
-      "step3Body": "Chipta va video uchrashuv havolasi darhol elektron pochtangizga va Telegram hisobingizga yuborildi. Belgilangan vaqtda suhbatni boshlang."
+      "step2Title": "Click orqali xavfsiz to‘lang",
+      "step2Body": "Vaqtni tanlagach, Click Business orqali onlayn to‘lov qiling. To‘lov tasdiqlanishi bilan booking avtomatik faollashadi.",
+      "step3Title": "1-ga-1 video uchrashuv",
+      "step3Body": "Tasdiqlangan booking ichida video uchrashuv havolasi ochiladi. Belgilangan vaqtda Rahnamo bilan suhbatni boshlang."
     },
     "faq": {
       "heading": "Tez-tez beriladigan savollar",
@@ -779,6 +819,41 @@
       "250000": "250 000 so‘mgacha",
       "500000": "500 000 so‘mgacha",
       "unlimited": "Narxdan ko‘ra tajriba muhim"
+    }
+  },
+  "waitlist": {
+    "badge": "Maqsadga asoslangan boshlanish",
+    "title": "Mentor emas, natijani tanlang.",
+    "subtitle": "MyRahnamo sizning maqsadingizdan boshlaydi. Ma’lumotlaringizni qoldiring — mos Rahnamo va imkoniyatlar ochilganda birinchilardan bo‘lib xabar beramiz.",
+    "formTitle": "Karyera maqsadingizni yozing",
+    "formSubtitle": "Bu ma’lumot mentorlar va xizmatlarni real talab bo‘yicha shakllantirishga yordam beradi.",
+    "nameLabel": "Ismingiz",
+    "namePlaceholder": "Ism familiya",
+    "goalLabel": "Asosiy maqsad",
+    "levelLabel": "Hozirgi daraja",
+    "fieldLabel": "Yo‘nalish",
+    "fieldPlaceholder": "Masalan: Frontend, Product, grantlar",
+    "contactLabel": "Email yoki Telegram",
+    "contactPlaceholder": "siz@example.com yoki @username",
+    "contactHint": "Sizga faqat mos Rahnamo yoki yangi imkoniyat paydo bo‘lganda yozamiz.",
+    "submit": "Erta kirishga qo‘shilish",
+    "submitting": "Saqlanmoqda...",
+    "error": "Ma’lumotlarni tekshirib, qayta urinib ko‘ring.",
+    "successTitle": "Maqsadingiz qabul qilindi",
+    "successBody": "Mos Rahnamo va imkoniyat tayyor bo‘lganda siz bilan bog‘lanamiz.",
+    "goals": {
+      "job": "Yaxshi ish topish",
+      "internship": "Stajirovka topish",
+      "study_abroad": "Xorijda o‘qish",
+      "startup": "Startup qurish",
+      "switch_career": "Karyerani almashtirish"
+    },
+    "levels": {
+      "student": "Talaba",
+      "entry": "Boshlang‘ich mutaxassis",
+      "mid": "O‘rta daraja",
+      "senior": "Tajribali mutaxassis",
+      "founder": "Founder / tadbirkor"
     }
   }
 }

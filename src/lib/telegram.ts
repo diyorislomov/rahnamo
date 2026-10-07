@@ -1,3 +1,5 @@
+import 'server-only';
+
 export interface NotificationBookingPayload {
   id: string;
   studentName: string;
@@ -14,14 +16,30 @@ export interface NotificationBookingPayload {
   meetLink: string;
 }
 
-export async function sendTelegramNotification(payload: NotificationBookingPayload): Promise<boolean> {
+export async function sendTelegramText(message: string): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
-  if (!token || !chatId || token.includes('placeholder')) {
+  if (!token || !chatId || token.includes('placeholder')) return false;
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('[TELEGRAM_API_REJECTED]', res.status, body);
+    }
+    return res.ok;
+  } catch (err) {
+    console.error('[TELEGRAM_NETWORK_ERROR]', err);
     return false;
   }
+}
 
+export async function sendTelegramNotification(payload: NotificationBookingPayload): Promise<boolean> {
   const message = `
 🐪 YANGI RAHNAMO QABULI!
 
@@ -42,29 +60,5 @@ ${payload.question}
 🔗 Video uchrashuv havolasi:
 ${payload.meetLink}
   `.trim();
-
-  try {
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-      }),
-    });
-    // A non-2xx here doesn't throw -- fetch only rejects on network failure
-    // -- so without this, a real API rejection (bad chat id, a message that
-    // breaks Telegram's Markdown parser, etc.) would resolve as an unlogged
-    // `false` that every call site used to silently ignore.
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error('[TELEGRAM_API_REJECTED]', res.status, body);
-    }
-    return res.ok;
-  } catch (err) {
-    console.error('[TELEGRAM_NETWORK_ERROR]', err);
-    return false;
-  }
+  return sendTelegramText(message);
 }
-import 'server-only';

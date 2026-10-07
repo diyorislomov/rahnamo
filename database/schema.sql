@@ -134,6 +134,24 @@ CREATE TABLE IF NOT EXISTS api_rate_limits (
   reset_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS career_waitlist (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name VARCHAR(120) NOT NULL,
+  contact VARCHAR(254) NOT NULL,
+  goal TEXT NOT NULL CHECK (goal IN ('job', 'internship', 'study_abroad', 'startup', 'switch_career')),
+  field TEXT NOT NULL CHECK (char_length(field) BETWEEN 2 AND 120),
+  experience_level TEXT NOT NULL CHECK (experience_level IN ('student', 'entry', 'mid', 'senior', 'founder')),
+  locale TEXT NOT NULL DEFAULT 'uz' CHECK (locale IN ('uz', 'ru', 'en')),
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'converted')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS career_waitlist_contact_unique
+  ON career_waitlist (contact);
+CREATE INDEX IF NOT EXISTS career_waitlist_created_idx
+  ON career_waitlist (created_at DESC);
+
 CREATE TABLE IF NOT EXISTS question_threads (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,

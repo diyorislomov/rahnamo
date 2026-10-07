@@ -8,13 +8,14 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 
 - **Counselor catalog** (`/`) — browse and filter mentors by specialty.
 - **Guided mentor matching** (`/match`) — recommends mentors from the student's field, goal, preferred format and budget.
+- **Goal-based early access** — captures each user's career goal, level and field before mentor supply is available, and surfaces that demand in the admin dashboard.
 - **Booking flow** (`/counselors/[id]`) — live availability, collision-safe slot booking, rescheduling/cancellation for unpaid bookings, and signed Click Business checkout confirmation.
 - **Mentor services** — mentors can publish priced services such as quick calls, CV reviews, mock interviews, grant guidance and monthly mentorship from their dashboard.
 - **Mentee accounts** — registration and sign-in through Google or Telegram, with accounts and sessions stored in server-local PostgreSQL.
 - **Matnli maslahat (Text Q&A)** — a running-tab alternative to booked sessions: each question adds to a live total billed at the mentor's own per-question rate, with an optional cap that pauses new questions until payment is confirmed.
 - **Become a counselor** (`/become-counselor`) — mentor application form, reviewed and approved/rejected from the admin panel.
 - **Forum** (`/forum`) — public Q&A between students and counselors.
-- **Admin panel** (`/admin`) — password-gated; manages bookings, applications, forum moderation, and Text Q&A threads (confirm payment, or manually flag an uncapped thread for payment as a safety valve).
+- **Admin panel** (`/admin`) — password-gated; manages bookings, applications, goal demand, marketplace metrics, forum moderation, and Text Q&A threads.
 - **Survey** (`/survey`) — standalone pricing/willingness-to-pay research page.
 - Trilingual UI (Uzbek, Russian, English) via `next-intl`, cookie-based (no URL locale prefixes).
 

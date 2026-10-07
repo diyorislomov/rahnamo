@@ -9,6 +9,7 @@ import CleanHero from '@/components/CleanHero';
 import CatalogIntro, { SortOption } from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
 import RevealOnScroll from '@/components/RevealOnScroll';
+import GoalWaitlist from '@/components/GoalWaitlist';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
 import { supabase } from '@/lib/supabase';
@@ -76,6 +77,8 @@ export default function Home() {
         <Navbar />
 
         <CleanHero counselors={counselors} />
+
+        <GoalWaitlist />
 
         <CatalogIntro
           counselors={counselors}

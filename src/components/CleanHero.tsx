@@ -3,7 +3,7 @@
 import { Playfair_Display } from 'next/font/google';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { ArrowRight, ArrowDown, Building2, Clock, ShieldCheck, Sparkles, Star, Zap } from 'lucide-react';
+import { ArrowRight, Building2, Clock, ShieldCheck, Sparkles, Star, Target, Zap } from 'lucide-react';
 import { Counselor } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin', 'latin-ext'], weight: ['700', '800'], display: 'swap' });
@@ -51,24 +51,24 @@ export default function CleanHero({ counselors }: CleanHeroProps) {
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
             <a
-              href="#rahnamolar"
+              href="#early-access"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-bold text-sm px-6 py-3.5 rounded-2xl shadow-md transition-all"
             >
-              <span>{tCommon('viewCounselors')}</span>
+              <span>{t('goalCta')}</span>
               <ArrowRight className="w-4 h-4" />
             </a>
             <a
-              href="#how-it-works"
+              href="#rahnamolar"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-amber-900/15 hover:border-amber-400/60 text-amber-950 font-bold text-sm px-6 py-3.5 rounded-2xl shadow-xs transition-all"
             >
-              <span>{tCommon('howItWorks')}</span>
-              <ArrowDown className="w-4 h-4" />
+              <span>{tCommon('viewCounselors')}</span>
+              <ArrowRight className="w-4 h-4" />
             </a>
           </div>
         </div>
 
         {/* Right column -- a real featured mentor, not an invented persona */}
-        {featured && (
+        {featured ? (
           <div className="relative mx-auto max-w-sm w-full">
             <div aria-hidden className="absolute -inset-6 bg-amber-400/15 blur-3xl rounded-full" />
 
@@ -139,6 +139,21 @@ export default function CleanHero({ counselors }: CleanHeroProps) {
                 <br />
                 {t('statLabelLine2')}
               </span>
+            </div>
+          </div>
+        ) : (
+          <div className="relative mx-auto w-full max-w-sm">
+            <div aria-hidden className="absolute -inset-6 rounded-full bg-amber-400/15 blur-3xl" />
+            <div className="relative rounded-3xl border border-amber-900/15 bg-white p-7 shadow-xl">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
+                <Target className="h-6 w-6" />
+              </div>
+              <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.15em] text-amber-700">{t('emptyCardBadge')}</p>
+              <h2 className="mt-2 font-serif text-2xl font-extrabold text-amber-950">{t('emptyCardTitle')}</h2>
+              <p className="mt-3 text-sm leading-relaxed text-stone-600">{t('emptyCardBody')}</p>
+              <a href="#early-access" className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-amber-900 py-3 text-xs font-bold text-amber-50 transition-colors hover:bg-amber-800">
+                {t('emptyCardCta')} <ArrowRight className="h-3.5 w-3.5" />
+              </a>
             </div>
           </div>
         )}

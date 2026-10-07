@@ -18,11 +18,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://myrahnamo.com'),
-  title: "Rahnamo - Silk Road Career Mentors",
-  description: "Yo'lingizni o'z sohasining yetuk ustozlari bilan toping",
+  title: "MyRahnamo — Central Asia Career Growth Platform",
+  description: "Maqsadingizdan boshlang: mos Rahnamo, aniq keyingi qadamlar va karyera imkoniyatlarini toping.",
   openGraph: {
-    title: 'Rahnamo - Silk Road Career Mentors',
-    description: "Yo'lingizni o'z sohasining yetuk ustozlari bilan toping",
+    title: 'MyRahnamo — Central Asia Career Growth Platform',
+    description: "Maqsadingizdan boshlang: mos Rahnamo, aniq keyingi qadamlar va karyera imkoniyatlarini toping.",
     type: 'website',
   },
 };

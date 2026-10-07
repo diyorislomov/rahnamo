@@ -18,7 +18,7 @@
     "findMyMentor": "Find my Rahnamo"
   },
   "navbar": {
-    "banner": "The Silk Road career counseling and 1-on-1 mentorship platform",
+    "banner": "Central Asia’s career growth and 1-on-1 mentorship platform",
     "toggleMenuAriaLabel": "Toggle navigation menu"
   },
   "footer": {
@@ -42,13 +42,18 @@
     "madeWithSuffix": "for the youth of Central Asia."
   },
   "hero": {
-    "badge": "Silk Road career platform",
-    "title": "Build your future with Central Asia's <strong>strongest experts</strong>.",
-    "subtitle": "Get personal 1-on-1 advice from verified Rahnamo in Medicine, Law, Architecture, Programming, and International Grants.",
+    "badge": "Central Asia’s career growth platform",
+    "title": "Choose your goal and <strong>reach it faster</strong>.",
+    "subtitle": "Find the right Rahnamo and clear next steps for landing a job or internship, studying abroad, building a startup, or changing careers.",
     "viewProfile": "View profile",
     "nextSlotLabel": "Next available slot: {slot}",
     "statLabelLine1": "Verified",
-    "statLabelLine2": "Rahnamo"
+    "statLabelLine2": "Rahnamo",
+    "goalCta": "Start with my goal",
+    "emptyCardBadge": "Start with your outcome",
+    "emptyCardTitle": "What do you want to achieve?",
+    "emptyCardBody": "Tell us your goal and current level. As new Rahnamo join, we’ll recommend the best path and specialist for you.",
+    "emptyCardCta": "Join early access"
   },
   "catalogIntro": {
     "eyebrow": "Personal 1-on-1 mentorship",
@@ -584,7 +589,8 @@
       "applications": "Rahnamo Applications ({count})",
       "forum": "Forum ({count})",
       "survey": "Survey Responses ({count})",
-      "counselors": "Rahnamo ({count})"
+      "counselors": "Rahnamo ({count})",
+      "waitlist": "Goals ({count})"
     },
     "bookings": {
       "searchPlaceholder": "By student name, Rahnamo, or ticket ID...",
@@ -672,6 +678,40 @@
       "flagFailed": "There was an error flagging this for payment. Please try again.",
       "confirmFailed": "There was an error confirming payment. Please try again.",
       "networkError": "A network error occurred. Please try again."
+    },
+    "metrics": {
+      "heading": "Platform metrics",
+      "users": "Users",
+      "activeMentees": "Active in 30 days: {count}",
+      "bookings": "Bookings",
+      "completed": "Completed sessions: {count}",
+      "gmv": "Confirmed GMV",
+      "repeatRate": "Repeat booking rate: {rate}%",
+      "demand": "Waitlist demand",
+      "mentors": "Active Rahnamo: {count}"
+    },
+    "waitlist": {
+      "emptyTitle": "No career goals yet",
+      "emptyBody": "Goals will appear here after someone submits the landing-page form.",
+      "person": "Person",
+      "goal": "Goal",
+      "field": "Field",
+      "level": "Level",
+      "date": "Date",
+      "goals": {
+        "job": "Land a job",
+        "internship": "Internship",
+        "study_abroad": "Study abroad",
+        "startup": "Startup",
+        "switch_career": "Switch careers"
+      },
+      "levels": {
+        "student": "Student",
+        "entry": "Entry",
+        "mid": "Mid",
+        "senior": "Senior",
+        "founder": "Founder"
+      }
     }
   },
   "home": {
@@ -693,10 +733,10 @@
       "subheading": "How to get a 1-on-1 consultation from Central Asia's top experts",
       "step1Title": "Choose a Rahnamo and a time",
       "step1Body": "Pick the specialist that fits you from the catalog, choose the Standard or Premium package, and book a time that works.",
-      "step2Title": "Pay and fill in your details",
-      "step2Body": "Make a manual card transfer through Payme, Click, or Uzum Bank and submit the receipt ID. Write the main question you'd like to ask your Rahnamo.",
-      "step3Title": "1-on-1 video call",
-      "step3Body": "Your ticket and video meeting link are sent immediately to your email and Telegram. Start the conversation at the scheduled time."
+      "step2Title": "Pay securely with Click",
+      "step2Body": "After choosing a time, pay online through Click Business. Your booking activates automatically when payment is confirmed.",
+      "step3Title": "Meet 1-on-1 by video",
+      "step3Body": "The video link appears inside your confirmed booking. Join at the scheduled time and start your session with your Rahnamo."
     },
     "faq": {
       "heading": "Frequently asked questions",
@@ -779,6 +819,41 @@
       "250000": "Up to 250,000 UZS",
       "500000": "Up to 500,000 UZS",
       "unlimited": "Experience matters more than price"
+    }
+  },
+  "waitlist": {
+    "badge": "Goal-based onboarding",
+    "title": "Choose an outcome, not just a mentor.",
+    "subtitle": "MyRahnamo starts with your goal. Leave your details and we’ll notify you first when a matching Rahnamo or opportunity becomes available.",
+    "formTitle": "Tell us your career goal",
+    "formSubtitle": "This helps us build mentor supply and services around real demand.",
+    "nameLabel": "Your name",
+    "namePlaceholder": "First and last name",
+    "goalLabel": "Primary goal",
+    "levelLabel": "Current level",
+    "fieldLabel": "Field",
+    "fieldPlaceholder": "For example: Frontend, Product, scholarships",
+    "contactLabel": "Email or Telegram",
+    "contactPlaceholder": "you@example.com or @username",
+    "contactHint": "We’ll contact you only when a relevant Rahnamo or opportunity is available.",
+    "submit": "Join early access",
+    "submitting": "Saving...",
+    "error": "Check your details and try again.",
+    "successTitle": "Your goal is saved",
+    "successBody": "We’ll contact you when a matching Rahnamo or opportunity becomes available.",
+    "goals": {
+      "job": "Land a better job",
+      "internship": "Find an internship",
+      "study_abroad": "Study abroad",
+      "startup": "Build a startup",
+      "switch_career": "Switch careers"
+    },
+    "levels": {
+      "student": "Student",
+      "entry": "Entry level",
+      "mid": "Mid level",
+      "senior": "Senior professional",
+      "founder": "Founder / entrepreneur"
     }
   }
 }

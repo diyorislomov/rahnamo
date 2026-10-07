@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -8,7 +9,7 @@ import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse, Counselo
 import { mapCounselorRow } from '@/lib/counselors';
 import { mapForumQuestion, mapForumAnswer } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users, MessagesSquare, Flag } from 'lucide-react';
+import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users, MessagesSquare, Flag, Target, Banknote } from 'lucide-react';
 
 interface CounselorApp {
   id?: string;
@@ -87,6 +88,40 @@ interface SurveyRow {
   created_at?: string;
 }
 
+interface WaitlistRow {
+  id: string;
+  full_name: string;
+  contact: string;
+  goal: 'job' | 'internship' | 'study_abroad' | 'startup' | 'switch_career';
+  field: string;
+  experience_level: 'student' | 'entry' | 'mid' | 'senior' | 'founder';
+  locale: string;
+  status: string;
+  created_at: string;
+}
+
+interface PlatformMetrics {
+  totalUsers: number;
+  activeMentees: number;
+  totalBookings: number;
+  paidGmv: number;
+  completedSessions: number;
+  repeatRate: number;
+  activeMentors: number;
+  waitlistCount: number;
+}
+
+const EMPTY_METRICS: PlatformMetrics = {
+  totalUsers: 0,
+  activeMentees: 0,
+  totalBookings: 0,
+  paidGmv: 0,
+  completedSessions: 0,
+  repeatRate: 0,
+  activeMentors: 0,
+  waitlistCount: 0,
+};
+
 export default function AdminDashboardPage() {
   const t = useTranslations('admin');
   const tCommon = useTranslations('common');
@@ -95,7 +130,7 @@ export default function AdminDashboardPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'forum' | 'survey' | 'counselors' | 'threads'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'waitlist' | 'forum' | 'survey' | 'counselors' | 'threads'>('bookings');
   const [bookings, setBookings] = useState<BookingTicketData[]>([]);
   const [applications, setApplications] = useState<CounselorApp[]>([]);
   const [forumQuestions, setForumQuestions] = useState<ForumQuestion[]>([]);
@@ -103,6 +138,8 @@ export default function AdminDashboardPage() {
   const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [counselors, setCounselors] = useState<Counselor[]>([]);
   const [threads, setThreads] = useState<AdminThread[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistRow[]>([]);
+  const [metrics, setMetrics] = useState<PlatformMetrics>(EMPTY_METRICS);
   const [threadActionId, setThreadActionId] = useState<string | null>(null);
   const [threadActionErrors, setThreadActionErrors] = useState<{ [id: string]: string }>({});
   const [applicationActionId, setApplicationActionId] = useState<string | null>(null);
@@ -180,6 +217,8 @@ export default function AdminDashboardPage() {
           }))
       );
       setCounselors((overviewData.counselors || []).map(mapCounselorRow));
+      setWaitlist((overviewData.waitlist || []) as WaitlistRow[]);
+      setMetrics({ ...EMPTY_METRICS, ...(overviewData.metrics || {}) });
       setThreads(threadsData.threads || []);
     } catch (error) {
       console.error('[ADMIN_DATA_FETCH_FAILED]', error);
@@ -189,6 +228,8 @@ export default function AdminDashboardPage() {
       setForumAnswers([]);
       setSurveyResponses([]);
       setCounselors([]);
+      setWaitlist([]);
+      setMetrics(EMPTY_METRICS);
       setThreads([]);
     } finally {
       setLoading(false);
@@ -604,8 +645,15 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        <section aria-label={t('metrics.heading')} className="mb-7 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <MetricCard icon={<Users className="h-4 w-4" />} label={t('metrics.users')} value={metrics.totalUsers.toLocaleString()} detail={t('metrics.activeMentees', { count: metrics.activeMentees })} />
+          <MetricCard icon={<Calendar className="h-4 w-4" />} label={t('metrics.bookings')} value={metrics.totalBookings.toLocaleString()} detail={t('metrics.completed', { count: metrics.completedSessions })} />
+          <MetricCard icon={<Banknote className="h-4 w-4" />} label={t('metrics.gmv')} value={`${metrics.paidGmv.toLocaleString()} UZS`} detail={t('metrics.repeatRate', { rate: metrics.repeatRate })} />
+          <MetricCard icon={<Target className="h-4 w-4" />} label={t('metrics.demand')} value={metrics.waitlistCount.toLocaleString()} detail={t('metrics.mentors', { count: metrics.activeMentors })} />
+        </section>
+
         {/* Admin Navigation Tabs */}
-        <div className="flex items-center gap-3 mb-6 border-b border-amber-900/15 pb-3">
+        <div className="flex flex-wrap items-center gap-3 mb-6 border-b border-amber-900/15 pb-3">
           <button
             onClick={() => setActiveTab('bookings')}
             className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
@@ -616,6 +664,18 @@ export default function AdminDashboardPage() {
           >
             <Calendar className="w-4 h-4" />
             <span>{t('tabs.bookings', { count: bookings.length })}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('waitlist')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'waitlist'
+                ? 'bg-amber-900 text-amber-50 shadow-sm'
+                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            <span>{t('tabs.waitlist', { count: waitlist.length })}</span>
           </button>
 
           <button
@@ -986,7 +1046,44 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Tab 4: Survey Responses -- read-only lead list, no actions */}
+        {activeTab === 'waitlist' && (
+          <div className="space-y-6">
+            {waitlist.length === 0 ? (
+              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
+                <Target className="w-12 h-12 text-stone-400 mx-auto mb-3" />
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('waitlist.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('waitlist.emptyBody')}</p>
+              </div>
+            ) : (
+              <div className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead><tr className="bg-amber-50/80 border-b border-amber-900/10 text-amber-950 font-serif font-bold">
+                      <th className="p-4">{t('waitlist.person')}</th>
+                      <th className="p-4">{t('waitlist.goal')}</th>
+                      <th className="p-4">{t('waitlist.field')}</th>
+                      <th className="p-4">{t('waitlist.level')}</th>
+                      <th className="p-4">{t('waitlist.date')}</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-amber-900/10">
+                      {waitlist.map((entry) => (
+                        <tr key={entry.id} className="hover:bg-amber-50/30">
+                          <td className="p-4"><div className="font-bold text-stone-900">{entry.full_name}</div><div className="text-[11px] text-amber-800">{entry.contact}</div></td>
+                          <td className="p-4"><span className="rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900">{t(`waitlist.goals.${entry.goal}`)}</span></td>
+                          <td className="p-4 font-semibold text-stone-700">{entry.field}</td>
+                          <td className="p-4 text-stone-600">{t(`waitlist.levels.${entry.experience_level}`)}</td>
+                          <td className="p-4 text-stone-500">{new Date(entry.created_at).toLocaleDateString(dateLocale)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Survey Responses -- read-only lead list, no actions */}
         {activeTab === 'survey' && (
           <div className="space-y-6">
             {surveyResponses.length === 0 ? (
@@ -1230,6 +1327,19 @@ export default function AdminDashboardPage() {
       </main>
 
       <Footer />
+    </div>
+  );
+}
+
+function MetricCard({ icon, label, value, detail }: { icon: ReactNode; label: string; value: string; detail: string }) {
+  return (
+    <div className="rounded-2xl border border-amber-900/15 bg-white p-4 shadow-xs">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-800">{icon}</span>
+        {label}
+      </div>
+      <div className="mt-3 font-serif text-xl font-extrabold text-amber-950 sm:text-2xl">{value}</div>
+      <div className="mt-1 text-[10px] text-stone-500">{detail}</div>
     </div>
   );
 }

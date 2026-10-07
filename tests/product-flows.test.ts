@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeSlots } from '../src/lib/slots';
 import { serviceInput } from '../src/lib/services';
+import { parseWaitlistInput } from '../src/lib/waitlist';
 
 describe('booking slots', () => {
   it('removes duplicate and expired ISO slots and sorts future times', () => {
@@ -30,5 +31,32 @@ describe('mentor services', () => {
 
   it('rejects invalid duration and prices', () => {
     expect(serviceInput({ title: 'Test', description: '', serviceType: 'custom', durationMinutes: 5, price: 0 })).toBeNull();
+  });
+});
+
+describe('career goal waitlist', () => {
+  it('normalizes a valid Telegram contact and keeps the selected goal', () => {
+    expect(parseWaitlistInput({
+      fullName: 'Ali Valiyev',
+      contact: 'AliCareer_01',
+      goal: 'internship',
+      field: 'Data Science',
+      experienceLevel: 'student',
+      locale: 'uz',
+    })).toMatchObject({
+      contact: '@alicareer_01',
+      goal: 'internship',
+      experienceLevel: 'student',
+    });
+  });
+
+  it('rejects unsupported goals and invalid contact details', () => {
+    expect(parseWaitlistInput({
+      fullName: 'Ali Valiyev',
+      contact: 'not a contact',
+      goal: 'social_feed',
+      field: 'Design',
+      experienceLevel: 'student',
+    })).toBeNull();
   });
 });
