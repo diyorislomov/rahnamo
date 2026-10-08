@@ -162,6 +162,7 @@ export async function POST(request: Request) {
     );
     inserted = result.rows[0];
   } catch (error) {
+    console.error('[BOOKING_INSERT_FAILED]', error);
     const conflict = Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23505');
     return NextResponse.json(
       { success: false, error: conflict ? 'slot_unavailable' : 'insert_failed' },

@@ -10,8 +10,14 @@ export function secureEqual(left: string, right: string): boolean {
 export function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
   if (!origin) return true;
+
   try {
-    return new URL(origin).origin === new URL(request.url).origin;
+    const requestOrigin = new URL(request.url).origin;
+    const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SITE_URL).origin
+      : null;
+
+    return origin === requestOrigin || origin === configuredOrigin;
   } catch {
     return false;
   }

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { safeRedirectPath } from '../src/lib/safeRedirect';
 import { amountInTiyin, clickPaymentUrl, clickSignature, verifyClickSignature, type ClickRequestFields } from '../src/lib/click';
+import { isSameOrigin } from '../src/lib/serverSecurity';
 
 vi.mock('server-only', () => ({}));
 
@@ -13,6 +14,38 @@ describe('safeRedirectPath', () => {
     expect(safeRedirectPath('https://evil.example', '/my-bookings')).toBe('/my-bookings');
     expect(safeRedirectPath('//evil.example', '/my-bookings')).toBe('/my-bookings');
     expect(safeRedirectPath('/\\evil.example', '/my-bookings')).toBe('/my-bookings');
+  });
+});
+
+describe('same-origin protection', () => {
+  it('accepts the configured public origin behind a reverse proxy', () => {
+    const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://myrahnamo.com';
+
+    try {
+      const request = new Request('http://127.0.0.1:3002/api/bookings', {
+        headers: { origin: 'https://myrahnamo.com' },
+      });
+      expect(isSameOrigin(request)).toBe(true);
+    } finally {
+      if (previousSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = previousSiteUrl;
+    }
+  });
+
+  it('rejects an unrelated origin', () => {
+    const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://myrahnamo.com';
+
+    try {
+      const request = new Request('http://127.0.0.1:3002/api/bookings', {
+        headers: { origin: 'https://evil.example' },
+      });
+      expect(isSameOrigin(request)).toBe(false);
+    } finally {
+      if (previousSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = previousSiteUrl;
+    }
   });
 });
 
