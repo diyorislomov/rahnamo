@@ -16,20 +16,11 @@ export default function BecomeCounselorPage() {
   const tSpecialties = useTranslations('specialties');
   // Earnings Calculator State
   const [sessionsPerWeek, setSessionsPerWeek] = useState(5);
-  // String, not number -- has to be able to sit empty while the mentor is
-  // typing. An empty/invalid value falls back to an example price rather
-  // than showing "0" or NaN.
   const [sessionPrice, setSessionPrice] = useState('');
 
   // Form State
   const [fullName, setFullName] = useState('');
   const [headline, setHeadline] = useState('');
-  // The homepage's filter pills compare a counselor's specialties array
-  // against these exact English SPECIALTY_CONFIG keys -- previously this
-  // page only collected free-text Uzbek specialties, so an approved
-  // counselor could never match any category pill except "All". `category`
-  // stores the real key; `specialties` stays free-text for the finer,
-  // display-only sub-specialties shown on the counselor's card/profile.
   const [category, setCategory] = useState(CATEGORY_KEYS[0]);
   const [specialties, setSpecialties] = useState('');
   const [bio, setBio] = useState('');
@@ -38,17 +29,8 @@ export default function BecomeCounselorPage() {
   const [phone, setPhone] = useState('+998 ');
   const [standardPrice, setStandardPrice] = useState('45000');
   const [premiumPrice, setPremiumPrice] = useState('130000');
-  // Both optional and empty by default -- a mentor who leaves these blank
-  // simply doesn't offer "Matnli maslahat" at all (NULL price_per_question
-  // on the resulting counselor row, checked by a DB trigger before any
-  // thread can ever be created against them).
   const [pricePerQuestion, setPricePerQuestion] = useState('');
   const [softCap, setSoftCap] = useState('');
-  // Uploaded immediately on file select, not on form submit -- there's no
-  // application id yet at this point (the row doesn't exist until INSERT
-  // below), so the path uses a random per-attempt token instead. The anon
-  // "app photo upload" Storage policy only checks the applications/*
-  // prefix, not any particular id, so this is a legitimate use of it.
   const [photoUrl, setPhotoUrl] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState('');
@@ -139,9 +121,6 @@ export default function BecomeCounselorPage() {
       cleanedTelegram = '@' + cleanedTelegram;
     }
 
-    // `category` (a real SPECIALTY_CONFIG key) leads the comma list so it
-    // survives admin's approve-time split into the counselor's specialties
-    // array and actually matches the homepage's filter pills.
     const combinedSpecialties = [category, ...specialties.split(',').map((s) => s.trim()).filter(Boolean)].join(
       ', '
     );
@@ -181,50 +160,50 @@ export default function BecomeCounselorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans antialiased selection:bg-amber-200 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#0F1E36] font-sans antialiased flex flex-col justify-between overflow-x-hidden">
       <div>
         <Navbar />
 
-        <main className="max-w-5xl mx-auto px-6 py-10">
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 bg-amber-100 px-3.5 py-2 rounded-xl border border-amber-300/60 mb-6 shadow-xs"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700 hover:text-[#18181B] bg-white px-3.5 py-2 rounded-xl border border-zinc-900/10 mb-8 shadow-2xs transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> {tCommon('backToHome')}
+            <ArrowLeft className="w-3.5 h-3.5" /> {tCommon('backToHome')}
           </Link>
 
           {/* Hero Header */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-900/15 text-amber-950 text-xs font-semibold mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-zinc-900/10 text-[#0F4C5C] text-[11px] font-mono uppercase tracking-[0.14em] font-semibold mb-4 shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-[#D4A84B]" />
               <span>{t('badge')}</span>
             </div>
-            <h1 className="font-serif text-3xl sm:text-5xl font-extrabold text-amber-950 leading-tight">
+            <h1 className="font-serif text-3xl sm:text-5xl font-bold text-[#18181B] tracking-tight leading-tight">
               {t('heroTitle')}
             </h1>
-            <p className="text-stone-600 text-xs sm:text-base mt-3 max-w-2xl mx-auto">
+            <p className="text-zinc-600 text-sm sm:text-base mt-3 max-w-2xl mx-auto leading-relaxed">
               {t('heroSubtitle')}
             </p>
           </div>
 
-          {/* MentorCruise Style Calculator & Perks Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {/* Calculator & Perks Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-14">
             {/* Left Col: Earnings Calculator */}
-            <div className="md:col-span-1 bg-gradient-to-b from-[#1E1B4B] to-[#2A265F] text-amber-50 p-6 sm:p-8 rounded-3xl border border-amber-400/20 shadow-xl flex flex-col justify-between">
+            <div className="md:col-span-1 bg-[#0F4C5C] text-white p-6 sm:p-7 rounded-2xl border border-[#D4A84B]/30 shadow-md flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[#D4A84B] text-[11px] font-mono font-semibold uppercase tracking-[0.14em]">
                   <TrendingUp className="w-4 h-4" /> {t('calculator.badge')}
                 </div>
-                <h3 className="font-serif font-bold text-xl text-amber-100 mt-2">
+                <h3 className="font-serif font-bold text-xl text-white mt-2">
                   {t('calculator.heading')}
                 </h3>
-                <p className="text-xs text-amber-200/70 mt-1">
+                <p className="text-xs text-zinc-200/80 mt-1 leading-relaxed">
                   {t('calculator.subheading')}
                 </p>
 
                 {/* Session price input */}
                 <div className="mt-5 space-y-1.5">
-                  <label className="text-xs font-semibold block">{t('calculator.priceLabel')}</label>
+                  <label className="text-xs font-medium text-zinc-200 block">{t('calculator.priceLabel')}</label>
                   <input
                     type="number"
                     min={20000}
@@ -232,15 +211,15 @@ export default function BecomeCounselorPage() {
                     value={sessionPrice}
                     onChange={(e) => setSessionPrice(e.target.value)}
                     placeholder={t('calculator.pricePlaceholder')}
-                    className="w-full p-2.5 text-sm font-bold bg-white/10 border border-amber-300/30 rounded-xl outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-amber-100/40 placeholder:font-normal"
+                    className="w-full px-3.5 py-2.5 text-sm font-mono font-bold bg-white/10 border border-white/20 rounded-xl outline-none focus:border-[#D4A84B] placeholder:text-white/40 placeholder:font-sans placeholder:font-normal text-white"
                   />
                 </div>
 
                 {/* Slider */}
                 <div className="my-6 space-y-3">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span>{t('calculator.weeklyLabel')}</span>
-                    <span className="text-amber-300 font-bold text-sm">{t('calculator.sessionsCount', { count: sessionsPerWeek })}</span>
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-zinc-200">{t('calculator.weeklyLabel')}</span>
+                    <span className="text-[#D4A84B] font-mono font-bold text-sm">{t('calculator.sessionsCount', { count: sessionsPerWeek })}</span>
                   </div>
                   <input
                     type="range"
@@ -248,9 +227,9 @@ export default function BecomeCounselorPage() {
                     max={20}
                     value={sessionsPerWeek}
                     onChange={(e) => setSessionsPerWeek(parseInt(e.target.value, 10))}
-                    className="w-full accent-amber-400 cursor-pointer"
+                    className="w-full accent-[#D4A84B] cursor-pointer"
                   />
-                  <div className="flex justify-between text-[10px] text-amber-300/60">
+                  <div className="flex justify-between text-[10px] font-mono text-zinc-300/70">
                     <span>{t('calculator.sliderMin')}</span>
                     <span>{t('calculator.sliderMax')}</span>
                   </div>
@@ -258,17 +237,17 @@ export default function BecomeCounselorPage() {
               </div>
 
               {/* Monthly Result Card */}
-              <div className="bg-white/10 border border-amber-300/20 p-4 rounded-2xl text-center">
-                <span className="text-[11px] text-amber-200/80 uppercase font-semibold block">{t('calculator.monthlyLabel')}</span>
-                <div className="text-2xl sm:text-3xl font-serif font-extrabold text-amber-300 mt-1">
-                  ~{estimatedMonthlyEarnings.toLocaleString()} <span className="text-xs text-amber-100 font-normal">{t('calculator.perMonth')}</span>
+              <div className="bg-[#09323D] border border-white/12 p-4 rounded-xl text-center">
+                <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-wider font-semibold block">{t('calculator.monthlyLabel')}</span>
+                <div className="text-2xl sm:text-3xl font-mono font-bold text-[#D4A84B] mt-1">
+                  ~{estimatedMonthlyEarnings.toLocaleString()} <span className="text-xs text-white font-sans font-normal">{t('calculator.perMonth')}</span>
                 </div>
                 {!isRealPrice && (
-                  <span className="text-[10px] text-amber-300/60 block mt-1">
+                  <span className="text-[10px] text-zinc-300/70 block mt-1">
                     {t('calculator.exampleNote', { price: EXAMPLE_SESSION_PRICE.toLocaleString() })}
                   </span>
                 )}
-                <span className="text-[10px] text-amber-300/60 block mt-1">
+                <span className="text-[10px] text-zinc-300/70 block mt-1">
                   {t('calculator.commissionNote')}
                 </span>
               </div>
@@ -276,42 +255,42 @@ export default function BecomeCounselorPage() {
 
             {/* Right Col: 4 Perks Cards */}
             <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
-                  <Calendar className="w-5 h-5 text-amber-800" />
+              <div className="surface-card p-6 rounded-2xl space-y-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#0F4C5C]/8 text-[#0F4C5C] border border-[#0F4C5C]/15 flex items-center justify-center">
+                  <Calendar className="w-5 h-5" />
                 </div>
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('perks.flexibleTitle')}</h4>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.flexibleTitle')}</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
                   {t('perks.flexibleBody')}
                 </p>
               </div>
 
-              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
-                  <Globe className="w-5 h-5 text-amber-800" />
+              <div className="surface-card p-6 rounded-2xl space-y-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#0F4C5C]/8 text-[#0F4C5C] border border-[#0F4C5C]/15 flex items-center justify-center">
+                  <Globe className="w-5 h-5" />
                 </div>
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('perks.remoteTitle')}</h4>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.remoteTitle')}</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
                   {t('perks.remoteBody')}
                 </p>
               </div>
 
-              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
-                  <Award className="w-5 h-5 text-amber-800" />
+              <div className="surface-card p-6 rounded-2xl space-y-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#0F4C5C]/8 text-[#0F4C5C] border border-[#0F4C5C]/15 flex items-center justify-center">
+                  <Award className="w-5 h-5" />
                 </div>
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('perks.brandTitle')}</h4>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.brandTitle')}</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
                   {t('perks.brandBody')}
                 </p>
               </div>
 
-              <div className="bg-white/95 p-6 rounded-3xl border border-amber-900/15 shadow-sm space-y-2">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
-                  <Shield className="w-5 h-5 text-amber-800" />
+              <div className="surface-card p-6 rounded-2xl space-y-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#0F4C5C]/8 text-[#0F4C5C] border border-[#0F4C5C]/15 flex items-center justify-center">
+                  <Shield className="w-5 h-5" />
                 </div>
-                <h4 className="font-serif font-bold text-base text-amber-950">{t('perks.guaranteedTitle')}</h4>
-                <p className="text-xs text-stone-600 leading-relaxed">
+                <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.guaranteedTitle')}</h4>
+                <p className="text-xs text-zinc-600 leading-relaxed">
                   {t('perks.guaranteedBody')}
                 </p>
               </div>
@@ -320,86 +299,86 @@ export default function BecomeCounselorPage() {
 
           {/* Form Section */}
           {submitted ? (
-            <div className="bg-white/95 rounded-3xl p-8 border-2 border-emerald-500/30 text-center shadow-md animate-in fade-in zoom-in duration-300">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-700" />
+            <div className="surface-card rounded-2xl p-8 border-2 border-emerald-500/30 text-center">
+              <div className="w-14 h-14 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-7 h-7" />
               </div>
-              <h3 className="font-serif font-bold text-2xl text-amber-950">{t('success.title')}</h3>
-              <p className="text-stone-600 text-xs sm:text-sm mt-2 max-w-md mx-auto">
+              <h3 className="font-serif font-bold text-2xl text-[#18181B]">{t('success.title')}</h3>
+              <p className="text-zinc-600 text-xs sm:text-sm mt-2 max-w-md mx-auto leading-relaxed">
                 {t.rich('success.body', {
                   name: fullName,
                   telegram: telegram,
-                  b: (chunks) => <span className="font-bold">{chunks}</span>,
+                  b: (chunks) => <span className="font-bold text-[#18181B]">{chunks}</span>,
                 })}
               </p>
               <div className="mt-6 flex justify-center gap-3">
                 <Link
                   href="/"
-                  className="bg-amber-900 hover:bg-amber-800 text-amber-50 font-semibold text-xs px-6 py-3 rounded-xl transition-all"
+                  className="bg-[#0F4C5C] hover:bg-[#09323D] text-white font-semibold text-xs px-6 py-3 rounded-xl transition-colors"
                 >
                   {tCommon('returnHome')}
                 </Link>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-white/95 p-6 sm:p-8 rounded-3xl border border-amber-900/15 shadow-sm space-y-5">
-              <h2 className="font-serif font-bold text-xl text-amber-950 flex items-center gap-2 border-b border-amber-900/10 pb-3">
-                <UserCheck className="w-5 h-5 text-amber-800" /> {t('form.heading')}
+            <form onSubmit={handleSubmit} className="surface-card p-6 sm:p-8 rounded-2xl space-y-5">
+              <h2 className="font-serif font-bold text-xl text-[#18181B] flex items-center gap-2.5 border-b border-zinc-900/8 pb-4">
+                <UserCheck className="w-5 h-5 text-[#0F4C5C]" /> {t('form.heading')}
               </h2>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">{t('form.fullNameLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.fullNameLabel')}</label>
                 <input
                   type="text"
                   maxLength={120}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder={t('form.fullNamePlaceholder')}
-                  className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                 />
-                {errors.fullName && <p className="text-[11px] text-red-600 mt-1">{errors.fullName}</p>}
+                {errors.fullName && <p className="text-xs text-red-600 mt-1">{errors.fullName}</p>}
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">{t('form.photoLabel')}</label>
-                <div className="mt-1.5 flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-full bg-amber-100 border border-amber-900/15 flex items-center justify-center overflow-hidden shrink-0">
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.photoLabel')}</label>
+                <div className="flex items-center gap-3.5">
+                  <div className="w-14 h-14 rounded-2xl bg-[#FFF8E7] border border-zinc-900/12 flex items-center justify-center overflow-hidden shrink-0">
                     {photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={photoUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <Camera className="w-5 h-5 text-amber-700" />
+                      <Camera className="w-5 h-5 text-zinc-400" />
                     )}
                   </div>
-                  <label className="cursor-pointer inline-flex items-center gap-2 text-[11px] font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3.5 py-2 rounded-xl border border-amber-300/60 transition-colors">
+                  <label className="cursor-pointer inline-flex items-center gap-2 text-xs font-semibold text-[#0F4C5C] bg-[#0F4C5C]/8 hover:bg-[#0F4C5C]/15 px-4 py-2.5 rounded-xl border border-[#0F4C5C]/15 transition-colors">
                     {uploadingPhoto && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     <span>{uploadingPhoto ? t('form.photoUploading') : photoUrl ? t('form.photoChange') : t('form.photoLabel')}</span>
                     <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} className="hidden" />
                   </label>
                 </div>
-                <p className="text-[10px] text-stone-400 mt-1.5">{t('form.photoHint')}</p>
-                {photoError && <p className="text-[11px] text-red-600 mt-1">{photoError}</p>}
+                <p className="text-[11px] text-zinc-500 mt-1.5">{t('form.photoHint')}</p>
+                {photoError && <p className="text-xs text-red-600 mt-1">{photoError}</p>}
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">{t('form.headlineLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.headlineLabel')}</label>
                 <input
                   type="text"
                   maxLength={200}
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
                   placeholder={t('form.headlinePlaceholder')}
-                  className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                 />
-                {errors.headline && <p className="text-[11px] text-red-600 mt-1">{errors.headline}</p>}
+                {errors.headline && <p className="text-xs text-red-600 mt-1">{errors.headline}</p>}
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">{t('form.categoryLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.categoryLabel')}</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700 cursor-pointer"
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C] cursor-pointer"
                 >
                   {CATEGORY_KEYS.map((key) => (
                     <option key={key} value={key}>
@@ -407,67 +386,67 @@ export default function BecomeCounselorPage() {
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-stone-400 mt-1">
+                <p className="text-[11px] text-zinc-500 mt-1">
                   {t('form.categoryHint')}
                 </p>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">{t('form.specialtiesLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.specialtiesLabel')}</label>
                 <input
                   type="text"
                   maxLength={500}
                   value={specialties}
                   onChange={(e) => setSpecialties(e.target.value)}
                   placeholder={t('form.specialtiesPlaceholder')}
-                  className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                 />
-                {errors.specialties && <p className="text-[11px] text-red-600 mt-1">{errors.specialties}</p>}
+                {errors.specialties && <p className="text-xs text-red-600 mt-1">{errors.specialties}</p>}
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">{t('form.bioLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.bioLabel')}</label>
                 <textarea
                   rows={4}
                   maxLength={4000}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder={t('form.bioPlaceholder')}
-                  className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                 />
-                {errors.bio && <p className="text-[11px] text-red-600 mt-1">{errors.bio}</p>}
+                {errors.bio && <p className="text-xs text-red-600 mt-1">{errors.bio}</p>}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-amber-900/10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-zinc-900/8">
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 block">{t('form.telegramLabel')}</label>
+                  <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.telegramLabel')}</label>
                   <input
                     type="text"
                     maxLength={80}
                     value={telegram}
                     onChange={(e) => setTelegram(e.target.value)}
                     placeholder={t('form.telegramPlaceholder')}
-                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                    className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                   />
-                  {errors.telegram && <p className="text-[11px] text-red-600 mt-1">{errors.telegram}</p>}
+                  {errors.telegram && <p className="text-xs text-red-600 mt-1">{errors.telegram}</p>}
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 block">{t('form.phoneLabel')}</label>
+                  <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.phoneLabel')}</label>
                   <input
                     type="text"
                     maxLength={30}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder={t('form.phonePlaceholder')}
-                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                    className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                   />
-                  {errors.phone && <p className="text-[11px] text-red-600 mt-1">{errors.phone}</p>}
+                  {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block">{t('form.emailLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.emailLabel')}</label>
                 <input
                   type="email"
                   maxLength={254}
@@ -475,64 +454,64 @@ export default function BecomeCounselorPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t('form.emailPlaceholder')}
-                  className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                 />
-                {errors.email && <p className="text-[11px] text-red-600 mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-amber-900/10">
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-zinc-900/8">
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 block">{t('form.standardPriceLabel')}</label>
+                  <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.standardPriceLabel')}</label>
                   <input
                     type="number"
                     value={standardPrice}
                     onChange={(e) => setStandardPrice(e.target.value)}
-                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                    className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 block">{t('form.premiumPriceLabel')}</label>
+                  <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.premiumPriceLabel')}</label>
                   <input
                     type="number"
                     value={premiumPrice}
                     onChange={(e) => setPremiumPrice(e.target.value)}
-                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                    className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 block">{t('form.pricePerQuestionLabel')}</label>
+                  <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.pricePerQuestionLabel')}</label>
                   <input
                     type="number"
                     min={0}
                     value={pricePerQuestion}
                     onChange={(e) => setPricePerQuestion(e.target.value)}
                     placeholder={t('form.pricePerQuestionPlaceholder')}
-                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                    className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-stone-700 block">{t('form.softCapLabel')}</label>
+                  <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.softCapLabel')}</label>
                   <input
                     type="number"
                     min={1}
                     value={softCap}
                     onChange={(e) => setSoftCap(e.target.value)}
                     placeholder={t('form.softCapPlaceholder')}
-                    className="w-full mt-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+                    className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                   />
                 </div>
               </div>
-              <p className="text-[10px] text-stone-400 -mt-2">
+              <p className="text-[11px] text-zinc-500 -mt-2">
                 {t('form.pricePerQuestionHint')}
               </p>
 
               {submitError && (
-                <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-300 rounded-xl px-3.5 py-2.5">
+                <p className="text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
                   {submitError}
                 </p>
               )}
@@ -540,7 +519,7 @@ export default function BecomeCounselorPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-70 mt-4"
+                className="w-full py-3.5 bg-[#0F4C5C] hover:bg-[#09323D] text-white font-semibold text-sm rounded-xl shadow-sm transition-colors cursor-pointer disabled:opacity-70 mt-4"
               >
                 {isSubmitting ? t('form.submitting') : t('form.submit')}
               </button>

@@ -11,7 +11,22 @@ import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from 
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
-import { Star, ShieldCheck, ArrowLeft, Clock, CheckCircle2, AlertCircle, Copy, Mail, Phone, Lock, Loader2, MessageCircleHeart, Send, LogIn } from 'lucide-react';
+import {
+  Star,
+  ShieldCheck,
+  ArrowLeft,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Copy,
+  Mail,
+  Phone,
+  Lock,
+  Loader2,
+  MessageCircleHeart,
+  Send,
+  LogIn,
+} from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -43,10 +58,6 @@ interface BookingTicketData {
   paymentStatus?: 'pending' | 'confirmed' | 'rejected';
   paymentReceipt?: string;
   createdAt: string;
-  // Captured once, here, from this browser's own active locale -- never
-  // re-derived later from whichever session's cookie eventually triggers
-  // the payment-confirmed email (that's the admin's browser, not the
-  // student's, and often much later).
   locale: string;
 }
 
@@ -66,7 +77,7 @@ export default function CounselorPage() {
   const locale = useLocale();
   const params = useParams();
   const { data: authSession, status: authStatus } = useSession();
-  
+
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const [counselor, setCounselor] = useState<Counselor | undefined>(() =>
@@ -77,32 +88,39 @@ export default function CounselorPage() {
   useEffect(() => {
     if (!rawId || !isSupabaseConfigured()) return;
 
-    Promise.resolve(supabase.from('counselors').select(PUBLIC_COUNSELOR_COLUMNS).eq('id', rawId).maybeSingle())
+    const sampleMatch = INITIAL_COUNSELORS.find((c) => c.id === rawId);
+
+    Promise.resolve(
+      supabase.from('counselors').select(PUBLIC_COUNSELOR_COLUMNS).eq('id', rawId).maybeSingle()
+    )
       .then(({ data, error }) => {
-        if (error) throw error;
-        setCounselor(data ? mapCounselorRow(data) : undefined);
+        if (error) {
+          if (sampleMatch) {
+            setCounselor(sampleMatch);
+            setCounselorLoading(false);
+            return;
+          }
+          throw error;
+        }
+        setCounselor(data ? mapCounselorRow(data) : sampleMatch);
         setCounselorLoading(false);
       })
       .catch((error) => {
         console.error('[COUNSELOR_FETCH_FAILED]', error);
-        setCounselor(undefined);
+        setCounselor(sampleMatch);
         setCounselorLoading(false);
       });
   }, [rawId]);
 
-  // Reviews — read-only for now, no submission flow exists yet. Empty by
-  // default; only ever populated by real Supabase rows, never fabricated.
-  // `reviewsLoading` starts true only if a fetch will actually happen, so the
-  // effect never needs to flip it synchronously — only from inside the async
-  // `.then` callback below.
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     return !!url && !url.includes('placeholder');
   });
-  const verifiedRating = reviews.length > 0
-    ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
-    : '—';
+  const verifiedRating =
+    reviews.length > 0
+      ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)
+      : '—';
 
   useEffect(() => {
     if (!counselor || !reviewsLoading) return;
@@ -132,14 +150,14 @@ export default function CounselorPage() {
   const [services, setServices] = useState<CounselorService[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const selectedService = services.find((service) => service.id === selectedServiceId) || null;
-  // Only meaningful when the counselor actually offers text Q&A
-  // (pricePerQuestion set) -- switches the whole right column between the
-  // existing video booking flow and TextQaPanel below.
   const [viewMode, setViewMode] = useState<'video' | 'text_qa'>('video');
-  const [availability, setAvailability] = useState<{ counselorId: string; slots: string[] } | null>(null);
-  const availableSlots = availability && availability.counselorId === counselor?.id
-    ? availability.slots
-    : counselor?.availableSlots || [];
+  const [availability, setAvailability] = useState<{ counselorId: string; slots: string[] } | null>(
+    null
+  );
+  const availableSlots =
+    availability && availability.counselorId === counselor?.id
+      ? availability.slots
+      : counselor?.availableSlots || [];
   const [selectedSlotOverride, setSelectedSlot] = useState<string>('');
   const selectedSlot = selectedSlotOverride || availableSlots[0] || '';
   const [paymentMethod] = useState<PaymentMethod>('click');
@@ -153,10 +171,6 @@ export default function CounselorPage() {
   const [education, setEducation] = useState('');
   const [question, setQuestion] = useState('');
 
-  // Mandatory-login gate for the video booking wizard. Text Q&A applies
-  // the same real-account requirement in its own panel. null = still
-  // checking; false = not logged in as a real
-  // (non-anonymous) mentee; a string = that mentee's email.
   const menteeEmail: string | null | false =
     authStatus === 'loading'
       ? null
@@ -164,7 +178,6 @@ export default function CounselorPage() {
         ? authSession.user.email || authSession.user.name || 'mentee'
         : false;
 
-  // Errors & Ticket state
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [bookingTicket] = useState<BookingTicketData | null>(null);
   const [copied, setCopied] = useState(false);
@@ -180,7 +193,7 @@ export default function CounselorPage() {
         const result = await response.json();
         if (active && response.ok && Array.isArray(result.availableSlots)) {
           setAvailability({ counselorId: counselor.id, slots: result.availableSlots });
-          setSelectedSlot((current) => result.availableSlots.includes(current) ? current : '');
+          setSelectedSlot((current) => (result.availableSlots.includes(current) ? current : ''));
         }
       })
       .catch(() => undefined);
@@ -204,33 +217,32 @@ export default function CounselorPage() {
         }
       })
       .catch(() => undefined);
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [counselor]);
 
-  const bookingPrice = selectedTier === 'service' && selectedService
-    ? selectedService.price
-    : selectedTier === 'standard'
-      ? counselor?.standardPrice || 0
-      : counselor?.premiumPrice || 0;
+  const bookingPrice =
+    selectedTier === 'service' && selectedService
+      ? selectedService.price
+      : selectedTier === 'standard'
+        ? counselor?.standardPrice || 0
+        : counselor?.premiumPrice || 0;
 
   if (!counselor) {
     if (counselorLoading) {
-      return <div className="min-h-screen bg-[#FAF6EE]" />;
+      return <div className="min-h-screen bg-[#FBF9F5]" />;
     }
     return (
-      <div className="min-h-screen bg-[#FAF6EE] p-12 text-center text-amber-950 font-serif">
+      <div className="min-h-screen bg-[#FBF9F5] p-12 text-center text-[#0F1E36] font-display">
         <p className="text-xl font-bold">{t('notFound')}</p>
-        <Link href="/" className="text-amber-800 underline text-sm mt-3 inline-block">
+        <Link href="/" className="text-[#D97706] underline text-sm mt-3 inline-block">
           {tCommon('returnHome')}
         </Link>
       </div>
     );
   }
 
-  // Returns the built-up error map itself (not just a boolean) so the
-  // submit handler can jump the wizard back to whichever step owns the
-  // first invalid field -- every individual check below is unchanged from
-  // before this was split into steps.
   const validateForm = (): { [key: string]: string } => {
     const newErrors: { [key: string]: string } = {};
 
@@ -312,12 +324,6 @@ export default function CounselorPage() {
     setIsProcessingPayment(true);
     setCardError('');
 
-    // A tab open since before a deploy runs its old JS forever -- ordinary
-    // navigation never reloads it. That's the exact class of bug that
-    // produced a real "successful" ticket for a booking that was never
-    // written anywhere: the stale code's env check silently skipped the
-    // whole Supabase branch. Checked here, first, before anything else in
-    // this function touches state or storage.
     if (await isRunningStaleBuild()) {
       announceStaleBuild();
       setIsProcessingPayment(false);
@@ -357,13 +363,21 @@ export default function CounselorPage() {
     const result = await response.json();
     if (!response.ok || !result?.booking) {
       setIsProcessingPayment(false);
-      setCardError(result?.error === 'slot_unavailable' ? t('slotUnavailable') : t('bookingInsertError'));
+      setCardError(
+        result?.error === 'slot_unavailable' ? t('slotUnavailable') : t('bookingInsertError')
+      );
       return;
     }
 
     const row = result.booking;
-    setAvailability({ counselorId: counselor.id, slots: availableSlots.filter((slot) => slot !== row.slot) });
-    if (typeof result.paymentUrl !== 'string' || !result.paymentUrl.startsWith('https://my.click.uz/')) {
+    setAvailability({
+      counselorId: counselor.id,
+      slots: availableSlots.filter((slot) => slot !== row.slot),
+    });
+    if (
+      typeof result.paymentUrl !== 'string' ||
+      !result.paymentUrl.startsWith('https://my.click.uz/')
+    ) {
       setIsProcessingPayment(false);
       setCardError(t('bookingInsertError'));
       return;
@@ -381,7 +395,11 @@ export default function CounselorPage() {
   const copyBookingId = () => {
     if (bookingTicket) {
       try {
-        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        if (
+          typeof navigator !== 'undefined' &&
+          navigator.clipboard &&
+          navigator.clipboard.writeText
+        ) {
           navigator.clipboard.writeText(bookingTicket.id);
         } else {
           const textArea = document.createElement('textarea');
@@ -400,70 +418,88 @@ export default function CounselorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] font-sans pb-16 selection:bg-amber-200">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#0F1E36] font-sans pb-16 selection:bg-[#F59E0B]/25">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-6 py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-amber-900 hover:text-amber-700 bg-amber-100 px-3.5 py-2 rounded-xl border border-amber-300/60 shadow-xs"
+          className="btn-secondary-surface inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-xl"
         >
-          <ArrowLeft className="w-4 h-4" /> {t('backToCatalog')}
+          <ArrowLeft className="w-3.5 h-3.5 text-[#0F1E36]" />
+          <span>{t('backToCatalog')}</span>
         </Link>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-        {/* Left Column: Counselor Profile Card */}
-        <div className="md:col-span-1 bg-white/95 p-6 rounded-3xl border border-amber-900/10 shadow-sm h-fit">
-          <Image
-            src={counselor.avatarUrl}
-            alt={counselor.fullName}
-            width={96}
-            height={96}
-            className="w-24 h-24 rounded-2xl object-cover mx-auto border-2 border-amber-200 shadow-xs"
-          />
-          <div className="text-center mt-4">
-            <h2 className="font-serif font-bold text-lg text-amber-950 flex items-center justify-center gap-1.5">
-              {counselor.fullName}
-              <ShieldCheck className="w-4 h-4 text-amber-700 fill-amber-100" />
-            </h2>
-            <p className="text-xs text-stone-600 mt-1">{counselor.headline}</p>
-            <div className="flex items-center justify-center gap-1 mt-2 text-xs font-semibold text-amber-800">
-              <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-              <span>{verifiedRating}</span>
-              <span className="text-stone-400 font-normal">({t('reviewsCountSuffix', { count: reviews.length })})</span>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16">
+        {/* Left Column: Counselor Identity, Credentials & Reviews */}
+        <div className="lg:col-span-5 surface-card p-6 sm:p-7 h-fit">
+          <div className="flex items-start gap-4">
+            <Image
+              src={counselor.avatarUrl}
+              alt={counselor.fullName}
+              width={88}
+              height={88}
+              className="w-20 h-20 rounded-2xl object-cover border border-zinc-900/10 shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <h1 className="font-serif font-bold text-xl text-zinc-900 flex items-center gap-1.5">
+                <span className="truncate">{counselor.fullName}</span>
+                <ShieldCheck className="w-4 h-4 text-[#0F4C5C] shrink-0" />
+              </h1>
+              <p className="text-xs sm:text-sm text-zinc-600 mt-1 leading-relaxed">
+                {counselor.headline}
+              </p>
+              <div className="inline-flex items-center gap-1.5 mt-2.5 text-xs font-semibold text-zinc-900 bg-[#FBF5E6] border border-[#D4A84B]/40 px-2.5 py-1 rounded-md">
+                <Star className="w-3.5 h-3.5 fill-[#D4A84B] text-[#D4A84B]" />
+                <span>{verifiedRating}</span>
+                <span className="text-zinc-500 font-normal">
+                  ({t('reviewsCountSuffix', { count: reviews.length })})
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Mentor Cruise Key Stats */}
-          <div className="mt-4 pt-4 border-t border-amber-900/10 grid grid-cols-2 gap-2 text-[11px] font-semibold text-amber-950">
-            {counselor.responseTime && (
-              <div className="bg-emerald-50/80 p-2 rounded-xl border border-emerald-200 text-emerald-900 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
-                <span>{t('responseTimeSuffix', { time: counselor.responseTime })}</span>
-              </div>
-            )}
-            {counselor.totalSessions && (
-              <div className="bg-amber-50/80 p-2 rounded-xl border border-amber-200 text-amber-900 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                <span>{t('sessionsCountSuffix', { count: counselor.totalSessions })}</span>
-              </div>
-            )}
-          </div>
+          {/* Key Credibility Stats */}
+          {(counselor.responseTime || counselor.totalSessions) && (
+            <div className="mt-5 pt-4 border-t border-zinc-900/[0.08] grid grid-cols-2 gap-2.5 text-[11px] font-semibold">
+              {counselor.responseTime && (
+                <div className="bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/80 text-emerald-900 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span>{t('responseTimeSuffix', { time: counselor.responseTime })}</span>
+                </div>
+              )}
+              {counselor.totalSessions && (
+                <div className="bg-[#F5EFE0] p-2.5 rounded-xl border border-zinc-900/10 text-zinc-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#0F4C5C] shrink-0" />
+                  <span>{t('sessionsCountSuffix', { count: counselor.totalSessions })}</span>
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="mt-4 pt-4 border-t border-amber-900/10">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">{t('aboutHeading')}</h4>
-            <p className="text-xs text-stone-600 mt-2 leading-relaxed">{counselor.bio}</p>
+          <div className="mt-5 pt-4 border-t border-zinc-900/[0.08]">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+              {t('aboutHeading')}
+            </h4>
+            <p className="text-xs sm:text-sm text-zinc-700 mt-2 leading-relaxed">
+              {counselor.bio}
+            </p>
           </div>
 
           {/* Student Outcomes */}
           {counselor.outcomes && counselor.outcomes.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-amber-900/10">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">{t('outcomesHeading')}</h4>
-              <div className="space-y-1.5 mt-2">
+            <div className="mt-5 pt-4 border-t border-zinc-900/[0.08]">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                {t('outcomesHeading')}
+              </h4>
+              <div className="space-y-1.5 mt-2.5">
                 {counselor.outcomes.map((out) => (
-                  <div key={out} className="flex items-center gap-1.5 text-[11px] font-medium text-amber-950 bg-amber-50 p-2 rounded-xl border border-amber-200/60">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                  <div
+                    key={out}
+                    className="flex items-center gap-2 text-xs font-medium text-zinc-800 bg-[#F5EFE0]/70 p-2.5 rounded-xl border border-zinc-900/[0.07]"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#0F4C5C] shrink-0" />
                     <span>{out}</span>
                   </div>
                 ))}
@@ -471,60 +507,74 @@ export default function CounselorPage() {
             </div>
           )}
 
-          <div className="mt-4 pt-4 border-t border-amber-900/10">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">{t('specialtiesHeading')}</h4>
-            <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="mt-5 pt-4 border-t border-zinc-900/[0.08]">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+              {t('specialtiesHeading')}
+            </h4>
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
               {counselor.specialties.map((s) => (
-                <span key={s} className="bg-amber-50 border border-amber-200/70 text-amber-900 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                <span
+                  key={s}
+                  className="bg-[#0F4C5C]/[0.07] text-[#0F4C5C] text-[11px] font-semibold px-2.5 py-1 rounded-md"
+                >
                   {s}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Why work with me — only shown once a counselor has actually written one */}
           {counselor.whyWorkWithMe && (
-            <div className="mt-4 pt-4 border-t border-amber-900/10">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70">
+            <div className="mt-5 pt-4 border-t border-zinc-900/[0.08]">
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                 {t('whyWorkWithMeHeading')}
               </h4>
-              <p className="text-xs text-stone-600 mt-2 leading-relaxed">{counselor.whyWorkWithMe}</p>
+              <p className="text-xs sm:text-sm text-zinc-700 mt-2 leading-relaxed">
+                {counselor.whyWorkWithMe}
+              </p>
             </div>
           )}
 
-          {/* Reviews — real data only. No submitted reviews exist yet, so this is
-              an honest empty state, not a placeholder testimonial. */}
-          <div className="mt-4 pt-4 border-t border-amber-900/10">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-900/70 flex items-center gap-1.5">
-              <MessageCircleHeart className="w-3.5 h-3.5 text-amber-700" />
-              {t('reviewsHeading')}
+          {/* Verified Reviews */}
+          <div className="mt-5 pt-4 border-t border-zinc-900/[0.08]">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+              <MessageCircleHeart className="w-3.5 h-3.5 text-[#0F4C5C]" />
+              <span>{t('reviewsHeading')}</span>
             </h4>
 
             {reviewsLoading ? (
-              <p className="text-[11px] text-stone-400 mt-2">{t('reviewsLoading')}</p>
+              <p className="text-xs text-zinc-400 mt-2">{t('reviewsLoading')}</p>
             ) : reviews.length === 0 ? (
-              <div className="mt-2 bg-amber-50/60 border border-amber-900/10 rounded-xl p-3 text-center">
-                <p className="text-[11px] font-semibold text-stone-500">{t('reviewsEmptyTitle')}</p>
-                <p className="text-[10px] text-stone-400 mt-0.5">
-                  {t('reviewsEmptyBody')}
-                </p>
+              <div className="mt-2.5 bg-[#FFF8E7]/60 border border-zinc-900/[0.08] rounded-xl p-4 text-center">
+                <p className="text-xs font-semibold text-zinc-600">{t('reviewsEmptyTitle')}</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">{t('reviewsEmptyBody')}</p>
               </div>
             ) : (
-              <div className="space-y-2 mt-2">
+              <div className="space-y-2.5 mt-2.5">
                 {reviews.map((r) => (
-                  <div key={r.id} className="bg-amber-50/60 border border-amber-900/10 rounded-xl p-3">
+                  <div
+                    key={r.id}
+                    className="bg-[#FFF8E7]/60 border border-zinc-900/[0.08] rounded-xl p-3.5"
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-amber-950">{r.studentFirstName}</span>
-                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <span className="text-xs font-semibold text-zinc-900">
+                        {r.studentFirstName}
+                      </span>
+                      <div className="flex items-center gap-0.5 shrink-0">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
-                            className={`w-3 h-3 ${i < r.rating ? 'fill-amber-500 text-amber-500' : 'text-stone-300'}`}
+                            className={`w-3 h-3 ${
+                              i < r.rating
+                                ? 'fill-[#D4A84B] text-[#D4A84B]'
+                                : 'text-zinc-300'
+                            }`}
                           />
                         ))}
                       </div>
                     </div>
-                    <p className="text-xs text-stone-600 mt-1 leading-relaxed">{r.reviewText}</p>
+                    <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed">
+                      {r.reviewText}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -532,15 +582,17 @@ export default function CounselorPage() {
           </div>
         </div>
 
-        {/* Right Column: Form or Digital Ticket */}
-        <div className="md:col-span-2">
+        {/* Right Column: Booking Wizard or Digital Ticket */}
+        <div className="lg:col-span-7">
           {counselor.pricePerQuestion != null && !bookingTicket && (
-            <div className="flex gap-2 mb-4 bg-amber-100/60 p-1.5 rounded-2xl w-fit">
+            <div className="flex gap-1.5 mb-4 bg-[#F5EFE0] border border-zinc-900/10 p-1 rounded-xl w-fit">
               <button
                 type="button"
                 onClick={() => setViewMode('video')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'video' ? 'bg-amber-900 text-amber-50 shadow-xs' : 'text-stone-700 hover:text-amber-950'
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'video'
+                    ? 'bg-[#0F4C5C] text-white shadow-2xs'
+                    : 'text-zinc-700 hover:text-zinc-900'
                 }`}
               >
                 {t('videoModeLabel')}
@@ -548,8 +600,10 @@ export default function CounselorPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('text_qa')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'text_qa' ? 'bg-amber-900 text-amber-50 shadow-xs' : 'text-stone-700 hover:text-amber-950'
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'text_qa'
+                    ? 'bg-[#0F4C5C] text-white shadow-2xs'
+                    : 'text-zinc-700 hover:text-zinc-900'
                 }`}
               >
                 {t('textQaModeLabel')}
@@ -561,80 +615,99 @@ export default function CounselorPage() {
             <TextQaPanel counselor={counselor} />
           ) : !bookingTicket && viewMode === 'video' && !menteeEmail ? (
             /* Mandatory login gate for the video booking wizard. */
-            <div className="bg-white/95 rounded-3xl border-2 border-amber-900/20 p-8 shadow-md text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto shadow-sm">
-                <Lock className="w-7 h-7 text-amber-300" />
+            <div className="surface-card p-8 sm:p-10 text-center space-y-5">
+              <div className="w-12 h-12 rounded-xl bg-[#0F4C5C] text-white flex items-center justify-center mx-auto shadow-2xs">
+                <Lock className="w-5 h-5 text-[#D4A84B]" />
               </div>
               {menteeEmail === null ? (
-                <p className="text-xs text-stone-500">{t('bookingLoginGate.checking')}</p>
+                <p className="text-xs text-zinc-500">{t('bookingLoginGate.checking')}</p>
               ) : (
                 <>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F4C5C] bg-[#0F4C5C]/[0.08] px-3 py-1 rounded-full">
                       {t('bookingLoginGate.badge')}
                     </span>
-                    <h3 className="font-serif font-extrabold text-xl text-amber-950 mt-3">{t('bookingLoginGate.title')}</h3>
-                    <p className="text-xs text-stone-600 mt-1.5 max-w-sm mx-auto">{t('bookingLoginGate.subtitle')}</p>
+                    <h3 className="font-serif font-bold text-xl text-zinc-900 mt-3">
+                      {t('bookingLoginGate.title')}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-zinc-600 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                      {t('bookingLoginGate.subtitle')}
+                    </p>
                   </div>
                   <Link
                     href={`/login?redirect=${encodeURIComponent(`/counselors/${rawId}`)}`}
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition-all"
+                    className="btn-primary-teal inline-flex items-center gap-2 font-semibold text-xs sm:text-sm px-6 py-3 rounded-xl"
                   >
-                    <LogIn className="w-4 h-4 text-amber-300" /> {t('bookingLoginGate.cta')}
+                    <LogIn className="w-4 h-4 text-[#D4A84B]" />
+                    <span>{t('bookingLoginGate.cta')}</span>
                   </Link>
                 </>
               )}
             </div>
           ) : bookingTicket ? (
             /* Digital Rahnamo Ticket */
-            <div className="bg-white/95 rounded-3xl border-2 border-amber-900/20 p-6 md:p-8 shadow-md">
-              <div className="flex items-center justify-between border-b border-dashed border-amber-900/20 pb-4">
+            <div className="surface-card p-6 md:p-8">
+              <div className="flex items-center justify-between border-b border-dashed border-zinc-900/15 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-900 flex items-center justify-center text-amber-100">
-                    <CamelIcon className="w-5 h-5 fill-amber-100" />
+                  <div className="w-10 h-10 rounded-xl bg-[#0F4C5C] flex items-center justify-center text-white">
+                    <CamelIcon className="w-5 h-5 fill-white" />
                   </div>
                   <div>
-                    <h3 className="font-serif font-bold text-lg text-amber-950">{t('ticket.title')}</h3>
-                    <p className="text-[11px] text-stone-500">{t('ticket.subtitle')}</p>
+                    <h3 className="font-serif font-bold text-lg text-zinc-900">
+                      {t('ticket.title')}
+                    </h3>
+                    <p className="text-[11px] text-zinc-500">{t('ticket.subtitle')}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={copyBookingId}
-                  className="flex items-center gap-1 text-xs font-mono font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 px-3 py-1.5 rounded-lg border border-amber-300 transition-all cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-mono font-bold bg-[#F5EFE0] hover:bg-[#EBE3D0] text-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-900/15 transition-all cursor-pointer"
                 >
                   <span>{bookingTicket.id}</span>
                   <Copy className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              {copied && <p className="text-[11px] text-emerald-600 font-semibold text-right mt-1">{t('ticket.copiedNotice')}</p>}
+              {copied && (
+                <p className="text-[11px] text-emerald-600 font-semibold text-right mt-1">
+                  {t('ticket.copiedNotice')}
+                </p>
+              )}
 
-              <div className="grid grid-cols-2 gap-4 my-6 text-xs bg-amber-50/60 p-4 rounded-2xl border border-amber-900/10">
+              <div className="grid grid-cols-2 gap-4 my-6 text-xs bg-[#FFF8E7]/60 p-4 rounded-xl border border-zinc-900/10">
                 <div>
-                  <span className="text-stone-500 block">{t('ticket.studentLabel')}</span>
-                  <span className="font-bold text-amber-950 text-sm">{bookingTicket.studentName}</span>
+                  <span className="text-zinc-500 block">{t('ticket.studentLabel')}</span>
+                  <span className="font-bold text-zinc-900 text-sm">
+                    {bookingTicket.studentName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-stone-500 block">{t('ticket.counselorLabel')}</span>
-                  <span className="font-bold text-amber-950 text-sm">{bookingTicket.counselorName}</span>
+                  <span className="text-zinc-500 block">{t('ticket.counselorLabel')}</span>
+                  <span className="font-bold text-zinc-900 text-sm">
+                    {bookingTicket.counselorName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-stone-500 block">{t('ticket.slotLabel')}</span>
-                  <span className="font-bold text-amber-900">{formatSlot(bookingTicket.slot, locale)}</span>
+                  <span className="text-zinc-500 block">{t('ticket.slotLabel')}</span>
+                  <span className="font-bold text-[#0F4C5C]">
+                    {formatSlot(bookingTicket.slot, locale)}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-stone-500 block">{t('ticket.tierPaymentLabel')}</span>
-                  <span className="font-bold text-amber-900 uppercase">
-                    {bookingTicket.serviceTitle || bookingTicket.tier} ({bookingTicket.price.toLocaleString()} UZS via {bookingTicket.paymentMethod.toUpperCase()})
+                  <span className="text-zinc-500 block">{t('ticket.tierPaymentLabel')}</span>
+                  <span className="font-bold text-[#0F4C5C] uppercase">
+                    {bookingTicket.serviceTitle || bookingTicket.tier} (
+                    {bookingTicket.price.toLocaleString()} UZS via{' '}
+                    {bookingTicket.paymentMethod.toUpperCase()})
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-3 bg-emerald-50/80 p-5 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
+              <div className="space-y-3 bg-emerald-50/80 p-5 rounded-xl border border-emerald-200 text-xs text-emerald-950">
                 <div className="flex items-center gap-2 font-bold text-emerald-900 text-sm">
-                  <CheckCircle2 className="w-4.5 h-4.5 text-emerald-700" />
-                  {t('ticket.readyTitle')}
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                  <span>{t('ticket.readyTitle')}</span>
                 </div>
                 <p className="leading-relaxed">
                   {t.rich('ticket.emailNotice', {
@@ -643,19 +716,15 @@ export default function CounselorPage() {
                   })}
                 </p>
 
-                {/* The single most important next action -- called out on its
-                    own, with the booking ID immediately copyable right here,
-                    rather than folded into the paragraph above where a
-                    student skimming past the confirmation could miss it. */}
-                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3.5 flex items-start gap-2.5">
-                  <Send className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-                  <p className="text-amber-950 leading-relaxed">
+                <div className="bg-[#FBF5E6] border border-[#D4A84B]/50 rounded-xl p-3.5 flex items-start gap-2.5">
+                  <Send className="w-4 h-4 text-[#9E741E] shrink-0 mt-0.5" />
+                  <p className="text-zinc-900 leading-relaxed">
                     {t('ticket.sendReceiptPrefix')}{' '}
                     <a
                       href={`https://t.me/rahnamo_admin?start=${bookingTicket.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-bold text-sky-700 hover:text-sky-800 underline underline-offset-2"
+                      className="font-bold text-[#0F4C5C] hover:underline underline-offset-2"
                     >
                       @rahnamo_admin
                     </a>{' '}
@@ -663,21 +732,21 @@ export default function CounselorPage() {
                     <button
                       type="button"
                       onClick={copyBookingId}
-                      className="inline-flex items-center gap-1 font-mono font-bold bg-white hover:bg-amber-100 text-amber-950 px-2 py-0.5 rounded-md border border-amber-300 transition-all cursor-pointer align-middle"
+                      className="inline-flex items-center gap-1 font-mono font-bold bg-white hover:bg-[#F5EFE0] text-zinc-900 px-2 py-0.5 rounded-md border border-zinc-900/15 transition-all cursor-pointer align-middle"
                     >
                       <span>{bookingTicket.id}</span>
                       <Copy className="w-3 h-3" />
                     </button>
-                    {copied && <span className="ml-2 text-[11px] text-emerald-600 font-semibold">{t('ticket.copiedShort')}</span>}
+                    {copied && (
+                      <span className="ml-2 text-[11px] text-emerald-600 font-semibold">
+                        {t('ticket.copiedShort')}
+                      </span>
+                    )}
                   </p>
                 </div>
 
-                {/* Video link is deliberately withheld until an admin has
-                    actually verified the payment proof above -- it never
-                    ships in the booking-created email either, so this is
-                    the honest state right now, not a placeholder. */}
-                <div className="flex items-center gap-2 text-stone-600 bg-white/70 border border-stone-200 rounded-xl p-3">
-                  <Lock className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
+                <div className="flex items-center gap-2 text-zinc-600 bg-white/80 border border-zinc-200 rounded-xl p-3">
+                  <Lock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                   <span>{t('ticket.videoPendingNotice')}</span>
                 </div>
 
@@ -686,13 +755,13 @@ export default function CounselorPage() {
                     href={`https://t.me/rahnamo_admin?start=${bookingTicket.id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
+                    className="inline-flex items-center gap-1.5 bg-[#0F4C5C] hover:bg-[#09323D] text-white px-3.5 py-2 rounded-xl font-semibold transition-all cursor-pointer text-xs"
                   >
                     <span>{t('ticket.telegramCta')}</span>
                   </a>
                   <Link
                     href="/my-bookings"
-                    className="inline-flex items-center gap-1 bg-emerald-800 hover:bg-emerald-900 text-white px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer text-xs"
+                    className="inline-flex items-center gap-1 bg-emerald-800 hover:bg-emerald-900 text-white px-3.5 py-2 rounded-xl font-semibold transition-all cursor-pointer text-xs"
                   >
                     <span>{t('ticket.viewBookingsCta')}</span>
                   </Link>
@@ -702,83 +771,111 @@ export default function CounselorPage() {
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/my-bookings"
-                  className="flex-1 text-center bg-amber-900 hover:bg-amber-800 text-amber-50 font-semibold text-xs py-3 rounded-xl transition-all shadow-xs"
+                  className="btn-primary-teal flex-1 text-center font-semibold text-xs py-3 rounded-xl"
                 >
                   {t('ticket.viewInMyBookings')}
                 </Link>
                 <Link
                   href="/"
-                  className="flex-1 text-center bg-white border border-amber-900/20 text-stone-800 hover:bg-amber-50 font-semibold text-xs py-3 rounded-xl transition-all"
+                  className="btn-secondary-surface flex-1 text-center font-semibold text-xs py-3 rounded-xl"
                 >
                   {tCommon('returnHome')}
                 </Link>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleInitiatePayment} className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-6">
-              {/* Step indicator -- numbered, no wizard library. Clicking a
-                  completed/earlier step jumps back to it; the current and
-                  future steps are not clickable ahead of validation. */}
+            <form
+              onSubmit={handleInitiatePayment}
+              className="surface-card p-6 sm:p-8 space-y-6"
+            >
+              {/* Step Indicator */}
               <div className="flex items-center gap-2 pb-2">
                 {([1, 2, 3] as const).map((step, i) => (
                   <div key={step} className="flex items-center flex-1 last:flex-none">
                     <button
                       type="button"
-                      onClick={() => { if (step < currentStep) setCurrentStep(step); }}
+                      onClick={() => {
+                        if (step < currentStep) setCurrentStep(step);
+                      }}
                       disabled={step > currentStep}
-                      className={`w-8 h-8 flex-shrink-0 rounded-full text-xs font-bold flex items-center justify-center border-2 transition-all ${
+                      className={`w-8 h-8 shrink-0 rounded-lg text-xs font-mono font-bold flex items-center justify-center border transition-all ${
                         step === currentStep
-                          ? 'bg-amber-900 border-amber-900 text-amber-50'
+                          ? 'bg-[#0F4C5C] border-[#0F4C5C] text-white'
                           : step < currentStep
-                          ? 'bg-amber-100 border-amber-800 text-amber-900 cursor-pointer hover:bg-amber-200'
-                          : 'bg-white border-amber-900/15 text-stone-400'
+                            ? 'bg-[#F5EFE0] border-[#0F4C5C] text-[#0F4C5C] cursor-pointer hover:bg-[#EBE3D0]'
+                            : 'bg-white border-zinc-900/15 text-zinc-400'
                       }`}
                     >
-                      {step < currentStep ? <CheckCircle2 className="w-4 h-4" /> : step}
+                      {step < currentStep ? <CheckCircle2 className="w-4 h-4" /> : `0${step}`}
                     </button>
                     {i < 2 && (
-                      <div className={`h-0.5 flex-1 mx-2 rounded-full transition-all ${step < currentStep ? 'bg-amber-800' : 'bg-amber-900/10'}`} />
+                      <div
+                        className={`h-0.5 flex-1 mx-2 rounded-full transition-all ${
+                          step < currentStep ? 'bg-[#0F4C5C]' : 'bg-zinc-900/10'
+                        }`}
+                      />
                     )}
                   </div>
                 ))}
               </div>
 
-              {/* 1. Tier Selection */}
+              {/* Step 1: Tier & Service Selection */}
               <div className={currentStep === 1 ? '' : 'hidden'}>
-                <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step1Heading')}</h3>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  {services.map((service) => (
-                    <label
-                      key={service.id}
-                      className={`col-span-2 sm:col-span-1 cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
-                        selectedTier === 'service' && selectedServiceId === service.id
-                          ? 'border-amber-800 bg-amber-50/70 ring-2 ring-amber-800/20'
-                          : 'border-amber-900/10 hover:bg-amber-50/30'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="tier"
-                        value={service.id}
-                        checked={selectedTier === 'service' && selectedServiceId === service.id}
-                        onChange={() => { setSelectedTier('service'); setSelectedServiceId(service.id); }}
-                        className="mt-1 accent-amber-800 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-bold text-amber-900 block">{service.title}</span>
-                        <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{service.price.toLocaleString()} UZS</div>
-                        <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-700" /> {service.durationMinutes} {t('form.minutes')}
-                        </p>
-                        {service.description && <p className="text-[11px] text-stone-500 mt-1 line-clamp-2">{service.description}</p>}
-                      </div>
-                    </label>
-                  ))}
+                <h3 className="font-serif text-lg font-bold text-zinc-900">
+                  {t('form.step1Heading')}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  {services.map((service) => {
+                    const isSelected =
+                      selectedTier === 'service' && selectedServiceId === service.id;
+                    return (
+                      <label
+                        key={service.id}
+                        className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start gap-3 ${
+                          isSelected
+                            ? 'border-[#0F4C5C] bg-[#0F4C5C]/[0.05] ring-1 ring-[#0F4C5C]/20'
+                            : 'border-zinc-900/12 bg-white hover:bg-[#FFF8E7]/60'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="tier"
+                          value={service.id}
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedTier('service');
+                            setSelectedServiceId(service.id);
+                          }}
+                          className="mt-1 accent-[#0F4C5C] cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <span className="text-xs font-semibold text-[#0F4C5C] block">
+                            {service.title}
+                          </span>
+                          <div className="text-base font-mono font-bold text-zinc-900 mt-0.5">
+                            {service.price.toLocaleString()} UZS
+                          </div>
+                          <p className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-[#0F4C5C]" />
+                            <span>
+                              {service.durationMinutes} {t('form.minutes')}
+                            </span>
+                          </p>
+                          {service.description && (
+                            <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2">
+                              {service.description}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+
                   <label
-                    className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
+                    className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start gap-3 ${
                       selectedTier === 'standard'
-                        ? 'border-amber-800 bg-amber-50/70 ring-2 ring-amber-800/20'
-                        : 'border-amber-900/10 hover:bg-amber-50/30'
+                        ? 'border-[#0F4C5C] bg-[#0F4C5C]/[0.05] ring-1 ring-[#0F4C5C]/20'
+                        : 'border-zinc-900/12 bg-white hover:bg-[#FFF8E7]/60'
                     }`}
                   >
                     <input
@@ -786,23 +883,31 @@ export default function CounselorPage() {
                       name="tier"
                       value="standard"
                       checked={selectedTier === 'standard'}
-                      onChange={() => { setSelectedTier('standard'); setSelectedServiceId(''); }}
-                      className="mt-1 accent-amber-800 cursor-pointer"
+                      onChange={() => {
+                        setSelectedTier('standard');
+                        setSelectedServiceId('');
+                      }}
+                      className="mt-1 accent-[#0F4C5C] cursor-pointer"
                     />
                     <div>
-                      <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block">{tCommon('standard')}</span>
-                      <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{counselor.standardPrice.toLocaleString()} UZS</div>
-                      <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-700" /> {t('form.tierStandardDuration')}
+                      <span className="text-xs font-semibold text-[#0F4C5C] uppercase tracking-wider block">
+                        {tCommon('standard')}
+                      </span>
+                      <div className="text-base font-mono font-bold text-zinc-900 mt-0.5">
+                        {counselor.standardPrice.toLocaleString()} UZS
+                      </div>
+                      <p className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-[#0F4C5C]" />
+                        <span>{t('form.tierStandardDuration')}</span>
                       </p>
                     </div>
                   </label>
 
                   <label
-                    className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3 ${
+                    className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start gap-3 ${
                       selectedTier === 'premium'
-                        ? 'border-amber-800 bg-amber-50/70 ring-2 ring-amber-800/20'
-                        : 'border-amber-900/10 hover:bg-amber-50/30'
+                        ? 'border-[#0F4C5C] bg-[#0F4C5C]/[0.05] ring-1 ring-[#0F4C5C]/20'
+                        : 'border-zinc-900/12 bg-white hover:bg-[#FFF8E7]/60'
                     }`}
                   >
                     <input
@@ -810,33 +915,44 @@ export default function CounselorPage() {
                       name="tier"
                       value="premium"
                       checked={selectedTier === 'premium'}
-                      onChange={() => { setSelectedTier('premium'); setSelectedServiceId(''); }}
-                      className="mt-1 accent-amber-800 cursor-pointer"
+                      onChange={() => {
+                        setSelectedTier('premium');
+                        setSelectedServiceId('');
+                      }}
+                      className="mt-1 accent-[#0F4C5C] cursor-pointer"
                     />
                     <div>
-                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">{tCommon('premium')}</span>
-                      <div className="text-lg font-serif font-extrabold text-amber-950 mt-0.5">{counselor.premiumPrice.toLocaleString()} UZS</div>
-                      <p className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-700" /> {t('form.tierPremiumDuration')}
+                      <span className="text-xs font-semibold text-[#9E741E] uppercase tracking-wider block">
+                        {tCommon('premium')}
+                      </span>
+                      <div className="text-base font-mono font-bold text-zinc-900 mt-0.5">
+                        {counselor.premiumPrice.toLocaleString()} UZS
+                      </div>
+                      <p className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-[#0F4C5C]" />
+                        <span>{t('form.tierPremiumDuration')}</span>
                       </p>
                     </div>
                   </label>
                 </div>
               </div>
 
-              {/* 2. Slot Selection */}
+              {/* Step 1B: Slot Selection */}
               <div className={currentStep === 1 ? '' : 'hidden'}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step2Heading')}</h3>
+                  <h3 className="font-serif text-lg font-bold text-zinc-900">
+                    {t('form.step2Heading')}
+                  </h3>
                   {errors.slot && (
                     <span className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" /> {errors.slot}
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{errors.slot}</span>
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3">
                   {availableSlots.length === 0 && (
-                    <p className="sm:col-span-2 text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl p-4 text-center">
+                    <p className="sm:col-span-2 text-xs text-zinc-500 bg-[#FFF8E7]/60 border border-zinc-900/10 rounded-xl p-4 text-center">
                       {t('noAvailableSlots')}
                     </p>
                   )}
@@ -845,8 +961,8 @@ export default function CounselorPage() {
                       key={slot}
                       className={`cursor-pointer p-3 rounded-xl text-xs font-medium border transition-all flex items-center gap-2.5 ${
                         selectedSlot === slot
-                          ? 'bg-amber-900 text-amber-50 border-amber-900 shadow-xs'
-                          : 'bg-white text-stone-700 border-amber-900/15 hover:bg-amber-50/50'
+                          ? 'bg-[#0F4C5C] text-white border-[#0F4C5C] shadow-2xs'
+                          : 'bg-white text-zinc-700 border-zinc-900/12 hover:bg-[#F5EFE0]'
                       }`}
                     >
                       <input
@@ -858,7 +974,7 @@ export default function CounselorPage() {
                           setSelectedSlot(slot);
                           if (errors.slot) setErrors((prev) => ({ ...prev, slot: '' }));
                         }}
-                        className="accent-amber-500 cursor-pointer"
+                        className="accent-[#D4A84B] cursor-pointer"
                       />
                       <span>{formatSlot(slot, locale)}</span>
                     </label>
@@ -871,20 +987,28 @@ export default function CounselorPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="bg-amber-900 hover:bg-amber-800 text-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                    className="btn-primary-teal font-semibold text-xs px-6 py-3 rounded-xl cursor-pointer"
                   >
                     {t('form.continueButton')}
                   </button>
                 </div>
               )}
 
-              {/* 3. Validated Intake Questions */}
-              <div className={`space-y-4 pt-4 border-t border-amber-900/10 ${currentStep === 2 ? '' : 'hidden'}`}>
-                <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step3Heading')}</h3>
+              {/* Step 2: Intake Questions */}
+              <div
+                className={`space-y-4 pt-4 border-t border-zinc-900/[0.08] ${
+                  currentStep === 2 ? '' : 'hidden'
+                }`}
+              >
+                <h3 className="font-serif text-lg font-bold text-zinc-900">
+                  {t('form.step3Heading')}
+                </h3>
 
-                {/* Name */}
                 <div>
-                  <label htmlFor="student-fullname" className="text-xs font-semibold text-stone-700 block">
+                  <label
+                    htmlFor="student-fullname"
+                    className="text-xs font-semibold text-zinc-700 block"
+                  >
                     {t('form.fullNameLabel')}
                   </label>
                   <input
@@ -896,17 +1020,24 @@ export default function CounselorPage() {
                       if (errors.fullName) setErrors({ ...errors, fullName: '' });
                     }}
                     placeholder={t('form.fullNamePlaceholder')}
-                    className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.fullName ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
+                    className={`w-full mt-1.5 px-3.5 py-2.5 text-xs bg-[#FFF8E7]/40 border rounded-xl outline-none transition-all ${
+                      errors.fullName
+                        ? 'border-red-500 bg-red-50/20'
+                        : 'border-zinc-900/15 focus:bg-white focus:border-[#0F4C5C] text-zinc-900'
                     }`}
                   />
-                  {errors.fullName && <p className="text-[11px] text-red-600 mt-1">{errors.fullName}</p>}
+                  {errors.fullName && (
+                    <p className="text-[11px] text-red-600 mt-1">{errors.fullName}</p>
+                  )}
                 </div>
 
-                {/* Email */}
                 <div>
-                  <label htmlFor="student-email" className="text-xs font-semibold text-stone-700 flex items-center gap-1">
-                    <Mail className="w-3 h-3 text-stone-500" /> {t('form.emailLabel')}
+                  <label
+                    htmlFor="student-email"
+                    className="text-xs font-semibold text-zinc-700 flex items-center gap-1"
+                  >
+                    <Mail className="w-3 h-3 text-zinc-500" />
+                    <span>{t('form.emailLabel')}</span>
                   </label>
                   <input
                     id="student-email"
@@ -919,17 +1050,24 @@ export default function CounselorPage() {
                     maxLength={254}
                     autoComplete="email"
                     placeholder={t('form.emailPlaceholder')}
-                    className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.email ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 text-stone-800 focus:ring-2 focus:ring-amber-700'
+                    className={`w-full mt-1.5 px-3.5 py-2.5 text-xs bg-[#FFF8E7]/40 border rounded-xl outline-none transition-all ${
+                      errors.email
+                        ? 'border-red-500 bg-red-50/20'
+                        : 'border-zinc-900/15 text-zinc-900 focus:bg-white focus:border-[#0F4C5C]'
                     }`}
                   />
-                  {errors.email && <p className="text-[11px] text-red-600 mt-1">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="text-[11px] text-red-600 mt-1">{errors.email}</p>
+                  )}
                 </div>
 
-                {/* Phone */}
                 <div>
-                  <label htmlFor="student-phone" className="text-xs font-semibold text-stone-700 flex items-center gap-1">
-                    <Phone className="w-3 h-3 text-stone-500" /> {t('form.phoneLabel')}
+                  <label
+                    htmlFor="student-phone"
+                    className="text-xs font-semibold text-zinc-700 flex items-center gap-1"
+                  >
+                    <Phone className="w-3 h-3 text-zinc-500" />
+                    <span>{t('form.phoneLabel')}</span>
                   </label>
                   <input
                     id="student-phone"
@@ -937,16 +1075,22 @@ export default function CounselorPage() {
                     value={phone}
                     onChange={handlePhoneChange}
                     placeholder={t('form.phonePlaceholder')}
-                    className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.phone ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
+                    className={`w-full mt-1.5 px-3.5 py-2.5 text-xs bg-[#FFF8E7]/40 border rounded-xl outline-none transition-all ${
+                      errors.phone
+                        ? 'border-red-500 bg-red-50/20'
+                        : 'border-zinc-900/15 focus:bg-white focus:border-[#0F4C5C] text-zinc-900'
                     }`}
                   />
-                  {errors.phone && <p className="text-[11px] text-red-600 mt-1">{errors.phone}</p>}
+                  {errors.phone && (
+                    <p className="text-[11px] text-red-600 mt-1">{errors.phone}</p>
+                  )}
                 </div>
 
-                {/* Telegram */}
                 <div>
-                  <label htmlFor="student-telegram" className="text-xs font-semibold text-stone-700 block">
+                  <label
+                    htmlFor="student-telegram"
+                    className="text-xs font-semibold text-zinc-700 block"
+                  >
                     {t('form.telegramLabel')}
                   </label>
                   <input
@@ -958,16 +1102,22 @@ export default function CounselorPage() {
                       if (errors.telegram) setErrors((prev) => ({ ...prev, telegram: '' }));
                     }}
                     placeholder={t('form.telegramPlaceholder')}
-                    className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.telegram ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
+                    className={`w-full mt-1.5 px-3.5 py-2.5 text-xs bg-[#FFF8E7]/40 border rounded-xl outline-none transition-all ${
+                      errors.telegram
+                        ? 'border-red-500 bg-red-50/20'
+                        : 'border-zinc-900/15 focus:bg-white focus:border-[#0F4C5C] text-zinc-900'
                     }`}
                   />
-                  {errors.telegram && <p className="text-[11px] text-red-600 mt-1">{errors.telegram}</p>}
+                  {errors.telegram && (
+                    <p className="text-[11px] text-red-600 mt-1">{errors.telegram}</p>
+                  )}
                 </div>
 
-                {/* Current Status */}
                 <div>
-                  <label htmlFor="student-education" className="text-xs font-semibold text-stone-700 block">
+                  <label
+                    htmlFor="student-education"
+                    className="text-xs font-semibold text-zinc-700 block"
+                  >
                     {t('form.educationLabel')}
                   </label>
                   <input
@@ -979,16 +1129,22 @@ export default function CounselorPage() {
                       if (errors.education) setErrors((prev) => ({ ...prev, education: '' }));
                     }}
                     placeholder={t('form.educationPlaceholder')}
-                    className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.education ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
+                    className={`w-full mt-1.5 px-3.5 py-2.5 text-xs bg-[#FFF8E7]/40 border rounded-xl outline-none transition-all ${
+                      errors.education
+                        ? 'border-red-500 bg-red-50/20'
+                        : 'border-zinc-900/15 focus:bg-white focus:border-[#0F4C5C] text-zinc-900'
                     }`}
                   />
-                  {errors.education && <p className="text-[11px] text-red-600 mt-1">{errors.education}</p>}
+                  {errors.education && (
+                    <p className="text-[11px] text-red-600 mt-1">{errors.education}</p>
+                  )}
                 </div>
 
-                {/* Question */}
                 <div>
-                  <label htmlFor="student-question" className="text-xs font-semibold text-stone-700 block">
+                  <label
+                    htmlFor="student-question"
+                    className="text-xs font-semibold text-zinc-700 block"
+                  >
                     {t('form.questionLabel')}
                   </label>
                   <textarea
@@ -1000,11 +1156,15 @@ export default function CounselorPage() {
                       if (errors.question) setErrors((prev) => ({ ...prev, question: '' }));
                     }}
                     placeholder={t('form.questionPlaceholder')}
-                    className={`w-full mt-1 p-3 text-xs bg-amber-50/40 border rounded-xl outline-none transition-all ${
-                      errors.question ? 'border-red-500 bg-red-50/20' : 'border-amber-900/15 focus:ring-2 focus:ring-amber-700 text-stone-800'
+                    className={`w-full mt-1.5 px-3.5 py-2.5 text-xs bg-[#FFF8E7]/40 border rounded-xl outline-none transition-all ${
+                      errors.question
+                        ? 'border-red-500 bg-red-50/20'
+                        : 'border-zinc-900/15 focus:bg-white focus:border-[#0F4C5C] text-zinc-900'
                     }`}
                   />
-                  {errors.question && <p className="text-[11px] text-red-600 mt-1">{errors.question}</p>}
+                  {errors.question && (
+                    <p className="text-[11px] text-red-600 mt-1">{errors.question}</p>
+                  )}
                 </div>
               </div>
 
@@ -1013,39 +1173,68 @@ export default function CounselorPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(1)}
-                    className="bg-white border border-amber-900/20 text-stone-700 hover:bg-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                    className="btn-secondary-surface font-semibold text-xs px-6 py-3 rounded-xl cursor-pointer"
                   >
                     {t('form.backButton')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="bg-amber-900 hover:bg-amber-800 text-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                    className="btn-primary-teal font-semibold text-xs px-6 py-3 rounded-xl cursor-pointer"
                   >
                     {t('form.continueButton')}
                   </button>
                 </div>
               )}
 
-              {/* 4. Payment Gateway Selection Step */}
-              <div className={`space-y-3 pt-4 border-t border-amber-900/10 ${currentStep === 3 ? '' : 'hidden'}`}>
+              {/* Step 3: Payment Gateway Confirmation */}
+              <div
+                className={`space-y-3 pt-4 border-t border-zinc-900/[0.08] ${
+                  currentStep === 3 ? '' : 'hidden'
+                }`}
+              >
                 <div className="flex items-center justify-between">
-                  <h3 className="font-serif text-lg font-bold text-amber-950">{t('form.step4Heading')}</h3>
-                  <span className="text-[11px] text-stone-500 flex items-center gap-1">
-                    <Lock className="w-3 h-3 text-emerald-700" /> {t('form.securePayment')}
+                  <h3 className="font-serif text-lg font-bold text-zinc-900">
+                    {t('form.step4Heading')}
+                  </h3>
+                  <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-emerald-700" />
+                    <span>{t('form.securePayment')}</span>
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3">
-                  <div className="p-4 rounded-2xl border border-sky-500 bg-sky-50/80 ring-2 ring-sky-500/20 shadow-xs flex items-center justify-between gap-3">
+                  <div className="p-4 rounded-xl border border-[#0F1E36] bg-[#0F1E36]/[0.05] ring-1 ring-[#0F1E36]/20 flex items-center justify-between gap-3">
                     <div>
-                      <span className="font-extrabold text-sm text-sky-950 block">Click</span>
-                      <span className="text-[11px] text-sky-800">{t('form.clickSubLabel')}</span>
+                      <span className="font-bold text-sm text-[#0F1E36] block">Click</span>
+                      <span className="text-xs text-[#475569]">{t('form.clickSubLabel')}</span>
                     </div>
-                    <ShieldCheck className="w-5 h-5 text-sky-700" />
+                    <ShieldCheck className="w-5 h-5 text-[#D97706]" />
+                  </div>
+
+                  {/* Stage 1 Marketplace Commission & Escrow Breakdown (Master Plan Section 8) */}
+                  <div className="rounded-xl bg-[#FBF9F5] border border-[#0F1E36]/12 p-3.5 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between font-mono text-[11px] text-[#475569]">
+                      <span>85% Mentor Payout (Rahnamo Honorarium)</span>
+                      <span className="font-bold text-[#0F1E36]">
+                        {Math.round(bookingPrice * 0.85).toLocaleString()} UZS
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between font-mono text-[11px] text-[#475569]">
+                      <span>15% Platform Escrow & Session Guarantee</span>
+                      <span className="font-bold text-[#D97706]">
+                        {Math.round(bookingPrice * 0.15).toLocaleString()} UZS
+                      </span>
+                    </div>
+                    <div className="pt-1.5 border-t border-[#0F1E36]/10 flex items-center justify-between font-mono text-xs font-extrabold text-[#0F1E36]">
+                      <span>Total Session Price</span>
+                      <span>{bookingPrice.toLocaleString()} UZS</span>
+                    </div>
                   </div>
                 </div>
-                {cardError && <p className="text-[11px] text-red-600 font-semibold">{cardError}</p>}
+                {cardError && (
+                  <p className="text-xs text-red-600 font-semibold">{cardError}</p>
+                )}
               </div>
 
               {currentStep === 3 && (
@@ -1053,18 +1242,23 @@ export default function CounselorPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="sm:w-auto bg-white border border-amber-900/20 text-stone-700 hover:bg-amber-50 font-bold text-xs px-6 py-3 rounded-xl transition-all cursor-pointer"
+                    className="btn-secondary-surface sm:w-auto font-semibold text-xs px-6 py-3 rounded-xl cursor-pointer"
                   >
                     {t('form.backButton')}
                   </button>
                   <button
                     type="submit"
                     disabled={isProcessingPayment}
-                    className="flex-1 py-4 bg-gradient-to-r from-sky-700 to-sky-800 hover:from-sky-600 hover:to-sky-700 text-white font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-70 disabled:cursor-wait flex items-center justify-center gap-2"
+                    className="btn-primary-teal flex-1 py-3.5 font-semibold text-sm rounded-xl cursor-pointer disabled:opacity-70 disabled:cursor-wait flex items-center justify-center gap-2"
                   >
                     {isProcessingPayment ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> {t('modal.processing')}</>
-                    ) : t('form.submit', { price: bookingPrice.toLocaleString() })}
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{t('modal.processing')}</span>
+                      </>
+                    ) : (
+                      t('form.submit', { price: bookingPrice.toLocaleString() })
+                    )}
                   </button>
                 </div>
               )}
@@ -1074,7 +1268,7 @@ export default function CounselorPage() {
       </div>
 
       {counselor.pricePerQuestion != null && (
-        <div className="max-w-4xl mx-auto px-6 mb-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-16">
           <MentorInboxPanel />
         </div>
       )}

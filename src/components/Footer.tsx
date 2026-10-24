@@ -1,91 +1,143 @@
+'use client';
+
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import RahnamoLogo from '@/components/RahnamoLogo';
-import { Shield, Send, Heart } from 'lucide-react';
+import { RahnamoMonogram } from '@/components/RahnamoLogo';
+import { ArrowUpRight, Heart, ShieldCheck, Send } from 'lucide-react';
 
 export default function Footer() {
-  const t = useTranslations('common');
+  const tCommon = useTranslations('common');
   const tFooter = useTranslations('footer');
-  const specialtiesList = tFooter.raw('specialtiesList') as string[];
+  const specialties = tFooter.raw('specialtiesList') as string[];
 
   return (
-    <footer className="bg-gradient-to-b from-[#2C241E] to-[#1E1813] text-amber-100/80 pt-14 pb-8 border-t-4 border-amber-800">
-      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
-        {/* Col 1: Brand Info */}
-        <div className="md:col-span-1 space-y-3">
-          <RahnamoLogo className="h-12" light={true} />
-          <p className="text-xs text-amber-200/70 leading-relaxed">
-            {tFooter('tagline')}
-          </p>
-          <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-400 font-semibold pt-1">
-            <Shield className="w-3.5 h-3.5" /> {tFooter('verifiedBadge')}
+    <footer className="mt-16 bg-[#0F1E36] text-slate-300 border-t-2 border-[#F59E0B]/40 relative overflow-hidden neo-silk-tessellation-dark">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-18 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-white/10">
+          {/* Col 1: MyRahnamo Brand Identity & Neo-Silk Road Tagline */}
+          <div className="lg:col-span-4 space-y-4">
+            <Link href="/" className="inline-flex items-center gap-2.5 group">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-[#F59E0B]/40">
+                <RahnamoMonogram className="w-7 h-7" light={true} />
+              </div>
+              <div className="flex items-baseline">
+                <span className="font-display font-extrabold text-xl tracking-[-0.03em] text-white">
+                  MyRahnamo
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="w-2 h-2 rounded-full bg-[#F59E0B] inline-block ml-0.5 shadow-[0_0_8px_rgba(245,158,11,0.75)]"
+                />
+              </div>
+            </Link>
+
+            <p className="text-xs sm:text-sm text-slate-300/85 leading-relaxed max-w-sm">
+              {tFooter('tagline')}
+            </p>
+
+            <div className="inline-flex items-center gap-2 text-xs text-amber-200 bg-white/[0.06] px-3.5 py-1.5 rounded-full border border-[#F59E0B]/30 font-semibold">
+              <ShieldCheck className="w-4 h-4 text-[#F59E0B] shrink-0" />
+              <span>{tFooter('verifiedBadge')}</span>
+            </div>
+          </div>
+
+          {/* Col 2: Platform & Institutional Links */}
+          <div className="lg:col-span-2 space-y-3">
+            <h4 className="text-xs font-mono font-bold uppercase tracking-[0.16em] text-[#F59E0B]">
+              {tFooter('platformHeading')}
+            </h4>
+            <ul className="space-y-2.5 text-xs sm:text-sm text-slate-300">
+              <li>
+                <Link href="/#rahnamolar" className="hover:text-white transition-colors">
+                  {tCommon('catalog')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/#roadmaps" className="hover:text-white transition-colors">
+                  Yo‘nalishlar (Roadmaps)
+                </Link>
+              </li>
+              <li>
+                <Link href="/#ecosystem" className="hover:text-white transition-colors">
+                  Imkoniyatlar (Ecosystem)
+                </Link>
+              </li>
+              <li>
+                <Link href="/match" className="hover:text-white transition-colors">
+                  {tCommon('findMyMentor')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/forum" className="hover:text-white transition-colors">
+                  {tCommon('forum')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/my-bookings" className="hover:text-white transition-colors">
+                  {tCommon('myBookings')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/become-counselor" className="hover:text-white transition-colors">
+                  {tCommon('becomeCounselorJoin')}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/admin"
+                  className="text-[#F59E0B] hover:text-amber-300 font-semibold transition-colors"
+                >
+                  {tFooter('adminPanel')}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 3: Career & Academic Tracks */}
+          <div className="lg:col-span-3 space-y-3">
+            <h4 className="text-xs font-mono font-bold uppercase tracking-[0.16em] text-[#F59E0B]">
+              {tFooter('specialtiesHeading')}
+            </h4>
+            <ul className="space-y-2.5 text-xs sm:text-sm text-slate-300">
+              {specialties.map((item, idx) => (
+                <li key={idx} className="leading-snug">
+                  <Link href="/#rahnamolar" className="hover:text-white transition-colors">
+                    {item}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Col 4: Contact & Official Telegram Support (@rahnamo_admin) */}
+          <div className="lg:col-span-3 space-y-3">
+            <h4 className="text-xs font-mono font-bold uppercase tracking-[0.16em] text-[#F59E0B]">
+              {tFooter('contactHeading')}
+            </h4>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {tFooter('contactBlurb')}
+            </p>
+            <a
+              href="https://t.me/rahnamo_admin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-xs font-bold text-[#0F1E36] bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:brightness-105 px-5 py-3 rounded-full transition-all shadow-md"
+            >
+              <Send className="w-3.5 h-3.5 text-[#0F1E36]" />
+              <span>{tFooter('telegramSupport')}</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
           </div>
         </div>
 
-        {/* Col 2: Navigation */}
-        <div className="space-y-2 text-xs">
-          <h4 className="font-serif font-bold text-amber-300 uppercase tracking-wider text-[11px]">{tFooter('platformHeading')}</h4>
-          <ul className="space-y-2 pt-1 text-amber-100/70">
-            <li>
-              <Link href="/" className="hover:text-amber-300 transition-colors">
-                {t('catalog')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/#how-it-works" className="hover:text-amber-300 transition-colors">
-                {t('howItWorks')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/my-bookings" className="hover:text-amber-300 transition-colors">
-                {t('myBookings')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/become-counselor" className="hover:text-amber-300 transition-colors">
-                {t('becomeCounselorJoin')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/admin" className="hover:text-amber-300 transition-colors text-amber-400 font-semibold">
-                {tFooter('adminPanel')}
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Col 3: Specialties */}
-        <div className="space-y-2 text-xs">
-          <h4 className="font-serif font-bold text-amber-300 uppercase tracking-wider text-[11px]">{tFooter('specialtiesHeading')}</h4>
-          <ul className="space-y-2 pt-1 text-amber-100/70">
-            {specialtiesList.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Col 4: Contact & Social */}
-        <div className="space-y-3 text-xs">
-          <h4 className="font-serif font-bold text-amber-300 uppercase tracking-wider text-[11px]">{tFooter('contactHeading')}</h4>
-          <p className="text-amber-200/70 text-[11px]">
-            {tFooter('contactBlurb')}
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
+          <p>{tFooter('copyright', { year: 2026 })}</p>
+          <p className="flex items-center gap-1.5">
+            <span>{tFooter('madeWithPrefix')}</span>
+            <Heart className="w-3.5 h-3.5 text-[#C25E38] fill-[#C25E38]" />
+            <span>{tFooter('madeWithSuffix')}</span>
           </p>
-          <a
-            href="https://t.me/rahnamo_admin"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 bg-amber-900/80 hover:bg-amber-800 text-amber-50 px-4 py-2.5 rounded-xl border border-amber-700/60 font-semibold transition-all shadow-2xs"
-          >
-            <Send className="w-3.5 h-3.5" /> {tFooter('telegramSupport')}
-          </a>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 mt-10 pt-6 border-t border-amber-900/40 text-center text-[11px] text-amber-200/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>{tFooter('copyright', { year: new Date().getFullYear() })}</p>
-        <p className="flex items-center gap-1">
-          {tFooter('madeWithPrefix')} <Heart className="w-3 h-3 text-amber-500 fill-amber-500" /> {tFooter('madeWithSuffix')}
-        </p>
       </div>
     </footer>
   );

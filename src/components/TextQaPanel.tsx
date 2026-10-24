@@ -79,11 +79,6 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     }
   }
 
-  // Stage 4: mentee login is mandatory here too now -- no more anonymous
-  // sign-in fallback. A visitor with no real session (or a leftover
-  // pre-migration anonymous one) sees the login gate below instead of
-  // ever reaching 'start'. Real sessions still get looked up against any
-  // existing thread on mount, same as before.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -111,9 +106,6 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
     };
   }, [counselor.id, sessionStatus]);
 
-  // Polling, not Realtime -- consistent with the rest of this app, which
-  // uses no websocket subscriptions anywhere. Refetches while the thread
-  // view is open; stops the instant it isn't.
   useEffect(() => {
     if (phase !== 'thread' || !thread) return;
     pollRef.current = setInterval(() => {
@@ -214,24 +206,24 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
   };
 
   if (phase === 'checking') {
-    return <div className="p-8 text-center text-xs text-stone-500">{t('start.loading')}</div>;
+    return <div className="p-8 text-center text-xs text-zinc-500">{t('start.loading')}</div>;
   }
 
   if (phase === 'login_required') {
     return (
-      <div className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center mx-auto shadow-sm">
-          <Lock className="w-7 h-7 text-amber-300" />
+      <div className="surface-card p-6 md:p-8 rounded-2xl text-center space-y-4">
+        <div className="w-12 h-12 rounded-xl bg-[#0F4C5C] text-white flex items-center justify-center mx-auto shadow-sm">
+          <Lock className="w-5 h-5 text-[#D4A84B]" />
         </div>
         <div>
-          <h3 className="font-serif font-extrabold text-lg text-amber-950">{t('start.loginRequiredTitle')}</h3>
-          <p className="text-xs text-stone-600 mt-1.5">{t('start.loginRequiredSubtitle')}</p>
+          <h3 className="font-serif font-bold text-lg text-[#18181B]">{t('start.loginRequiredTitle')}</h3>
+          <p className="text-xs text-zinc-500 mt-1">{t('start.loginRequiredSubtitle')}</p>
         </div>
         <Link
           href={`/login?redirect=${encodeURIComponent(`/counselors/${counselor.id}`)}`}
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition-all"
+          className="inline-flex items-center gap-2 bg-[#0F4C5C] hover:bg-[#09323D] text-white font-semibold text-xs px-5 py-3 rounded-xl shadow-sm transition-colors"
         >
-          <LogIn className="w-4 h-4 text-amber-300" /> {t('start.loginRequiredCta')}
+          <LogIn className="w-4 h-4 text-[#D4A84B]" /> {t('start.loginRequiredCta')}
         </Link>
       </div>
     );
@@ -239,15 +231,15 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
 
   if (phase === 'start') {
     return (
-      <div className="bg-white/95 p-6 md:p-8 rounded-3xl border border-amber-900/10 shadow-sm space-y-5">
+      <div className="surface-card p-6 md:p-8 rounded-2xl space-y-5">
         <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-900/10">
-            <span className="text-stone-400 block text-[10px]">{t('start.priceLabel')}</span>
-            <span className="font-bold text-amber-950">{counselor.pricePerQuestion?.toLocaleString()} UZS</span>
+          <div className="bg-[#FFF8E7] p-3.5 rounded-xl border border-zinc-900/10">
+            <span className="text-zinc-500 block text-[10px] font-mono uppercase tracking-wider">{t('start.priceLabel')}</span>
+            <span className="font-mono font-bold text-[#18181B] mt-0.5 block">{counselor.pricePerQuestion?.toLocaleString()} UZS</span>
           </div>
-          <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-900/10">
-            <span className="text-stone-400 block text-[10px]">{t('start.capLabel')}</span>
-            <span className="font-bold text-amber-950">
+          <div className="bg-[#FFF8E7] p-3.5 rounded-xl border border-zinc-900/10">
+            <span className="text-zinc-500 block text-[10px] font-mono uppercase tracking-wider">{t('start.capLabel')}</span>
+            <span className="font-mono font-bold text-[#18181B] mt-0.5 block">
               {counselor.softCap ? counselor.softCap : t('start.noCapNote')}
             </span>
           </div>
@@ -258,13 +250,13 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
             type="checkbox"
             checked={ageConfirmed}
             onChange={(e) => setAgeConfirmed(e.target.checked)}
-            className="mt-0.5 w-4 h-4 accent-amber-800 cursor-pointer"
+            className="mt-0.5 w-4 h-4 accent-[#0F4C5C] cursor-pointer"
           />
-          <span className="text-xs text-stone-700">{t('start.ageCheckboxLabel')}</span>
+          <span className="text-xs text-zinc-700">{t('start.ageCheckboxLabel')}</span>
         </label>
 
         {startError && (
-          <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-300 rounded-xl px-3.5 py-2.5">
+          <p className="text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
             {startError}
           </p>
         )}
@@ -273,7 +265,7 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
           type="button"
           onClick={handleStart}
           disabled={isStarting || !ageConfirmed}
-          className="w-full py-4 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-sm rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+          className="w-full py-3.5 bg-[#0F4C5C] hover:bg-[#09323D] text-white font-semibold text-sm rounded-xl shadow-sm transition-colors cursor-pointer disabled:opacity-50"
         >
           {isStarting ? t('start.loading') : t('start.beginButton')}
         </button>
@@ -284,30 +276,30 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
   if (!thread) return null;
 
   return (
-    <div className="bg-white/95 rounded-3xl border border-amber-900/10 shadow-sm flex flex-col max-h-[600px]">
-      <div className="p-4 border-b border-amber-900/10 flex items-center justify-between text-xs font-bold text-amber-950 bg-amber-50/60 rounded-t-3xl">
+    <div className="surface-card rounded-2xl flex flex-col max-h-[600px] overflow-hidden">
+      <div className="px-4 py-3 border-b border-zinc-900/10 flex items-center justify-between text-xs font-mono font-semibold text-[#18181B] bg-[#FFF8E7]">
         <span>
           {thread.softCap
             ? t('thread.questionsLabelWithCap', { used: thread.questionsUsed, cap: thread.softCap })
             : t('thread.questionsLabel', { used: thread.questionsUsed })}
         </span>
-        <span>{t('thread.totalLabel', { amount: thread.totalOwed.toLocaleString() })}</span>
+        <span className="text-[#0F4C5C]">{t('thread.totalLabel', { amount: thread.totalOwed.toLocaleString() })}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[240px]">
         {messages.length === 0 ? (
-          <p className="text-xs text-stone-400 text-center py-6">{t('thread.noMessagesYet')}</p>
+          <p className="text-xs text-zinc-400 text-center py-6">{t('thread.noMessagesYet')}</p>
         ) : (
           messages.map((m) => (
             <div key={m.id} className={`flex ${m.senderRole === 'student' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs ${
+                className={`max-w-[80%] rounded-xl px-3.5 py-2.5 text-xs ${
                   m.senderRole === 'student'
-                    ? 'bg-amber-900 text-amber-50'
-                    : 'bg-amber-50 text-stone-800 border border-amber-900/10'
+                    ? 'bg-[#0F4C5C] text-white'
+                    : 'bg-[#FFF8E7] text-[#18181B] border border-zinc-900/10'
                 }`}
               >
-                <span className="block text-[10px] opacity-70 mb-0.5">
+                <span className="block text-[10px] opacity-70 mb-0.5 font-mono">
                   {m.senderRole === 'student' ? t('thread.studentLabel') : t('thread.counselorLabel')}
                 </span>
                 {m.body}
@@ -318,8 +310,8 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
       </div>
 
       {thread.paymentStatus === 'active' && (
-        <div className="p-4 border-t border-amber-900/10 space-y-2">
-          {askError && <p className="text-[11px] text-red-600 font-semibold">{askError}</p>}
+        <div className="p-4 border-t border-zinc-900/10 space-y-2">
+          {askError && <p className="text-xs text-red-600 font-medium">{askError}</p>}
           <div className="flex gap-2">
             <input
               type="text"
@@ -327,24 +319,24 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
               onChange={(e) => setNewQuestion(e.target.value)}
               maxLength={4000}
               placeholder={t('thread.askPlaceholder')}
-              className="flex-1 p-3 text-xs bg-amber-50/40 border border-amber-900/15 rounded-xl outline-none focus:ring-2 focus:ring-amber-700"
+              className="flex-1 px-3.5 py-2.5 text-xs bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
             />
             <button
               type="button"
               onClick={handleAsk}
               disabled={isAsking}
-              className="px-4 py-3 bg-amber-900 hover:bg-amber-800 text-amber-50 rounded-xl cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              className="px-4 py-2.5 bg-[#0F4C5C] hover:bg-[#09323D] text-white rounded-xl cursor-pointer disabled:opacity-50 flex items-center gap-1.5 transition-colors"
             >
               {isAsking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              <span className="text-xs font-bold">{t('thread.askButton')}</span>
+              <span className="text-xs font-semibold">{t('thread.askButton')}</span>
             </button>
           </div>
         </div>
       )}
 
       {thread.paymentStatus === 'awaiting_payment' && (
-        <div className="p-4 border-t border-amber-900/10 space-y-3">
-          <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5">
+        <div className="p-4 border-t border-zinc-900/10 space-y-3">
+          <p className="text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
             {t('thread.awaitingPaymentNotice')}
           </p>
 
@@ -354,10 +346,10 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
             </p>
           ) : (
             <>
-              <div className="p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase font-bold text-amber-900 block">{t('payment.cardBoxLabel')}</span>
+              <div className="p-3.5 bg-[#FFF8E7] border border-zinc-900/10 rounded-xl space-y-1">
+                <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-zinc-500 block">{t('payment.cardBoxLabel')}</span>
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-extrabold text-sm text-amber-950">
+                  <span className="font-mono font-bold text-sm text-[#18181B]">
                     {isPaymentConfigured ? paymentCardDisplay : t('payment.unavailable')}
                   </span>
                   <button
@@ -370,36 +362,36 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
                         setTimeout(() => setCopiedCard(false), 2000);
                       }
                     }}
-                    className="text-xs font-bold text-amber-800 underline hover:text-amber-950 cursor-pointer disabled:opacity-40"
+                    className="text-xs font-semibold text-[#0F4C5C] underline hover:text-[#09323D] cursor-pointer disabled:opacity-40"
                   >
                     {copiedCard ? t('payment.copiedButton') : t('payment.copyButton')}
                   </button>
                 </div>
-                <span className="text-[10px] text-stone-600 block">
+                <span className="text-[11px] text-zinc-500 block">
                   {isPaymentConfigured ? paymentCardOwner : t('payment.unavailableHint')}
                 </span>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block mb-1">{t('payment.receiptLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1">{t('payment.receiptLabel')}</label>
                 <input
                   type="text"
                   value={receiptRef}
                   onChange={(e) => setReceiptRef(e.target.value)}
                   maxLength={300}
                   placeholder={t('payment.receiptPlaceholder')}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
+                  className="w-full px-3 py-2 bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl text-xs outline-none focus:bg-white focus:border-[#0F4C5C]"
                 />
-                {receiptError && <p className="text-[11px] text-red-600 mt-1">{receiptError}</p>}
+                {receiptError && <p className="text-xs text-red-600 mt-1">{receiptError}</p>}
               </div>
 
               <button
                 type="button"
                 onClick={handleSubmitReceipt}
                 disabled={isSubmittingReceipt || !receiptRef.trim() || !isPaymentConfigured}
-                className="w-full py-3 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#0F4C5C] hover:bg-[#09323D] text-white font-semibold text-xs rounded-xl shadow-sm transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <Lock className="w-3.5 h-3.5" />
+                <Lock className="w-3.5 h-3.5 text-[#D4A84B]" />
                 {t('payment.submitButton')}
               </button>
             </>
@@ -408,12 +400,12 @@ export default function TextQaPanel({ counselor }: { counselor: Counselor }) {
       )}
 
       {thread.paymentStatus === 'closed' && (
-        <div className="p-4 border-t border-amber-900/10 space-y-2">
-          <p className="text-xs text-stone-600">{t('thread.closedNotice')}</p>
+        <div className="p-4 border-t border-zinc-900/10 space-y-2">
+          <p className="text-xs text-zinc-600">{t('thread.closedNotice')}</p>
           <button
             type="button"
             onClick={handleStartNew}
-            className="w-full py-3 bg-amber-900 hover:bg-amber-800 text-amber-50 font-bold text-xs rounded-xl transition-all cursor-pointer"
+            className="w-full py-3 bg-[#0F4C5C] hover:bg-[#09323D] text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer"
           >
             {t('thread.startNewButton')}
           </button>

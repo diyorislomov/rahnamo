@@ -23,7 +23,7 @@
   },
   "footer": {
     "tagline": "Silk Road career counseling. A personal 1-on-1 mentorship platform connecting Central Asian youth with experienced professionals.",
-    "verifiedBadge": "100% Official and Guaranteed",
+    "verifiedBadge": "Verified mentors & transparent booking",
     "platformHeading": "Platform",
     "adminPanel": "Admin Panel",
     "specialtiesHeading": "Specialties",
@@ -43,8 +43,8 @@
   },
   "hero": {
     "badge": "Central Asia’s career growth platform",
-    "title": "Choose your goal and <strong>reach it faster</strong>.",
-    "subtitle": "Find the right Rahnamo and clear next steps for landing a job or internship, studying abroad, building a startup, or changing careers.",
+    "title": "Your ambition <strong>deserves a guide</strong>.",
+    "subtitle": "Connect with experienced mentors, discover your next opportunity, and take the next step in your career.",
     "viewProfile": "View profile",
     "nextSlotLabel": "Next available slot: {slot}",
     "statLabelLine1": "Verified",
@@ -90,7 +90,7 @@
     "Other": "Other"
   },
   "becomeCounselor": {
-    "badge": "A MentorCruise-level platform",
+    "badge": "Central Asia's Premier Mentorship Network",
     "heroTitle": "Become a Rahnamo and earn on your own schedule",
     "heroSubtitle": "Guide talented young people across Central Asia 1-on-1, build your personal brand, and earn income in your spare time.",
     "calculator": {

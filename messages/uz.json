@@ -23,7 +23,7 @@
   },
   "footer": {
     "tagline": "Ipak Yo'li karyera konsultatsiyasi. Markaziy Osiyo yoshlarini tajribali mutaxassislar bilan bog'laydigan 1-ga-1 shaxsiy mentorlik platformasi.",
-    "verifiedBadge": "100% Rasmiy va Kafolatlangan",
+    "verifiedBadge": "Tasdiqlangan Rahnamolar va shaffof qabul jarayoni",
     "platformHeading": "Platforma",
     "adminPanel": "Boshqaruv paneli (Admin)",
     "specialtiesHeading": "Yo'nalishlar",
@@ -43,8 +43,8 @@
   },
   "hero": {
     "badge": "Markaziy Osiyoning karyera o‘sish platformasi",
-    "title": "Maqsadingizni aniqlang va unga <strong>tezroq erishing</strong>.",
-    "subtitle": "Ish, stajirovka, xorijda o‘qish, startup yoki yangi karyera yo‘li uchun sizga mos Rahnamo va aniq keyingi qadamlarni toping.",
+    "title": "Katta maqsadingiz <strong>munosib Rahnamoga loyiq</strong>.",
+    "subtitle": "Tajribali mentorlar bilan bog‘laning, yangi imkoniyatlarni kashf eting va karyerangizda keyingi aniq qadamni tashlang.",
     "viewProfile": "Profilni ko'rish",
     "nextSlotLabel": "Yaqin bo'sh vaqt: {slot}",
     "statLabelLine1": "Tasdiqlangan",
@@ -90,7 +90,7 @@
     "Other": "Boshqa"
   },
   "becomeCounselor": {
-    "badge": "MentorCruise darajasidagi platforma",
+    "badge": "Markaziy Osiyoning yetakchi mentorlik tarmog‘i",
     "heroTitle": "Rahnamo bo'lib o'zingiz xohlagan grafikda daromad oling",
     "heroSubtitle": "Markaziy Osiyoning iqtidorli yoshlariga 1-ga-1 yo'l-yo'riq ko'rsating, shaxsiy brendingizni rivojlantiring va bo'sh vaqtingizda daromadga ega bo'ling.",
     "calculator": {

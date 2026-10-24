@@ -1,168 +1,308 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { useTranslations } from 'next-intl';
-import RahnamoLogo from '@/components/RahnamoLogo';
+import { useLocale, useTranslations } from 'next-intl';
+import { RahnamoMonogram } from '@/components/RahnamoLogo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { Menu, X, CalendarCheck, UserCheck, Compass, Sparkles, LogIn, LogOut } from 'lucide-react';
+import {
+  Menu,
+  X,
+  ArrowUpRight,
+  CalendarCheck,
+  Compass,
+  LogIn,
+  LogOut,
+  MessageSquare,
+  Sparkles,
+} from 'lucide-react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const locale = useLocale();
   const t = useTranslations('common');
   const tNav = useTranslations('navbar');
 
   const { data: session } = useSession();
   const isSignedIn = Boolean(session?.user?.id);
 
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 12);
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight > 0) {
+        setScrollProgress(Math.min(100, Math.max(0, (y / docHeight) * 100)));
+      }
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/' });
     setIsOpen(false);
   };
 
+  const labels = {
+    mentors: locale === 'ru' ? 'Менторы' : locale === 'en' ? 'Mentors' : 'Rahnamolar',
+    roadmaps: locale === 'ru' ? 'AI Маршруты' : locale === 'en' ? 'AI Roadmaps' : 'AI Yo‘nalishlar',
+    aiAdvisor: locale === 'ru' ? 'AI Советник' : locale === 'en' ? 'AI Advisor' : 'AI Maslahatchi',
+    opportunities:
+      locale === 'ru' ? 'Возможности' : locale === 'en' ? 'Opportunities' : 'Imkoniyatlar',
+    howItWorks: t('howItWorks'),
+  };
+
   return (
-    <header className="sticky top-0 z-40 border-b bg-[#FAF6EE]/90 backdrop-blur-md border-amber-900/15">
-      {/* Top Banner Notice */}
-      <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 text-amber-100 text-[11px] font-medium py-1.5 px-4 text-center flex items-center justify-center gap-2 shadow-inner">
-        <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" />
-        <span>{tNav('banner')}</span>
+    <>
+      {/* Top Scroll Progress Indicator in Desert Amber -> Lapis Lazuli */}
+      <div
+        aria-hidden="true"
+        className="fixed top-0 left-0 right-0 h-[3px] z-[60] bg-transparent pointer-events-none"
+      >
+        <div
+          className="h-full bg-gradient-to-r from-[#F59E0B] via-[#D97706] to-[#C25E38] transition-[width] duration-150 ease-out"
+          style={{ width: `${scrollProgress}%` }}
+        />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Official Startup Brand Logo */}
-        <Link href="/" className="group py-1 flex items-center">
-          <RahnamoLogo className="h-11 sm:h-12" />
-        </Link>
-
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-stone-700">
-          <Link
-            href="/"
-            className="transition-colors flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60"
-          >
-            <Compass className="w-4 h-4 text-amber-800" /> {t('catalog')}
-          </Link>
-          <Link
-            href="/#how-it-works"
-            className="transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60"
-          >
-            {t('howItWorks')}
-          </Link>
-          <Link href="/match" className="transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60">
-            {t('findMyMentor')}
-          </Link>
-          <Link href="/forum" className="transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60">
-            {t('forum')}
-          </Link>
-          <Link
-            href="/my-bookings"
-            className="flex items-center gap-1.5 transition-all bg-amber-100/80 hover:bg-amber-200/80 text-amber-950 px-3.5 py-2 rounded-xl border border-amber-300/80 shadow-2xs"
-          >
-            <CalendarCheck className="w-4 h-4 text-amber-800" />
-            {t('myBookings')}
-          </Link>
-          <Link
-            href="/become-counselor"
-            className="flex items-center gap-1.5 transition-all bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 px-4 py-2 rounded-xl shadow-sm border border-amber-700/50"
-          >
-            <UserCheck className="w-4 h-4" />
-            {t('becomeCounselor')}
-          </Link>
-          {isSignedIn ? (
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60 cursor-pointer"
-            >
-              <LogOut className="w-4 h-4 text-amber-800" /> {t('signOut')}
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 transition-colors py-1 px-2.5 rounded-lg hover:text-amber-900 hover:bg-amber-100/60"
-            >
-              <LogIn className="w-4 h-4 text-amber-800" /> {t('signIn')}
-            </Link>
-          )}
-          <LanguageSwitcher />
-        </nav>
-
-        {/* Mobile Hamburger */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden p-2 focus:outline-none rounded-xl transition-colors text-amber-950 hover:text-amber-700 bg-amber-100/60"
-          aria-label={tNav('toggleMenuAriaLabel')}
+      <header className="sticky top-0 z-50 w-full max-w-full px-3 sm:px-6 lg:px-8 pt-3 pb-1.5 overflow-x-clip">
+        <div
+          className={`max-w-[1360px] mx-auto rounded-2xl transition-all duration-300 px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 min-w-0 ${
+            scrolled
+              ? 'bg-[#FBF9F5]/92 backdrop-blur-xl shadow-[0_12px_36px_-14px_rgba(15,30,54,0.12)] border border-[#0F1E36]/10'
+              : 'bg-[#FBF9F5]/80 backdrop-blur-md border border-[#0F1E36]/[0.07]'
+          }`}
         >
-          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </div>
+          {/* Left: Brand Logo ("MyRahnamo." with Amber Accent Dot) */}
+          <Link href="/" className="shrink-0 flex items-center gap-2 sm:gap-2.5 group">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0F1E36] flex items-center justify-center shadow-xs border border-[#F59E0B]/30 group-hover:scale-[1.03] transition-transform shrink-0">
+              <RahnamoMonogram className="w-6 h-6 sm:w-7 sm:h-7" light={true} />
+            </div>
+            <div className="flex items-baseline shrink-0">
+              <span className="font-display font-extrabold text-base sm:text-xl tracking-[-0.03em] text-[#0F1E36]">
+                MyRahnamo
+              </span>
+              <span
+                aria-hidden="true"
+                className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#F59E0B] inline-block ml-0.5 shadow-[0_0_8px_rgba(245,158,11,0.65)]"
+              />
+            </div>
+          </Link>
 
-      {/* Mobile Drawer */}
-      {isOpen && (
-        <div className="md:hidden bg-[#FAF6EE] border-b border-amber-900/20 px-4 pt-2 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
-          <Link
-            href="/"
-            onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
-          >
-            {t('catalog')}
-          </Link>
-          <Link
-            href="/#how-it-works"
-            onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
-          >
-            {t('howItWorks')}
-          </Link>
-          <Link
-            href="/match"
-            onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
-          >
-            {t('findMyMentor')}
-          </Link>
-          <Link
-            href="/forum"
-            onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
-          >
-            {t('forum')}
-          </Link>
-          <Link
-            href="/my-bookings"
-            onClick={() => setIsOpen(false)}
-            className="block text-sm font-semibold text-amber-950 px-3 py-2.5 bg-amber-100/80 rounded-xl border border-amber-300/60"
-          >
-            {t('myBookings')}
-          </Link>
-          <Link
-            href="/become-counselor"
-            onClick={() => setIsOpen(false)}
-            className="block text-center text-xs font-bold text-amber-50 bg-amber-900 px-4 py-3 rounded-xl shadow-xs"
-          >
-            {t('becomeCounselorJoin')}
-          </Link>
-          {isSignedIn ? (
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-2 text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl cursor-pointer"
-            >
-              <LogOut className="w-4 h-4 text-amber-800" /> {t('signOut')}
-            </button>
-          ) : (
+          {/* Center Navigation Links: Streamlined and fully responsive without horizontal crowding */}
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 text-xs font-bold text-[#475569] shrink min-w-0">
             <Link
-              href="/login"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 text-sm font-semibold text-stone-800 px-3 py-2 hover:bg-amber-100/60 rounded-xl"
+              href="/#rahnamolar"
+              className="px-2 xl:px-3 py-1.5 rounded-full hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05] transition-colors whitespace-nowrap"
             >
-              <LogIn className="w-4 h-4 text-amber-800" /> {t('signIn')}
+              {labels.mentors}
             </Link>
-          )}
-          <div className="pt-1">
-            <LanguageSwitcher className="w-full justify-center" />
+            <Link
+              href="/#roadmaps"
+              onClick={() => window.dispatchEvent(new CustomEvent('rahnamo:tab', { detail: 'roadmaps' }))}
+              className="px-2 xl:px-3 py-1.5 rounded-full bg-[#F59E0B]/15 text-[#92400E] hover:bg-[#F59E0B]/25 transition-colors inline-flex items-center gap-1 whitespace-nowrap"
+            >
+              <Sparkles className="w-3 h-3 text-[#D97706] shrink-0" />
+              <span>{labels.roadmaps}</span>
+            </Link>
+            <Link
+              href="/#imkoniyatlar"
+              onClick={() => window.dispatchEvent(new CustomEvent('rahnamo:tab', { detail: 'opportunities' }))}
+              className="px-2 xl:px-3 py-1.5 rounded-full hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05] transition-colors whitespace-nowrap"
+            >
+              {labels.opportunities}
+            </Link>
+            <Link
+              href="/#how-it-works"
+              className="px-2 xl:px-3 py-1.5 rounded-full hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05] transition-colors whitespace-nowrap"
+            >
+              {labels.howItWorks}
+            </Link>
+            <Link
+              href="/match"
+              className={`px-2 xl:px-3 py-1.5 rounded-full transition-colors inline-flex items-center gap-1 whitespace-nowrap ${
+                pathname === '/match'
+                  ? 'bg-[#F59E0B]/15 text-[#B45309]'
+                  : 'hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05]'
+              }`}
+            >
+              <Sparkles className="w-3 h-3 text-[#D97706] shrink-0" />
+              <span>{t('findMyMentor')}</span>
+            </Link>
+            <Link
+              href="/forum"
+              className={`px-2 xl:px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${
+                pathname?.startsWith('/forum')
+                  ? 'bg-[#0F1E36]/[0.08] text-[#0F1E36]'
+                  : 'hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05]'
+              }`}
+            >
+              {t('forum')}
+            </Link>
+          </nav>
+
+          {/* Right Actions: Language Switcher (UZ / RU / EN) + Bookings/Auth + High-Contrast CTA */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <LanguageSwitcher />
+
+            <Link
+              href="/my-bookings"
+              title={t('myBookings')}
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#475569] hover:text-[#0F1E36] px-2 py-1.5 rounded-full hover:bg-[#0F1E36]/[0.05] transition-colors"
+            >
+              <CalendarCheck className="w-3.5 h-3.5 text-[#D97706]" />
+              <span className="hidden 2xl:inline">{t('myBookings')}</span>
+            </Link>
+
+            {isSignedIn ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                title={t('signOut')}
+                aria-label={t('signOut')}
+                className="p-2 rounded-full text-[#0F1E36] hover:bg-[#0F1E36]/[0.06] transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                title={t('signIn')}
+                aria-label={t('signIn')}
+                className="p-2 rounded-full text-[#0F1E36] hover:bg-[#0F1E36]/[0.06] transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+              </Link>
+            )}
+
+            {/* Become a Rahnamo CTA: Visible across lg and up */}
+            {pathname !== '/become-counselor' ? (
+              <Link
+                href="/become-counselor"
+                className="hidden lg:inline-flex items-center gap-1.5 bg-[#0F1E36] hover:bg-[#1B3154] text-white font-bold text-xs px-3 xl:px-4 py-2 rounded-full border border-[#F59E0B]/35 shadow-xs transition-all whitespace-nowrap shrink-0"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                <span>{t('becomeCounselor')}</span>
+                <ArrowUpRight className="w-3 h-3 text-[#F59E0B]" />
+              </Link>
+            ) : (
+              <Link
+                href="/#rahnamolar"
+                className="hidden lg:inline-flex items-center gap-1.5 bg-[#0F1E36]/[0.06] hover:bg-[#0F1E36]/[0.10] text-[#0F1E36] font-bold text-xs px-3 py-2 rounded-full transition-all whitespace-nowrap shrink-0"
+              >
+                <span>{labels.mentors}</span>
+                <ArrowUpRight className="w-3 h-3 text-[#D97706]" />
+              </Link>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              className="lg:hidden p-2 rounded-xl text-[#0F1E36] hover:bg-[#0F1E36]/[0.06] transition-colors cursor-pointer"
+              aria-label={tNav('toggleMenuAriaLabel')}
+              aria-expanded={isOpen}
+            >
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
-      )}
-    </header>
+
+        {/* Mobile / Tablet Slide-Down Glass Drawer */}
+        {isOpen && (
+          <div className="lg:hidden mt-2 max-w-[1360px] mx-auto rounded-3xl bg-[#FBF9F5]/98 backdrop-blur-2xl border border-[#0F1E36]/10 shadow-2xl p-5 space-y-2">
+            <Link
+              href="/#rahnamolar"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between text-sm font-bold text-[#0F1E36] px-4 py-3 rounded-2xl bg-[#0F1E36]/[0.05]"
+            >
+              <span className="flex items-center gap-2.5">
+                <Compass className="w-4 h-4 text-[#D97706]" />
+                <span>{labels.mentors}</span>
+              </span>
+              <span className="font-mono text-xs text-[#D97706]">01</span>
+            </Link>
+            <Link
+              href="/#roadmaps"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between text-sm font-semibold text-[#475569] px-4 py-3 rounded-2xl hover:bg-[#0F1E36]/[0.04]"
+            >
+              <span>{labels.roadmaps}</span>
+              <span className="font-mono text-xs text-[#64748B]">02</span>
+            </Link>
+            <Link
+              href="/#ai-copilot"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between text-sm font-bold text-[#92400E] px-4 py-3 rounded-2xl bg-[#F59E0B]/15"
+            >
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#D97706]" />
+                <span>{labels.aiAdvisor}</span>
+              </span>
+              <span className="font-mono text-xs text-[#D97706]">AI</span>
+            </Link>
+            <Link
+              href="/#imkoniyatlar"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between text-sm font-semibold text-[#475569] px-4 py-3 rounded-2xl hover:bg-[#0F1E36]/[0.04]"
+            >
+              <span>{labels.opportunities}</span>
+              <span className="font-mono text-xs text-[#64748B]">03</span>
+            </Link>
+            <Link
+              href="/#how-it-works"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between text-sm font-semibold text-[#475569] px-4 py-3 rounded-2xl hover:bg-[#0F1E36]/[0.04]"
+            >
+              <span>{labels.howItWorks}</span>
+              <span className="font-mono text-xs text-[#64748B]">04</span>
+            </Link>
+            <Link
+              href="/match"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-sm font-semibold text-[#475569] px-4 py-3 rounded-2xl hover:bg-[#0F1E36]/[0.04]"
+            >
+              <Sparkles className="w-4 h-4 text-[#D97706]" />
+              <span>{t('findMyMentor')}</span>
+            </Link>
+            <Link
+              href="/forum"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-sm font-semibold text-[#475569] px-4 py-3 rounded-2xl hover:bg-[#0F1E36]/[0.04]"
+            >
+              <MessageSquare className="w-4 h-4 text-[#D97706]" />
+              <span>{t('forum')}</span>
+            </Link>
+            <Link
+              href="/my-bookings"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-sm font-semibold text-[#475569] px-4 py-3 rounded-2xl hover:bg-[#0F1E36]/[0.04]"
+            >
+              <CalendarCheck className="w-4 h-4 text-[#D97706]" />
+              <span>{t('myBookings')}</span>
+            </Link>
+
+            <div className="pt-3 border-t border-[#0F1E36]/10 flex flex-col gap-2.5">
+              <Link
+                href="/become-counselor"
+                onClick={() => setIsOpen(false)}
+                className="btn-yv-primary w-full justify-between"
+              >
+                <span>{t('becomeCounselorJoin')}</span>
+                <span className="badge">
+                  <ArrowUpRight className="w-4 h-4" />
+                </span>
+              </Link>
+            </div>
+          </div>
+        )}
+      </header>
+    </>
   );
 }

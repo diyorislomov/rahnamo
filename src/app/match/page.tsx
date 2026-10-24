@@ -28,7 +28,9 @@ const GOAL_KEYWORDS: Record<(typeof GOALS)[number], string[]> = {
 export default function MatchPage() {
   const t = useTranslations('matching');
   const tSpecialties = useTranslations('specialties');
-  const [counselors, setCounselors] = useState<Counselor[]>(() => isSupabaseConfigured() ? [] : INITIAL_COUNSELORS);
+  const [counselors, setCounselors] = useState<Counselor[]>(() =>
+    isSupabaseConfigured() ? [] : INITIAL_COUNSELORS
+  );
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [goal, setGoal] = useState<(typeof GOALS)[number]>('explore');
   const [format, setFormat] = useState<(typeof FORMATS)[number]>('quick');
@@ -55,11 +57,12 @@ export default function MatchPage() {
         if (format === 'text' && counselor.pricePerQuestion) score += 5;
         if (format === 'quick' && counselor.standardPrice <= maxBudget) score += 4;
         if ((format === 'deep' || format === 'ongoing') && counselor.premiumPrice <= maxBudget) score += 4;
-        const relevantPrice = format === 'text'
-          ? counselor.pricePerQuestion || counselor.standardPrice
-          : format === 'quick'
-            ? counselor.standardPrice
-            : counselor.premiumPrice;
+        const relevantPrice =
+          format === 'text'
+            ? counselor.pricePerQuestion || counselor.standardPrice
+            : format === 'quick'
+              ? counselor.standardPrice
+              : counselor.premiumPrice;
         if (relevantPrice <= maxBudget) score += 3;
         score += Math.min(counselor.rating, 5);
         return { counselor, score };
@@ -70,55 +73,111 @@ export default function MatchPage() {
   }, [budget, category, counselors, format, goal]);
 
   return (
-    <div className="min-h-screen bg-[#FAF6EE] text-[#2C241E] flex flex-col">
+    <div className="min-h-screen bg-[#FFF8E7] text-[#18181B] flex flex-col">
       <Navbar />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-10">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-12">
         <div className="max-w-2xl mx-auto text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold">
-            <Sparkles className="w-3.5 h-3.5" /> {t('badge')}
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0F4C5C]/[0.08] text-[#0F4C5C] text-[11px] font-semibold uppercase tracking-[0.14em]">
+            <Sparkles className="w-3.5 h-3.5 text-[#9E741E]" />
+            <span>{t('badge')}</span>
           </span>
-          <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-amber-950 mt-4">{t('title')}</h1>
-          <p className="text-sm text-stone-600 mt-3">{t('subtitle')}</p>
+          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-zinc-900 mt-3">
+            {t('title')}
+          </h1>
+          <p className="text-sm text-zinc-600 mt-2.5 leading-relaxed">{t('subtitle')}</p>
         </div>
 
-        <div className="max-w-3xl mx-auto bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm p-6 sm:p-8 mt-8 space-y-6">
+        <div className="max-w-3xl mx-auto surface-card p-6 sm:p-8 mt-8 space-y-6">
           <Question title={t('categoryLabel')}>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((key) => (
-                <button key={key} type="button" onClick={() => { setCategory(key); setShowResults(false); }} className={`px-3 py-2 rounded-xl border text-xs font-bold cursor-pointer ${category === key ? 'bg-amber-900 border-amber-900 text-amber-50' : 'bg-amber-50 border-amber-200 text-amber-950'}`}>
-                  {SPECIALTY_CONFIG[key].icon} {tSpecialties(key)}
-                </button>
-              ))}
+              {CATEGORIES.map((key) => {
+                const isSelected = category === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setCategory(key);
+                      setShowResults(false);
+                    }}
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#0F4C5C] border-[#0F4C5C] text-white shadow-2xs'
+                        : 'bg-white border-zinc-900/12 text-zinc-700 hover:bg-[#F5EFE0]'
+                    }`}
+                  >
+                    <span aria-hidden="true">{SPECIALTY_CONFIG[key].icon}</span> {tSpecialties(key)}
+                  </button>
+                );
+              })}
             </div>
           </Question>
 
           <Question title={t('goalLabel')}>
-            <OptionGrid values={GOALS} selected={goal} onSelect={(value) => { setGoal(value); setShowResults(false); }} label={(value) => t(`goals.${value}`)} />
-          </Question>
-          <Question title={t('formatLabel')}>
-            <OptionGrid values={FORMATS} selected={format} onSelect={(value) => { setFormat(value); setShowResults(false); }} label={(value) => t(`formats.${value}`)} />
-          </Question>
-          <Question title={t('budgetLabel')}>
-            <OptionGrid values={BUDGETS} selected={budget} onSelect={(value) => { setBudget(value); setShowResults(false); }} label={(value) => t(`budgets.${value}`)} />
+            <OptionGrid
+              values={GOALS}
+              selected={goal}
+              onSelect={(value) => {
+                setGoal(value);
+                setShowResults(false);
+              }}
+              label={(value) => t(`goals.${value}`)}
+            />
           </Question>
 
-          <button type="button" onClick={() => setShowResults(true)} className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-amber-800 to-amber-900 text-amber-50 font-serif font-bold cursor-pointer shadow-md">
-            <Compass className="w-5 h-5" /> {t('find')} <ArrowRight className="w-4 h-4" />
+          <Question title={t('formatLabel')}>
+            <OptionGrid
+              values={FORMATS}
+              selected={format}
+              onSelect={(value) => {
+                setFormat(value);
+                setShowResults(false);
+              }}
+              label={(value) => t(`formats.${value}`)}
+            />
+          </Question>
+
+          <Question title={t('budgetLabel')}>
+            <OptionGrid
+              values={BUDGETS}
+              selected={budget}
+              onSelect={(value) => {
+                setBudget(value);
+                setShowResults(false);
+              }}
+              label={(value) => t(`budgets.${value}`)}
+            />
+          </Question>
+
+          <button
+            type="button"
+            onClick={() => setShowResults(true)}
+            className="btn-primary-teal w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm cursor-pointer"
+          >
+            <Compass className="w-4 h-4 text-[#D4A84B]" />
+            <span>{t('find')}</span>
+            <ArrowRight className="w-4 h-4 text-[#D4A84B]" />
           </button>
         </div>
 
         {showResults && (
           <section className="mt-12">
             <div className="text-center mb-6">
-              <h2 className="font-serif text-2xl font-extrabold text-amber-950">{t('resultsTitle')}</h2>
-              <p className="text-xs text-stone-500 mt-1">{t('resultsSubtitle')}</p>
+              <h2 className="font-serif text-2xl font-bold text-zinc-900">
+                {t('resultsTitle')}
+              </h2>
+              <p className="text-xs text-zinc-500 mt-1">{t('resultsSubtitle')}</p>
             </div>
             {matches.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {matches.map((counselor) => <CounselorCard key={counselor.id} counselor={counselor} />)}
+                {matches.map((counselor) => (
+                  <CounselorCard key={counselor.id} counselor={counselor} />
+                ))}
               </div>
             ) : (
-              <p className="text-center text-sm text-stone-500 bg-white border border-stone-200 rounded-2xl p-8">{t('empty')}</p>
+              <p className="text-center text-sm text-zinc-500 surface-card p-8">
+                {t('empty')}
+              </p>
             )}
           </section>
         )}
@@ -129,17 +188,44 @@ export default function MatchPage() {
 }
 
 function Question({ title, children }: { title: string; children: React.ReactNode }) {
-  return <div><h2 className="text-sm font-bold text-amber-950 mb-3">{title}</h2>{children}</div>;
+  return (
+    <div className="pt-4 first:pt-0 border-t first:border-t-0 border-zinc-900/[0.06]">
+      <h2 className="text-xs sm:text-sm font-semibold text-zinc-900 mb-3">{title}</h2>
+      {children}
+    </div>
+  );
 }
 
-function OptionGrid<T extends string>({ values, selected, onSelect, label }: { values: readonly T[]; selected: T; onSelect: (value: T) => void; label: (value: T) => string }) {
+function OptionGrid<T extends string>({
+  values,
+  selected,
+  onSelect,
+  label,
+}: {
+  values: readonly T[];
+  selected: T;
+  onSelect: (value: T) => void;
+  label: (value: T) => string;
+}) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {values.map((value) => (
-        <button key={value} type="button" onClick={() => onSelect(value)} className={`text-left px-4 py-3 rounded-xl border text-xs font-semibold cursor-pointer ${selected === value ? 'bg-amber-100 border-amber-700 text-amber-950 ring-1 ring-amber-700/20' : 'bg-white border-amber-900/15 text-stone-700 hover:bg-amber-50'}`}>
-          {label(value)}
-        </button>
-      ))}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      {values.map((value) => {
+        const isSelected = selected === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onSelect(value)}
+            className={`text-left px-4 py-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+              isSelected
+                ? 'bg-[#0F4C5C]/[0.07] border-[#0F4C5C] text-[#0F4C5C] ring-1 ring-[#0F4C5C]/20'
+                : 'bg-white border-zinc-900/12 text-zinc-700 hover:bg-[#F5EFE0]'
+            }`}
+          >
+            {label(value)}
+          </button>
+        );
+      })}
     </div>
   );
 }

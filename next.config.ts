@@ -63,8 +63,13 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "192.168.100.221",
     "192.168.100.221:3000",
+    "10.228.1.49",
+    "10.228.1.49:3000",
     "localhost:3000",
-    "127.0.0.1:3000"
+    "127.0.0.1:3000",
+    "*.lhr.life",
+    "32f6cd57da14b4.lhr.life",
+    "*.trycloudflare.com",
   ],
   // Vercel supplies its commit SHA. Self-hosted builds read the checked-out
   // Git HEAD so a stale VERCEL_GIT_COMMIT_SHA cannot leak across deploys.
