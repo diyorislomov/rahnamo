@@ -15,7 +15,7 @@ import {
   Star,
 } from 'lucide-react';
 import { Counselor } from '@/types';
-import UzbekMetroVault from '@/components/UzbekMetroVault';
+import UzbekHeritageVisual from '@/components/UzbekHeritageVisual';
 
 interface CleanHeroProps {
   counselors: Counselor[];
@@ -608,10 +608,10 @@ export default function CleanHero({ counselors, onSelectSpecialty }: CleanHeroPr
         }}
       />
 
-      {/* Authentic Tashkent Metro / Registan Girih Star Medallion Watermark */}
+      {/* Authentic Uzbek Girih Star Medallion Watermark */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-[720px] h-[720px] opacity-[0.045] select-none text-[#0F1E36]"
+        className="pointer-events-none absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-[680px] h-[680px] opacity-[0.038] select-none text-[#0F1E36]"
       >
         <svg viewBox="0 0 200 200" className="w-full h-full fill-current">
           <polygon points="100,10 120,60 170,40 150,90 200,100 150,110 170,160 120,140 100,190 80,140 30,160 50,110 0,100 50,90 30,40 80,60" />
@@ -621,52 +621,38 @@ export default function CleanHero({ counselors, onSelectSpecialty }: CleanHeroPr
       </div>
 
       <div className="relative z-10 max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-10 items-center">
-          {/* LEFT COLUMN: Kinetic Typography + Interactive Ambition Selector + Primary CTAs */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          {/* LEFT COLUMN: Compact Headline + Interactive Ambition Selector + CTAs */}
           <div className="lg:col-span-7 text-left">
-            {/* Heritage + Career OS Badges */}
+            {/* Heritage + Trust Badges */}
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#0F1E36] text-white px-3.5 py-1.5 text-[11px] font-mono font-bold uppercase tracking-[0.14em] shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-[#C25E38] animate-pulse" />
-                <span>🏛️ TOSHKENT METROSI & IPAK YO‘LI RUHIYATI • {wingsMotto}</span>
-              </span>
               <span className="eyebrow-pill">
                 <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
                 <span>{t('badge')}</span>
               </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-medium text-[#0F1E36]/75 bg-[#0F1E36]/[0.04] border border-[#0F1E36]/10">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                <span>{wingsMotto}</span>
+              </span>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-[3.85rem] text-[#0F1E36] leading-[1.05] tracking-[-0.035em] mt-6">
+            {/* Compact Headline (No line under headline, no dangling dot) */}
+            <h1 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-[2.75rem] text-[#0F1E36] leading-[1.16] tracking-[-0.03em] mt-3.5 sm:mt-4">
               {t.rich('title', {
                 strong: (chunks) => (
-                  <span className="relative inline-block bg-gradient-to-r from-[#D97706] via-[#C25E38] to-[#0F1E36] bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-[#D97706] via-[#C25E38] to-[#0F1E36] bg-clip-text text-transparent font-extrabold">
                     {chunks}
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 240 12"
-                      fill="none"
-                      className="w-full h-2.5 mt-0.5 text-[#F59E0B]"
-                      preserveAspectRatio="none"
-                    >
-                      <path
-                        d="M2 9.5C58 2.5 162 1.5 238 7.5"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                      />
-                    </svg>
                   </span>
                 ),
               })}
             </h1>
 
-            <p className="mt-5 text-base sm:text-lg text-[#475569] max-w-xl leading-relaxed">
+            <p className="mt-3.5 text-base sm:text-lg text-[#475569] max-w-xl leading-relaxed">
               {t('subtitle')}
             </p>
 
             {/* Interactive Ambition Selector (Preplaced & GrowthMentor Pattern) */}
-            <div className="mt-7 p-4 sm:p-5 rounded-3xl bg-white/85 backdrop-blur-md border border-[#0F1E36]/10 shadow-[0_12px_36px_-16px_rgba(15,30,54,0.1)]">
+            <div className="mt-5 p-4 sm:p-5 rounded-3xl bg-white/85 backdrop-blur-md border border-[#0F1E36]/10 shadow-[0_12px_36px_-16px_rgba(15,30,54,0.1)]">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="text-xs font-mono font-bold uppercase tracking-[0.12em] text-[#0F1E36]">
                   {selectorPrompt}
@@ -712,7 +698,7 @@ export default function CleanHero({ counselors, onSelectSpecialty }: CleanHeroPr
             </div>
 
             {/* Primary & Secondary CTAs */}
-            <div className="mt-7 flex flex-wrap items-center gap-3.5">
+            <div className="mt-6 flex flex-wrap items-center gap-3.5">
               <a href="#rahnamolar" className="btn-yv-primary">
                 <span>{tCommon('viewCounselors')}</span>
                 <span className="badge" aria-hidden="true">
@@ -752,9 +738,9 @@ export default function CleanHero({ counselors, onSelectSpecialty }: CleanHeroPr
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Authentic Uzbek Metro Vault Arch Portal & Living Silk Road Transit Constellation */}
+          {/* RIGHT COLUMN: Authentic Uzbek Traditional Patterns & Mentor Showcase */}
           <div className="lg:col-span-5 relative flex items-center justify-center">
-            <UzbekMetroVault
+            <UzbekHeritageVisual
               counselors={counselors}
               selectedAmbition={selectedAmbition}
               onSelectAmbition={(ambId, specKey) => {
