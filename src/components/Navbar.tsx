@@ -72,7 +72,36 @@ export default function Navbar() {
         />
       </div>
 
-      <header className="sticky top-0 z-50 w-full max-w-full px-3 sm:px-6 lg:px-8 pt-3 pb-1.5 overflow-x-clip">
+      {/* Top Global Beta Version Announcement Strip */}
+      <div className="w-full bg-[#0F1E36] text-[#FBF9F5] border-b border-[#F59E0B]/30 py-1.5 px-3 sm:px-6 relative z-[55] shadow-xs">
+        <div className="max-w-[1360px] mx-auto flex items-center justify-between text-[11px] sm:text-xs">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="inline-flex items-center gap-1.5 font-bold uppercase font-mono text-[#F59E0B] tracking-wider text-[10px] bg-white/[0.08] px-2 py-0.5 rounded-full border border-[#F59E0B]/30 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
+              BETA VERSIYA
+            </span>
+            <span className="text-slate-300 font-medium truncate">
+              {locale === 'ru'
+                ? 'Платформа в режиме открытого бета-тестирования. Рахнамо объединяет амбициозных студентов Центральной Азии!'
+                : locale === 'en'
+                  ? 'Open Beta Version • Connecting Central Asian talent with world-class mentors.'
+                  : 'MyRahnamo ochiq beta versiyada ishlamoqda. Markaziy Osiyo yoshlari uchun jahon darajasidagi ustozlik ekotizimi!'}
+            </span>
+          </div>
+
+          <a
+            href="https://t.me/rahnamo_admin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[#F59E0B] hover:text-amber-300 font-semibold shrink-0 ml-3 text-[11px] hover:underline"
+          >
+            <span>{locale === 'ru' ? 'Fikr / Aloqa' : locale === 'en' ? 'Feedback' : 'Fikr bildirish'}</span>
+            <ArrowUpRight className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
+
+      <header className="sticky top-0 z-50 w-full max-w-full px-3 sm:px-6 lg:px-8 pt-2.5 pb-1.5 overflow-x-clip">
         <div
           className={`max-w-[1360px] mx-auto rounded-2xl transition-all duration-300 px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 min-w-0 ${
             scrolled
@@ -94,10 +123,13 @@ export default function Navbar() {
                 className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#F59E0B] inline-block ml-0.5 shadow-[0_0_8px_rgba(245,158,11,0.65)]"
               />
             </div>
+            <span className="hidden sm:inline-flex items-center text-[9px] font-mono font-extrabold uppercase tracking-wider text-[#92400E] bg-[#F59E0B]/20 border border-[#F59E0B]/40 px-1.5 py-0.5 rounded-md ml-1.5 shrink-0">
+              BETA
+            </span>
           </Link>
 
           {/* Center Navigation Links: Streamlined and fully responsive without horizontal crowding */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 text-xs font-bold text-[#475569] shrink min-w-0">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 text-xs font-bold text-[#475569] shrink-0">
             <Link
               href="/#rahnamolar"
               className="px-2 xl:px-3 py-1.5 rounded-full hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05] transition-colors whitespace-nowrap"
@@ -121,13 +153,13 @@ export default function Navbar() {
             </Link>
             <Link
               href="/#how-it-works"
-              className="px-2 xl:px-3 py-1.5 rounded-full hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05] transition-colors whitespace-nowrap"
+              className="hidden xl:inline-flex px-2 xl:px-3 py-1.5 rounded-full hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05] transition-colors whitespace-nowrap"
             >
               {labels.howItWorks}
             </Link>
             <Link
               href="/match"
-              className={`px-2 xl:px-3 py-1.5 rounded-full transition-colors inline-flex items-center gap-1 whitespace-nowrap ${
+              className={`hidden xl:inline-flex px-2 xl:px-3 py-1.5 rounded-full transition-colors items-center gap-1 whitespace-nowrap ${
                 pathname === '/match'
                   ? 'bg-[#F59E0B]/15 text-[#B45309]'
                   : 'hover:text-[#0F1E36] hover:bg-[#0F1E36]/[0.05]'
@@ -149,7 +181,7 @@ export default function Navbar() {
           </nav>
 
           {/* Right Actions: Language Switcher (UZ / RU / EN) + Bookings/Auth + High-Contrast CTA */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto pl-2.5 sm:pl-3.5 border-l border-[#0F1E36]/10">
             <LanguageSwitcher />
 
             <Link

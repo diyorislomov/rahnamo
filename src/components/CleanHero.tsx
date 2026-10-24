@@ -15,6 +15,7 @@ import {
   Star,
 } from 'lucide-react';
 import { Counselor } from '@/types';
+import UzbekMetroVault from '@/components/UzbekMetroVault';
 
 interface CleanHeroProps {
   counselors: Counselor[];
@@ -607,6 +608,18 @@ export default function CleanHero({ counselors, onSelectSpecialty }: CleanHeroPr
         }}
       />
 
+      {/* Authentic Tashkent Metro / Registan Girih Star Medallion Watermark */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-[720px] h-[720px] opacity-[0.045] select-none text-[#0F1E36]"
+      >
+        <svg viewBox="0 0 200 200" className="w-full h-full fill-current">
+          <polygon points="100,10 120,60 170,40 150,90 200,100 150,110 170,160 120,140 100,190 80,140 30,160 50,110 0,100 50,90 30,40 80,60" />
+          <circle cx="100" cy="100" r="35" fill="none" stroke="currentColor" strokeWidth="4" />
+          <circle cx="100" cy="100" r="65" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+        </svg>
+      </div>
+
       <div className="relative z-10 max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-10 items-center">
           {/* LEFT COLUMN: Kinetic Typography + Interactive Ambition Selector + Primary CTAs */}
@@ -615,7 +628,7 @@ export default function CleanHero({ counselors, onSelectSpecialty }: CleanHeroPr
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#0F1E36] text-white px-3.5 py-1.5 text-[11px] font-mono font-bold uppercase tracking-[0.14em] shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-[#C25E38] animate-pulse" />
-                <span>{wingsMotto}</span>
+                <span>🏛️ TOSHKENT METROSI & IPAK YO‘LI RUHIYATI • {wingsMotto}</span>
               </span>
               <span className="eyebrow-pill">
                 <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
@@ -739,167 +752,16 @@ export default function CleanHero({ counselors, onSelectSpecialty }: CleanHeroPr
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Dynamic Glassmorphic AI Skill-Gap & Top-Matched Rahnamo Preview Card */}
-          <div className="lg:col-span-5 relative min-h-[480px] flex items-center justify-center">
-            <div className="absolute -inset-4 rounded-[2.25rem] overflow-hidden">
-              <NeoSilkRoadBackdropCanvas />
-            </div>
-
-            <div className="relative z-10 w-full max-w-[440px]">
-              {/* Main Lapis Lazuli + Alabaster Glassmorphic Career Operating System Card */}
-              <div className="rounded-3xl bg-[#0F1E36] text-white p-6 sm:p-7 shadow-[0_28px_64px_-16px_rgba(15,30,54,0.45)] border border-[#F59E0B]/30 relative overflow-hidden neo-silk-tessellation-dark">
-                {/* Top Status Header */}
-                <div className="flex items-center justify-between gap-2 pb-4 border-b border-white/10">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#C25E38] ring-4 ring-[#C25E38]/25" />
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#F59E0B]">
-                      AI SKILL-GAP & ROADMAP OS
-                    </span>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-white/10 text-[10px] font-mono font-bold text-amber-300 border border-white/10">
-                    {activeBlueprint.durationBadge}
-                  </span>
-                </div>
-
-                {/* Blueprint Outcome Title & Readiness Score */}
-                <div className="mt-4 flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300">
-                      {activeBlueprint.emoji} {activeBlueprint.pillLabel}
-                    </div>
-                    <h2 className="font-display font-bold text-lg sm:text-xl text-white mt-1 leading-snug">
-                      {activeBlueprint.blueprintTitle}
-                    </h2>
-                  </div>
-                  <div className="shrink-0 text-right bg-white/[0.07] border border-[#F59E0B]/30 rounded-2xl px-3 py-2">
-                    <div className="font-mono font-extrabold text-xl text-[#F59E0B] leading-none">
-                      {activeBlueprint.readinessScore}%
-                    </div>
-                    <div className="text-[9px] font-mono uppercase tracking-wider text-slate-300 mt-1">
-                      MATCH FIT
-                    </div>
-                  </div>
-                </div>
-
-                {/* AI Skill-Gap Progress Bars */}
-                <div className="mt-5 space-y-3 bg-white/[0.04] rounded-2xl p-4 border border-white/[0.08]">
-                  {activeBlueprint.skills.map((skill) => (
-                    <div key={skill.label}>
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="font-medium text-slate-200 truncate pr-2">
-                          {skill.label}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 shrink-0">
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#C25E38]/25 text-amber-200 border border-[#C25E38]/40">
-                            {skill.tag}
-                          </span>
-                          <span className="font-mono font-bold text-[#F59E0B]">
-                            {skill.pct}%
-                          </span>
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#C25E38] transition-all duration-500"
-                          style={{ width: `${skill.pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 3-Step Structured Milestones (Chronus / Qooper Career OS style) */}
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  {activeBlueprint.milestones.map((m, idx) => (
-                    <div
-                      key={m}
-                      className="rounded-xl bg-white/[0.05] border border-white/10 px-2.5 py-2 text-left"
-                    >
-                      <div className="flex items-center gap-1 text-[10px] font-mono font-bold text-[#F59E0B]">
-                        <CheckCircle2 className="w-3 h-3 text-[#F59E0B] shrink-0" />
-                        <span>0{idx + 1}</span>
-                      </div>
-                      <div className="text-[11px] font-semibold text-white mt-0.5 truncate">
-                        {m}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Top-Matched Rahnamo Preview Card (ADPList Social Proof) */}
-                <div className="mt-5 rounded-2xl bg-[#FBF9F5] text-[#0F1E36] p-4 border border-[#F59E0B]/40 shadow-lg">
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-wider text-[#0F1E36] bg-[#F59E0B]/20 px-2.5 py-0.5 rounded-full">
-                      <ShieldCheck className="w-3 h-3 text-[#D97706]" />
-                      <span>{tCommon('verifiedBadge')}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-[#0F1E36]">
-                      <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-                      <span>
-                        {matchedLiveCounselor
-                          ? matchedLiveCounselor.rating.toFixed(1)
-                          : activeBlueprint.fallbackMentor.rating}
-                      </span>
-                      <span className="text-[#64748B] font-normal text-[11px]">
-                        •{' '}
-                        {matchedLiveCounselor
-                          ? matchedLiveCounselor.totalSessions || matchedLiveCounselor.reviewsCount
-                          : activeBlueprint.fallbackMentor.sessions}{' '}
-                        sessions
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3.5">
-                    <Image
-                      src={
-                        matchedLiveCounselor?.avatarUrl ||
-                        activeBlueprint.fallbackMentor.avatarUrl
-                      }
-                      alt={
-                        matchedLiveCounselor?.fullName ||
-                        activeBlueprint.fallbackMentor.name
-                      }
-                      width={52}
-                      height={52}
-                      className="w-13 h-13 rounded-2xl object-cover border-2 border-[#F59E0B] shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-display font-bold text-sm sm:text-base text-[#0F1E36] truncate">
-                        {matchedLiveCounselor?.fullName ||
-                          activeBlueprint.fallbackMentor.name}
-                      </h3>
-                      <p className="text-xs font-semibold text-[#C25E38] truncate">
-                        {matchedLiveCounselor?.company ||
-                          activeBlueprint.fallbackMentor.credibilityTag}
-                      </p>
-                      <div className="flex items-center gap-1 text-[11px] text-[#475569] mt-0.5">
-                        <MapPin className="w-3 h-3 text-[#D97706] shrink-0" />
-                        <span className="truncate">
-                          {activeBlueprint.fallbackMentor.roots}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3.5 pt-3 border-t border-[#0F1E36]/10 flex items-center justify-between gap-2">
-                    <Link
-                      href={
-                        matchedLiveCounselor
-                          ? `/counselors/${matchedLiveCounselor.id}`
-                          : '#early-access'
-                      }
-                      className="w-full inline-flex items-center justify-between bg-[#0F1E36] hover:bg-[#1B3154] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors"
-                    >
-                      <span>
-                        {matchedLiveCounselor ? t('viewProfile') : t('emptyCardCta')}
-                      </span>
-                      <ArrowUpRight className="w-4 h-4 text-[#F59E0B]" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* RIGHT COLUMN: Authentic Uzbek Metro Vault Arch Portal & Living Silk Road Transit Constellation */}
+          <div className="lg:col-span-5 relative flex items-center justify-center">
+            <UzbekMetroVault
+              counselors={counselors}
+              selectedAmbition={selectedAmbition}
+              onSelectAmbition={(ambId, specKey) => {
+                setSelectedAmbition(ambId as AmbitionId);
+                if (onSelectSpecialty) onSelectSpecialty(specKey);
+              }}
+            />
           </div>
         </div>
       </div>
