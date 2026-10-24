@@ -107,3 +107,10 @@ npm test        # unit tests
 ## Notes for AI coding agents
 
 See [AGENTS.md](AGENTS.md) — this project pins a specific Next.js version with breaking changes from what most models were trained on; read the bundled docs before generating framework-level code.
+
+## Continuous integration and deployment
+
+Pull requests run deployment tests, application tests and a production build.
+Passing pushes to `main` automatically deploy to `myrahnamo.com`, with a staged
+server build, health checks and automatic rollback. See [the CI/CD runbook](ops/README.md)
+for configuration, controller maintenance and recovery instructions.

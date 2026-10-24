@@ -1,0 +1,88 @@
+name: Rahnamo CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rahnamo-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Tests and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key
+      NEXT_PUBLIC_SITE_URL: https://myrahnamo.com
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Test deployment and rollback logic
+        run: python3 -m unittest discover -s ops/tests -v
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run application tests
+        run: npm test
+      - name: Compile production application
+        run: npm run build
+
+  deploy:
+    name: Deploy production
+    needs: checks
+    if: github.repository == 'diyorislomov/rahnamo' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://myrahnamo.com
+    steps:
+      - name: Deploy the verified main commit
+        env:
+          DEPLOY_KEY: ${{ secrets.RAHNAMO_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.RAHNAMO_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.RAHNAMO_DEPLOY_HOST }}
+          DEPLOY_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS" && test -n "$DEPLOY_HOST"
+          [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]
+          key="$RUNNER_TEMP/rahnamo-deploy-key"
+          hosts="$RUNNER_TEMP/rahnamo-known-hosts"
+          trap 'rm -f "$key" "$hosts"' EXIT
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$hosts"
+          ssh -i "$key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=8 \
+            "root@$DEPLOY_HOST" "deploy $DEPLOY_SHA"
+      - name: Verify the public HTTPS version
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            --connect-timeout 10 --max-time 20 \
+            https://myrahnamo.com/api/build-version > "$RUNNER_TEMP/rahnamo-version.json"
+          python3 - <<'PY'
+          import json, os, pathlib
+          version = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'rahnamo-version.json').read_text())['version']
+          assert version == os.environ['DEPLOY_SHA'], f'Unexpected production version: {version}'
+          print(f'Production is running {version}')
+          PY
