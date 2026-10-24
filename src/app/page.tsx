@@ -282,10 +282,10 @@ export default function Home() {
         {/* 3. Asymmetric Bento-Grid Ecosystem Section (#ecosystem) */}
         <section
           id="ecosystem"
-          className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24 pb-10 scroll-mt-24"
+          className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-10 scroll-mt-24"
         >
           <RevealOnScroll>
-            <div className="max-w-3xl mb-12">
+            <div className="max-w-3xl mb-8">
               <span className="eyebrow-pill">
                 <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
                 <span>{bentoCopy.eyebrow}</span>

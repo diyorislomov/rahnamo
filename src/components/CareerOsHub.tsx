@@ -684,10 +684,10 @@ export default function CareerOsHub({ counselors }: CareerOsHubProps) {
   return (
     <section
       id="roadmaps"
-      className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 scroll-mt-20"
+      className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-6 sm:pb-8 scroll-mt-20"
     >
       {/* Top Section Header + Master Plan Core Thesis */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-5 sm:mb-6">
         <div className="max-w-2xl">
           <span className="eyebrow-pill">
             <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
@@ -847,11 +847,29 @@ export default function CareerOsHub({ counselors }: CareerOsHubProps) {
                 </button>
               );
             })}
+
+            {/* Left Column Quick Trust / Mentor Tip Box */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-white to-[#FBF9F5] border border-[#0F1E36]/10 shadow-xs">
+              <div className="flex items-center gap-2 font-display font-bold text-xs text-[#0F1E36]">
+                <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
+                <span>1-ga-1 Mentor bilan 2x tezroq</span>
+              </div>
+              <p className="text-[11px] text-[#64748B] mt-1 leading-relaxed">
+                Ushbu yo‘l xaritasi bo‘yicha tajribali mutaxassis bilan suhbat qiling va xatolardan qoching.
+              </p>
+              <a
+                href="#rahnamolar"
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold text-[#C25E38] hover:text-[#0F1E36] transition-colors"
+              >
+                <span>Mos Rahnamoni tanlash</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
 
           {/* Right Column (8 Cols): Checkable Milestones + Curated Resources + Recommended Mentors */}
           <div className="lg:col-span-8 yv-card">
-            <div className="yv-card-inner p-6 sm:p-8 relative overflow-hidden">
+            <div className="yv-card-inner p-5 sm:p-6 relative overflow-hidden">
               <div className="uzc-dot-corner" aria-hidden="true" />
 
               <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-[#0F1E36]/10 relative z-10">
@@ -877,7 +895,7 @@ export default function CareerOsHub({ counselors }: CareerOsHubProps) {
               </div>
 
               {/* Interactive Checkable Milestones (Click to toggle ✓ / ✗) */}
-              <div className="mt-6 space-y-3 relative z-10">
+              <div className="mt-5 space-y-2.5 relative z-10">
                 <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-[#64748B]">
                   <span>CHECKABLE MILESTONES (CLICK TO UPDATE PROGRESS)</span>
                   <span className="text-[#D97706]">INTERACTIVE TRACKER</span>
