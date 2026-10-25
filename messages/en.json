@@ -137,7 +137,7 @@
       "heading": "Become-a-Rahnamo application",
       "fullNameLabel": "Full name *",
       "fullNamePlaceholder": "E.g. Dr. Jasur Mansurov",
-      "photoLabel": "Profile photo (optional)",
+      "photoLabel": "Profile photo",
       "photoHint": "Upload a photo clearly showing your face (no logos or group photos).",
       "photoUploading": "Uploading...",
       "photoUploadFailed": "Failed to upload photo. Please try again or select another image.",
