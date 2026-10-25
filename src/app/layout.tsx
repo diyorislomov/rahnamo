@@ -4,7 +4,9 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import StaleBuildWatcher from "@/components/StaleBuildWatcher";
 import AuthProvider from "@/components/AuthProvider";
+import { NetworkProvider } from '@/components/network/NetworkProvider';
 import "./globals.css";
+import './network.css';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,8 +51,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
+            <NetworkProvider>
             {children}
             <StaleBuildWatcher />
+            </NetworkProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

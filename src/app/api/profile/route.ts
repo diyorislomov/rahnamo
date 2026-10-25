@@ -100,7 +100,7 @@ export async function DELETE(request: Request) {
     await client.query('DELETE FROM sessions WHERE "userId"=$1', [session.user.id]);
     // Keep an anonymous referential record so payment history is not cascade-deleted.
     await client.query(
-      'UPDATE users SET name=\'Deleted user\',email=NULL,image=NULL,"emailVerified"=NULL WHERE id=$1',
+      'UPDATE users SET name=\'Deleted user\',email=NULL,image=NULL,"emailVerified"=NULL,deleted_at=now() WHERE id=$1',
       [session.user.id],
     );
     await client.query('COMMIT');

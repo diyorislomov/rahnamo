@@ -26,7 +26,7 @@ export default function SocialAuthCard({ mode }: { mode: 'login' | 'signup' }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status } = useSession();
-  const redirectTo = safeRedirectPath(searchParams.get('redirect'), '/my-bookings');
+  const redirectTo = safeRedirectPath(searchParams.get('redirect'), '/settings/profile');
   const [pending, setPending] = useState<'google' | 'telegram' | null>(null);
   const [providers, setProviders] = useState<Set<string> | null>(null);
   const hasError = Boolean(searchParams.get('error'));

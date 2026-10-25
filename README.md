@@ -107,3 +107,29 @@ Pull requests run deployment tests, application tests and a production build.
 Passing pushes to `main` automatically deploy to `myrahnamo.com`, with a staged
 server build, health checks and automatic rollback. See [the CI/CD runbook](ops/README.md)
 for configuration, controller maintenance and recovery instructions.
+
+
+## Professional community
+
+The home page is the chronological community feed. `/people` searches public profiles;
+`/mentors` limits discovery to mentors. Public profiles live at `/people/<id>` and their
+editor at `/settings/profile`. `/saved`, `/notifications`, and `/admin/community` provide
+bookmarks, activity, and report moderation. The previous landing page and career tools
+remain at `/resources`.
+
+Community profiles are private by default for ordinary users. Existing consenting mentors
+receive public profiles. Contact information, auth identifiers and booking details are not
+included in community responses. Linking a member profile to a mentor requires both active
+sessions and transfers their community records transactionally; matching email addresses do
+not grant access. Blocking, private profiles, disabled mentors and deleted/blocked users are
+filtered by the server. Reports can be reviewed with the existing signed admin session.
+
+Apply the versioned SQL migrations with `npm run db:migrate` before deploying this release.
+The prepaid card-payment compatibility migration accepts the `card` method used by the
+existing prepaid endpoint. The community migration adds separate tables and mentor-profile
+creation for newly approved mentors. Production still uses local PostgreSQL and local uploads.
+
+`node scripts/test-network.mjs` exercises a running app against a disposable `_ci` or `_test`
+database. It covers ownership, visibility, follows, comments, saves, moderation, blocks,
+account linking, account deletion and pagination. CI runs it after the existing platform
+integration suite. Tests never target the public production application.

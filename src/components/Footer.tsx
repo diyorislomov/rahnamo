@@ -48,17 +48,17 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-slate-300">
               <li>
-                <Link href="/#rahnamolar" className="hover:text-white transition-colors">
+                <Link href="/mentors" className="hover:text-white transition-colors">
                   {tCommon('catalog')}
                 </Link>
               </li>
               <li>
-                <Link href="/#roadmaps" className="hover:text-white transition-colors">
+                <Link href="/resources#roadmaps" className="hover:text-white transition-colors">
                   Yo‘nalishlar (Roadmaps)
                 </Link>
               </li>
               <li>
-                <Link href="/#ecosystem" className="hover:text-white transition-colors">
+                <Link href="/resources#ecosystem" className="hover:text-white transition-colors">
                   Imkoniyatlar (Ecosystem)
                 </Link>
               </li>
@@ -101,7 +101,7 @@ export default function Footer() {
             <ul className="space-y-2.5 text-xs sm:text-sm text-slate-300">
               {specialties.map((item, idx) => (
                 <li key={idx} className="leading-snug">
-                  <Link href="/#rahnamolar" className="hover:text-white transition-colors">
+                  <Link href="/mentors" className="hover:text-white transition-colors">
                     {item}
                   </Link>
                 </li>

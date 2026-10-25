@@ -376,10 +376,28 @@ try {
     await request('/api/threads/start', {
       method: 'POST',
       cookie: studentCookie,
-      body: { counselorId },
+      body: { counselorId, paymentMethod: 'card' },
     }),
     201,
   ).thread;
+  expectStatus(
+    await request('/api/threads/reply', {
+      method: 'POST', cookie: mentorCookie,
+      body: { threadId: thread.id, body: 'Payment must be confirmed first.' },
+    }),
+    403,
+  );
+  expectStatus(
+    await request('/api/admin/threads', {
+      method: 'POST', cookie: adminCookie,
+      body: {
+        action: 'confirm_payment', threadId: thread.id,
+        bankReference: 'disposable-integration-test',
+        confirmedAmount: thread.questions_paid * thread.price_per_question,
+      },
+    }),
+    200,
+  );
   expectStatus(
     await request('/api/threads/reply', {
       method: 'POST',
