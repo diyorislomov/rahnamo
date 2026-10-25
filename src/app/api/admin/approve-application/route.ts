@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
 import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
 import { isSameOrigin } from '@/lib/serverSecurity';
+import { getGlobalLaunchDate, calculateCommissionFreeUntil } from '@/lib/platformSettings';
 
 // Approving an application now does three things atomically from the
 // server: invite a real mentor account (needs the service_role key, so
@@ -99,6 +100,10 @@ export async function POST(request: Request) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')}-${Date.now().toString(36)}`;
 
+  const now = new Date();
+  const globalLaunchDate = await getGlobalLaunchDate();
+  const commissionFreeUntil = calculateCommissionFreeUntil(now, globalLaunchDate);
+
   const { error: insertError } = await supabase.from('counselors').insert({
     id: counselorId,
     auth_id: inviteData.user.id,
@@ -113,12 +118,13 @@ export async function POST(request: Request) {
     premium_price: application.expected_premium_price || 130000,
     rating: 5.0,
     reviews_count: 0,
-    // Same placeholder-slots reasoning as before this route existed -- real
-    // availability editing ships in the mentor dashboard (this same stage).
     available_slots: ['Dushanba, 19:00 - 19:30', 'Chorshanba, 19:00 - 19:30', 'Shanba, 12:00 - 12:30'],
     company: null,
     price_per_question: application.expected_price_per_question || null,
     soft_cap: application.expected_soft_cap || null,
+    joined_at: now.toISOString(),
+    commission_free_until: commissionFreeUntil.toISOString(),
+    is_active: true,
   });
 
   if (insertError) {

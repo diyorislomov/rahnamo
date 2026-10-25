@@ -8,12 +8,28 @@ export interface NotificationBookingPayload {
   price: number;
   slot: string;
   paymentMethod: string;
-  phone: string;
+  phone?: string | null;
   telegram: string;
   email: string;
-  education: string;
+  education?: string | null;
+  educationStage?: string | null;
+  isUnder18?: boolean;
   question: string;
   meetLink: string;
+}
+
+export function maskEmail(email: string): string {
+  if (!email || !email.includes('@')) return '***@***';
+  const [local, domain] = email.split('@');
+  if (local.length <= 2) return `${local[0]}***@${domain}`;
+  return `${local.slice(0, 2)}***${local.slice(-1)}@${domain}`;
+}
+
+export function maskPhone(phone?: string | null): string {
+  if (!phone) return 'Ko‘rsatilmagan (Ma’lumot minimallashtirilgan)';
+  const cleaned = phone.replace(/[^\d+]/g, '');
+  if (cleaned.length < 7) return '***';
+  return `${cleaned.slice(0, 4)} *** ** ${cleaned.slice(-2)}`;
 }
 
 export async function sendTelegramText(message: string): Promise<boolean> {
@@ -40,24 +56,25 @@ export async function sendTelegramText(message: string): Promise<boolean> {
 }
 
 export async function sendTelegramNotification(payload: NotificationBookingPayload): Promise<boolean> {
+  const under18Badge = payload.isUnder18 ? '⚠️ 18 yoshdan kichik (Ota-ona roziligi olingan)\n' : '';
   const message = `
 🐪 YANGI RAHNAMO QABULI!
 
 🎫 Chipta ID: ${payload.id}
-👤 Talaba: ${payload.studentName}
-🎓 Rahnamo: ${payload.counselorName}
+👤 Murojaatchi: ${payload.studentName}
+${under18Badge}🎓 Rahnamo: ${payload.counselorName}
 ⏱ Sessiya vaqti: ${payload.slot}
 💰 Sessiya turi & To'lov: ${payload.tier.toUpperCase()} (${payload.price.toLocaleString()} UZS via ${payload.paymentMethod.toUpperCase()})
 
-📱 Telefon: ${payload.phone}
-💬 Telegram: ${payload.telegram}
-✉️ Email: ${payload.email}
-🏫 Ta'lim: ${payload.education}
+📱 Telefon (himoyalangan): ${maskPhone(payload.phone)}
+💬 Telegram: @${payload.telegram.replace(/^@/, '')}
+✉️ Email (niqoblangan): ${maskEmail(payload.email)}
+🏫 Ta'lim / Bosqich: ${payload.educationStage || payload.education || 'Ko‘rsatilmagan'}
 
-❓ Asosiy savol:
+❓ Murojaat mazmuni:
 ${payload.question}
 
-🔗 Video uchrashuv havolasi:
+🔗 Video uchrashuv xonasi:
 ${payload.meetLink}
   `.trim();
   return sendTelegramText(message);

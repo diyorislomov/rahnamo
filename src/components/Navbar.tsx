@@ -7,11 +7,14 @@ import { signOut, useSession } from 'next-auth/react';
 import { useLocale, useTranslations } from 'next-intl';
 import { RahnamoMonogram } from '@/components/RahnamoLogo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { supabase } from '@/lib/supabase';
 import {
   Menu,
   X,
   ArrowUpRight,
   CalendarCheck,
+  LayoutDashboard,
+  User,
   Compass,
   LogIn,
   LogOut,
@@ -30,6 +33,17 @@ export default function Navbar() {
 
   const { data: session } = useSession();
   const isSignedIn = Boolean(session?.user?.id);
+  const [hasMentorSession, setHasMentorSession] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setHasMentorSession(!!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event: unknown, sess: unknown) => {
+      setHasMentorSession(!!sess);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -192,6 +206,26 @@ export default function Navbar() {
               <CalendarCheck className="w-3.5 h-3.5 text-[#D97706]" />
               <span className="hidden 2xl:inline">{t('myBookings')}</span>
             </Link>
+
+            {hasMentorSession && (
+              <Link
+                href="/mentor/dashboard"
+                className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-[#0F4C5C] bg-[#0F4C5C]/10 hover:bg-[#0F4C5C]/20 border border-[#0F4C5C]/20 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-[#0F4C5C]" />
+                <span>{locale === 'ru' ? 'Кабинет' : locale === 'en' ? 'Mentor' : 'Mentor Kabineti'}</span>
+              </Link>
+            )}
+
+            {isSignedIn && (
+              <Link
+                href="/profile"
+                className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-[#475569] hover:text-[#0F1E36] px-2.5 py-1.5 rounded-full hover:bg-[#0F1E36]/[0.05] transition-colors whitespace-nowrap"
+              >
+                <User className="w-3.5 h-3.5 text-[#0F1E36]" />
+                <span>{locale === 'ru' ? 'Профиль' : locale === 'en' ? 'Profile' : 'Profil'}</span>
+              </Link>
+            )}
 
             {isSignedIn ? (
               <button

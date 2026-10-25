@@ -33,7 +33,13 @@ function allowLocalRequest(key: string, limit: number, windowMs: number): boolea
 }
 
 export async function allowRequest(key: string, limit: number, windowMs: number): Promise<boolean> {
-  if (!allowLocalRequest(key, limit, windowMs)) return false;
+  const localAllowed = allowLocalRequest(key, limit, windowMs);
+  if (!localAllowed) return false;
+
+  // If Postgres DATABASE_URL is not configured, rely on in-memory rate limiting
+  if (!process.env.DATABASE_URL) {
+    return true;
+  }
 
   try {
     const result = await postgres.query<{ count: number }>(
@@ -48,7 +54,7 @@ export async function allowRequest(key: string, limit: number, windowMs: number)
     );
     return result.rowCount === 1;
   } catch (error) {
-    console.error('[DISTRIBUTED_RATE_LIMIT_FAILED]', error);
-    return process.env.NODE_ENV !== 'production';
+    console.warn('[DISTRIBUTED_RATE_LIMIT_FALLBACK] Falling back to local in-memory limiter:', error);
+    return true;
   }
 }

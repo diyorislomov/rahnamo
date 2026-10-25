@@ -25,6 +25,7 @@
     "tagline": "Ipak Yo'li karyera konsultatsiyasi. Markaziy Osiyo yoshlarini tajribali mutaxassislar bilan bog'laydigan 1-ga-1 shaxsiy mentorlik platformasi.",
     "verifiedBadge": "Tasdiqlangan Rahnamolar va shaffof qabul jarayoni",
     "platformHeading": "Platforma",
+    "privacyPolicy": "Maxfiylik siyosati",
     "adminPanel": "Boshqaruv paneli (Admin)",
     "specialtiesHeading": "Yo'nalishlar",
     "specialtiesList": [
@@ -87,7 +88,17 @@
     "Study Abroad": "Xalqaro Grantlar",
     "Agriculture & Trade": "Qishloq xo'jaligi & Eksport",
     "Engineering & Tech": "Dasturlash & IT",
-    "Other": "Boshqa"
+    "Other": "Boshqa",
+    "it-software": "IT va dasturlash",
+    "data-ai": "Data science va sun'iy intellekt",
+    "finance": "Moliya, buxgalteriya va bank",
+    "marketing-smm": "Marketing va SMM",
+    "business": "Biznes va tadbirkorlik",
+    "study-abroad": "Chet elda o'qish va grantlar",
+    "trade-logistics": "Xalqaro savdo va logistika",
+    "career-start": "Karyera boshlash (CV, intervyu, birinchi ish)",
+    "design-creative": "Dizayn va kreativ (mobil kontent va video)",
+    "other": "Boshqa"
   },
   "becomeCounselor": {
     "badge": "Markaziy Osiyoning yetakchi mentorlik tarmog‘i",
@@ -127,9 +138,9 @@
       "fullNameLabel": "Ism va Familiyangiz *",
       "fullNamePlaceholder": "Masalan: Dr. Jasur Mansurov",
       "photoLabel": "Profil surati (ixtiyoriy)",
-      "photoHint": "Agar tasdiqlansangiz, mentor kartangizda ko'rsatiladi. Keyinroq ham qo'shishingiz yoki o'zgartirishingiz mumkin.",
+      "photoHint": "Yuzingiz aniq ko'ringan rasm yuklang (logotip yoki guruh rasmisiz).",
       "photoUploading": "Yuklanmoqda...",
-      "photoUploadFailed": "Suratni yuklab bo'lmadi. Arizani surat bo'lmasa ham yuborishingiz mumkin.",
+      "photoUploadFailed": "Suratni yuklab bo'lmadi. Qayta urinib ko'ring yoki boshqa rasm tanlang.",
       "photoChange": "Suratni o'zgartirish",
       "headlineLabel": "Qisqa sarlovha (Headline) *",
       "headlinePlaceholder": "Masalan: Lead Architect & Studio Founder | Ex-Ankara",
@@ -153,18 +164,35 @@
       "softCapPlaceholder": "Masalan: 10",
       "pricePerQuestionHint": "Bo'sh qoldirsangiz, \"Matnli maslahat\" xizmatini taklif qilmaysiz.",
       "submitting": "Ariza topshirilmoqda...",
-      "submit": "Rahnamo sifatida topshirish"
+      "submit": "Rahnamo sifatida topshirish",
+      "photoRateLimited": "Juda ko'p rasm yuklash so'rovi yuborildi. Iltimos, biroz kutib qayta urinib ko'ring.",
+      "photoInvalidType": "Faqat JPG, PNG yoki WebP formatidagi suratlarni yuklash mumkin.",
+      "photoTooLarge": "Surat hajmi 5 MB dan oshmasligi kerak.",
+      "photoRequired": "Profil suratini yuklash majburiy.",
+      "proofLinkLabel": "Tajribangizni tasdiqlovchi havola *",
+      "proofLinkPlaceholder": "https://linkedin.com/in/... yoki boshqa havola",
+      "proofLinkHint": "Faqat administratorlar ko'radi, omma uchun e'lon qilinmaydi.",
+      "consentLabel": "Ismim, suratim va bio ma'lumotlarim Rahnamo platformasida e'lon qilinishiga roziman *",
+      "primaryTrackLabel": "Asosiy yo'nalishingiz *",
+      "primaryTrackPlaceholder": "Asosiy yo'nalishingizni tanlang",
+      "secondaryTracksLabel": "Qo'shimcha yo'nalishlar (maksimal 2 ta, ixtiyoriy)"
     },
     "validation": {
       "fullName": "Ism va familiyangizni kiriting.",
       "headline": "Lavozim va sohangizni yozing (masalan: Senior Architect | Ex-Ankara).",
       "specialties": "Tor ixtisosliklaringizni vergul bilan kiriting.",
-      "bio": "Tajribangiz haqida biroz batafsil yozing (kamida 20 ta belgi).",
+      "bio": "Tajribangiz haqida batafsilroq yozing (kamida 100 ta belgi).",
       "telegram": "Telegram username-ingizni kiriting.",
       "email": "To'g'ri email kiriting.",
-      "phone": "Telefon raqamingizni to'liq kiriting."
+      "phone": "Telefon raqamingizni to'liq kiriting.",
+      "proofLink": "Tajribangizni tasdiqlovchi to'g'ri havolani kiriting (https://...).",
+      "consent": "Platformada e'lon qilinishiga rozilik berish majburiy.",
+      "primaryTrack": "Iltimos, asosiy yo'nalishingizni tanlang."
     },
-    "submitError": "Arizani yuborishda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling."
+    "submitError": "Arizani yuborishda xatolik yuz berdi. Internet aloqangizni tekshirib qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling.",
+    "submitRateLimited": "Juda ko'p ariza yuborildi. Iltimos, birozdan so'ng qayta urinib ko'ring yoki @rahnamo_admin ga murojaat qiling.",
+    "submitInvalidInput": "Kiritilgan ma'lumotlarda xatolik mavjud. Iltimos, barcha majburiy maydonlarni to'g'ri to'ldiring.",
+    "submitInsertFailed": "Arizani saqlashda server xatoligi yuz berdi. Qayta urinib ko'ring yoki @rahnamo_admin ga yozing."
   },
   "counselorProfile": {
     "notFound": "Rahnamo topilmadi.",
@@ -855,5 +883,41 @@
       "senior": "Tajribali mutaxassis",
       "founder": "Founder / tadbirkor"
     }
+  },
+  "privacy": {
+    "title": "Maxfiylik Siyosati",
+    "subtitle": "Shaxsiy ma'lumotlaringiz xavfsizligi va maxfiyligi bizning ustuvor vazifamizdir.",
+    "lastUpdated": "Oxirgi yangilanish: 2026-yil 25-oktabr",
+    "placeholders": {
+      "company": "[Kompaniya: 'Rahnamo' MChJ]",
+      "address": "[Manzil: O'zbekiston Respublikasi, Toshkent shahri]",
+      "email": "[Email: privacy@myrahnamo.com]"
+    },
+    "sections": [
+      {
+        "title": "1. Ma'lumotlarni minimallashtirish tamoyili",
+        "content": "Rahnamo platformasi ma'lumotlarni minimallashtirish (Data Minimization) tamoyiliga qat'iy amal qiladi. Biz faqat xizmat ko'rsatish uchun zarur bo'lgan minimal shaxsiy ma'lumotlarni yig'amiz: ismingiz, hisobingiz emaili (Google/Telegram orqali), Telegram foydalanuvchi nomingiz, ta'lim bosqichingiz va ixtiyoriy ravishda umumiy viloyatingiz. Biz hech qachon aniq yashash manzilingiz, GPS geolokatsiyangiz yoki ortiqcha hujjatlaringizni talab qilmaymiz."
+      },
+      {
+        "title": "2. 18 yoshga to'lmagan foydalanuvchilar (Voyaga yetmaganlar himoyasi)",
+        "content": "18 yoshga to'lmagan foydalanuvchilar platformadan foydalanishda '18 yoshdan kichikman' belgisini qo'yishlari shart. 1-ga-1 jonli video konsultatsiyalarni bron qilishdan oldin ota-ona yoki qonuniy vasiyning roziligi tasdiqlanishi majburiydir. Mentorlar suhbat o'tkazishda ushbu belgi orqali muloqot xavfsizligini ta'minlaydilar."
+      },
+      {
+        "title": "3. Ma'lumotlardan foydalanish maqsadi",
+        "content": "Yig'ilgan ma'lumotlar faqat mentorlar bilan sessiyalarni tashkil qilish, eslatmalar yuborish va platforma xavfsizligini ta'minlash uchun ishlatiladi. Biz foydalanuvchilarning shaxsiy ma'lumotlarini hech qachon reklama tarmoqlariga yoki uchinchi shaxslarga sotmaymiz."
+      },
+      {
+        "title": "4. Uchinchi tomon integratsiyalari",
+        "content": "To'lovlar xavfsiz litsenziyalangan to'lov tizimlari (Click va hamkor banklar) orqali amalga oshiriladi. Video aloqa Jitsi Meet orqali shifrlangan holda taqdim etiladi. Tizimli bildirishnomalar Resend va rasmiy Telegram boti orqali uzatiladi."
+      },
+      {
+        "title": "5. Hisobni va ma'lumotlarni to'liq o'chirish huquqi",
+        "content": "Har bir foydalanuvchi istalgan vaqtda o'z profilida 'Hisobimni o'chirish' tugmasini bosish orqali barcha shaxsiy ma'lumotlarini o'chirish huquqiga ega. Hisob o'chirilganda, barcha shaxsiy ma'lumotlar tizimdan butunlay olib tashlanadi, o'tgan sessiyalar va sharhlar esa to'liq anonimlashtiriladi."
+      },
+      {
+        "title": "6. Bog'lanish va savollar",
+        "content": "Maxfiylik siyosati bo'yicha savollaringiz bo'lsa, privacy@myrahnamo.com manzili orqali biz bilan bog'lanishingiz mumkin."
+      }
+    ]
   }
 }

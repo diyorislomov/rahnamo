@@ -23,6 +23,7 @@ interface CounselorRow {
   commission_free_until: string | null;
   price_per_question: number | null;
   soft_cap: number | null;
+  is_active?: boolean | null;
 }
 
 // Live Supabase rows never carry responseTime/totalSessions/outcomes -- those
@@ -47,5 +48,6 @@ export function mapCounselorRow(r: CounselorRow): Counselor {
     commissionFreeUntil: r.commission_free_until || undefined,
     pricePerQuestion: r.price_per_question,
     softCap: r.soft_cap,
+    isActive: r.is_active !== false,
   };
 }

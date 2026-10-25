@@ -889,3 +889,137 @@ CREATE POLICY "Mentees review their own completed bookings" ON public.reviews
               AND bookings.status = 'completed'
         )
     );
+
+
+-- ---- 2026-10-25 Mentor Onboarding & Management Migrations ----
+-- Migration: 20261025_mentor_onboarding_phase2_4_6.sql
+-- Description: Add proof_link & consent_published to counselor_applications, is_active to counselors, and platform_settings table.
+
+-- 1. Phase 2: Counselor Applications Improvements
+ALTER TABLE public.counselor_applications
+  ADD COLUMN IF NOT EXISTS proof_link TEXT,
+  ADD COLUMN IF NOT EXISTS consent_published TIMESTAMP WITH TIME ZONE;
+
+-- 2. Phase 4: Counselor Activation / Pause Control
+ALTER TABLE public.counselors
+  ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+
+-- Ensure an index on is_active for public catalog filtering
+CREATE INDEX IF NOT EXISTS idx_counselors_is_active ON public.counselors(is_active);
+
+-- 3. Phase 6: Platform Settings (for Global Launch Date & dynamic configuration)
+CREATE TABLE IF NOT EXISTS public.platform_settings (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Insert default global launch date if not already present
+INSERT INTO public.platform_settings (key, value)
+VALUES ('global_launch_date', '"2026-11-01T00:00:00.000Z"'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
+-- ---- 2026-10-25 Tracks & Mentor Tracks System ----
+-- 1. Create tracks table
+CREATE TABLE IF NOT EXISTS public.tracks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text UNIQUE NOT NULL,
+  name_uz text NOT NULL,
+  name_ru text,
+  name_en text NOT NULL,
+  short_description_uz text,
+  icon text,
+  is_active boolean NOT NULL DEFAULT true,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- 2. Create mentor_tracks join table
+CREATE TABLE IF NOT EXISTS public.mentor_tracks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  mentor_id text NOT NULL REFERENCES public.counselors(id) ON DELETE CASCADE,
+  track_id uuid NOT NULL REFERENCES public.tracks(id) ON DELETE CASCADE,
+  is_primary boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT mentor_tracks_mentor_track_unique UNIQUE (mentor_id, track_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_mentor_tracks_mentor_id ON public.mentor_tracks(mentor_id);
+CREATE INDEX IF NOT EXISTS idx_mentor_tracks_track_id ON public.mentor_tracks(track_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_is_active_sort ON public.tracks(is_active, sort_order);
+
+ALTER TABLE public.tracks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mentor_tracks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view active tracks" ON public.tracks;
+CREATE POLICY "Public can view active tracks" ON public.tracks
+  FOR SELECT USING (is_active = true OR auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Service role can manage tracks" ON public.tracks;
+CREATE POLICY "Service role can manage tracks" ON public.tracks
+  FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Public can view mentor tracks" ON public.mentor_tracks;
+CREATE POLICY "Public can view mentor tracks" ON public.mentor_tracks
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Service role can manage mentor tracks" ON public.mentor_tracks;
+CREATE POLICY "Service role can manage mentor tracks" ON public.mentor_tracks
+  FOR ALL USING (auth.role() = 'service_role');
+
+
+
+-- ---- 2026-10-25 Privacy, Consent & Data Minimization ----
+-- ==============================================================================
+-- Migration: 20261025_privacy_and_data_minimization.sql
+-- Description: Mentee data minimization, privacy consent, under-18 protection, and account deletion support.
+-- ==============================================================================
+
+-- 1. Profiles Table Enhancements
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS education_stage text CHECK (education_stage IN ('school', 'university', 'working', 'other')),
+  ADD COLUMN IF NOT EXISTS is_under_18 boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS parental_consent boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS region text,
+  ADD COLUMN IF NOT EXISTS telegram text,
+  ADD COLUMN IF NOT EXISTS goal text,
+  ADD COLUMN IF NOT EXISTS preferred_language text DEFAULT 'uz',
+  ADD COLUMN IF NOT EXISTS privacy_consent boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS privacy_consent_at timestamptz,
+  ADD COLUMN IF NOT EXISTS privacy_policy_version text DEFAULT 'v1.0';
+
+-- 2. Bookings Table Enhancements for Data Minimization & Minor Protection
+ALTER TABLE public.bookings
+  ADD COLUMN IF NOT EXISTS education_stage text,
+  ADD COLUMN IF NOT EXISTS is_under_18 boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS parental_consent boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS region text,
+  ADD COLUMN IF NOT EXISTS privacy_consent boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS privacy_consent_at timestamptz;
+
+-- Make phone column nullable if it has not-null constraint
+ALTER TABLE public.bookings ALTER COLUMN phone DROP NOT NULL;
+
+-- 3. Platform Settings for Under-18 Policy
+INSERT INTO public.platform_settings (key, value)
+VALUES (
+  'under_18_policy',
+  '{"require_parental_consent": true, "allow_1on1_sessions": true, "minimum_age": 14, "updated_at": "2026-10-25T16:30:00Z"}'::jsonb
+)
+ON CONFLICT (key) DO NOTHING;
+
+-- 4. RLS Hardening for Profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can read own profile" ON public.profiles;
+CREATE POLICY "Users can read own profile" ON public.profiles
+  FOR SELECT USING (auth.uid() = id OR auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles
+  FOR UPDATE USING (auth.uid() = id OR auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Users can delete own profile" ON public.profiles;
+CREATE POLICY "Users can delete own profile" ON public.profiles
+  FOR DELETE USING (auth.uid() = id OR auth.role() = 'service_role');

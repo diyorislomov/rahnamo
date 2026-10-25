@@ -1,29 +1,103 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { ArrowLeft, CheckCircle2, UserCheck, Shield, Sparkles, Calendar, Globe, Award, TrendingUp, Camera, Loader2 } from 'lucide-react';
-import { SPECIALTY_CONFIG } from '@/lib/specialties';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  UserCheck,
+  Shield,
+  Sparkles,
+  Calendar,
+  Globe,
+  Award,
+  Camera,
+  Loader2,
+  Link as LinkIcon,
+  Check,
+} from 'lucide-react';
+import { TRACKS, getTrackLabel } from '@/lib/specialties';
 
-const CATEGORY_KEYS = Object.keys(SPECIALTY_CONFIG).filter((k) => k !== 'All');
+async function compressImage(file: File): Promise<File> {
+  if (file.size <= 1024 * 1024) return file;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 1200;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(file);
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob && blob.size < file.size) {
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          0.82
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function BecomeCounselorPage() {
   const t = useTranslations('becomeCounselor');
   const tCommon = useTranslations('common');
   const tSpecialties = useTranslations('specialties');
+
   // Earnings Calculator State
   const [sessionsPerWeek, setSessionsPerWeek] = useState(5);
+  const [availableTracks, setAvailableTracks] = useState<{ slug: string; name_uz: string; icon: string }[]>(() =>
+    TRACKS.map((t) => ({ slug: t.slug, name_uz: t.uz, icon: t.icon }))
+  );
+
+  useEffect(() => {
+    fetch('/api/tracks')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res?.success && Array.isArray(res.tracks) && res.tracks.length > 0) {
+          setAvailableTracks(res.tracks);
+        }
+      })
+      .catch((err) => console.warn('[FETCH_TRACKS_FALLBACK]', err));
+  }, []);
   const [sessionPrice, setSessionPrice] = useState('');
 
   // Form State
   const [fullName, setFullName] = useState('');
   const [headline, setHeadline] = useState('');
-  const [category, setCategory] = useState(CATEGORY_KEYS[0]);
+  const [primaryTrack, setPrimaryTrack] = useState('');
+  const [secondaryTracks, setSecondaryTracks] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState('');
   const [bio, setBio] = useState('');
+  const [proofLink, setProofLink] = useState('');
+  const [consentPublished, setConsentPublished] = useState(false);
   const [telegram, setTelegram] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+998 ');
@@ -50,8 +124,24 @@ export default function BecomeCounselorPage() {
     effectiveSessionPrice * sessionsPerWeek * 4 * (1 - PLATFORM_COMMISSION_RATE)
   );
 
+  const toggleSecondaryTrack = (slug: string) => {
+    setSecondaryTracks((prev) => {
+      if (prev.includes(slug)) {
+        return prev.filter((s) => s !== slug);
+      }
+      if (prev.length >= 2) {
+        return [...prev.slice(1), slug];
+      }
+      return [...prev, slug];
+    });
+  };
+
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
+
+    if (!photoUrl) {
+      newErrors.photo = t('form.photoRequired');
+    }
 
     if (!fullName.trim() || fullName.trim().length < 3) {
       newErrors.fullName = t('validation.fullName');
@@ -61,12 +151,20 @@ export default function BecomeCounselorPage() {
       newErrors.headline = t('validation.headline');
     }
 
-    if (!specialties.trim()) {
-      newErrors.specialties = t('validation.specialties');
+    if (!primaryTrack) {
+      newErrors.primaryTrack = t('validation.primaryTrack');
     }
 
-    if (!bio.trim() || bio.trim().length < 20) {
+    if (!bio.trim() || bio.trim().length < 100) {
       newErrors.bio = t('validation.bio');
+    }
+
+    if (!proofLink.trim() || !/^(https?:\/\/|[a-zA-Z0-9-]+\.[a-zA-Z]{2,})/.test(proofLink.trim())) {
+      newErrors.proofLink = t('validation.proofLink');
+    }
+
+    if (!consentPublished) {
+      newErrors.consent = t('validation.consent');
     }
 
     if (!telegram.trim()) {
@@ -90,20 +188,48 @@ export default function BecomeCounselorPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validMimes.includes(file.type)) {
+      setPhotoError(t('form.photoInvalidType'));
+      return;
+    }
+
     setPhotoError('');
     setUploadingPhoto(true);
 
     try {
+      // Client-side compression to < 1 MB
+      const compressed = await compressImage(file);
+      if (compressed.size > 5 * 1024 * 1024) {
+        throw new Error('file_too_large');
+      }
+
       const form = new FormData();
-      form.set('file', file);
+      form.set('file', compressed);
       const response = await fetch('/api/applications/photo', { method: 'POST', body: form });
       const result = await response.json();
-      if (!response.ok || !result?.url) throw new Error(result.error || 'upload_failed');
+      if (!response.ok || !result?.url) {
+        throw new Error(result?.error || 'upload_failed');
+      }
       setPhotoUrl(result.url);
-    } catch (error) {
-      console.error('[APPLICATION_PHOTO_UPLOAD_FAILED]', error);
+      setErrors((prev) => {
+        const copy = { ...prev };
+        delete copy.photo;
+        return copy;
+      });
+        } catch (error: unknown) {
+      console.warn('[APPLICATION_PHOTO_UPLOAD_FAILED]', error);
       setUploadingPhoto(false);
-      setPhotoError(t('form.photoUploadFailed'));
+      const errCode = error instanceof Error ? error.message : 'upload_failed';
+      if (errCode === 'rate_limited') {
+        setPhotoError("Juda ko'p rasm yuklandi. Iltimos, arizani suratsiz yuboring yoki birozdan so'ng urinib ko'ring.");
+      } else if (errCode === 'invalid_file_type' || errCode === 'invalid_file_signature') {
+        setPhotoError("Rasm formati mos kelmadi (JPG, PNG, WebP tavsiya etiladi). Arizani suratsiz ham topshirishingiz mumkin.");
+      } else if (errCode === 'file_too_large') {
+        setPhotoError("Rasm hajmi juda katta (maksimal 5MB). Arizani suratsiz ham topshirishingiz mumkin.");
+      } else {
+        setPhotoError("Suratni yuklab bo'lmadi (ixtiyoriy). Siz arizangizni suratsiz ham topshirishingiz mumkin.");
+      }
       return;
     }
     setUploadingPhoto(false);
@@ -121,9 +247,18 @@ export default function BecomeCounselorPage() {
       cleanedTelegram = '@' + cleanedTelegram;
     }
 
-    const combinedSpecialties = [category, ...specialties.split(',').map((s) => s.trim()).filter(Boolean)].join(
-      ', '
-    );
+    // Combine primary track (first), secondary tracks, and sub-specialties
+    const combinedSpecialtiesList = [
+      primaryTrack,
+      ...secondaryTracks.filter((s) => s !== primaryTrack),
+      ...specialties.split(',').map((s) => s.trim()).filter(Boolean),
+    ];
+    const combinedSpecialties = combinedSpecialtiesList.join(', ');
+
+    let cleanProofLink = proofLink.trim();
+    if (!cleanProofLink.startsWith('http://') && !cleanProofLink.startsWith('https://')) {
+      cleanProofLink = 'https://' + cleanProofLink;
+    }
 
     const applicationData = {
       full_name: fullName,
@@ -133,25 +268,67 @@ export default function BecomeCounselorPage() {
       telegram: cleanedTelegram,
       email,
       phone,
+      proof_link: cleanProofLink,
+      consent_published: new Date().toISOString(),
       expected_standard_price: parseInt(standardPrice, 10) || 45000,
       expected_premium_price: parseInt(premiumPrice, 10) || 130000,
       expected_price_per_question: pricePerQuestion.trim() ? parseInt(pricePerQuestion, 10) || null : null,
       expected_soft_cap: softCap.trim() ? parseInt(softCap, 10) || null : null,
-      photo_url: photoUrl || null,
+      photo_url: photoUrl,
     };
 
-    try {
+        try {
       const response = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(applicationData),
       });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.error || 'submit_failed');
-    } catch (error) {
-      console.error('[APPLICATION_SUBMIT_FAILED]', error);
+      const result = await response.json().catch(() => null);
+
+      console.log('[APPLICATION_SUBMIT_RESULT]', {
+        status: response.status,
+        statusText: response.statusText,
+        result,
+      });
+
+      if (!response.ok || !result?.success) {
+        console.error('[APPLICATION_SUBMIT_REAL_ERROR]', {
+          status: response.status,
+          error: result?.error,
+          failedFields: result?.failedFields,
+          details: result?.details,
+        });
+        setIsSubmitting(false);
+
+        if (response.status === 429 || result?.error === 'rate_limited') {
+          setSubmitError("Juda ko'p so'rov yuborildi. Iltimos, bir oz kuting va qaytadan urinib ko'ring.");
+        } else if (result?.failedFields?.length) {
+          const fieldMap: Record<string, string> = {
+            full_name: 'Ism',
+            headline: 'Kasb / Mansab',
+            specialties: 'Yo\u2018nalish',
+            bio: 'O\u2018zingiz haqingizda (bio)',
+            telegram: 'Telegram',
+            email: 'Email',
+            phone: 'Telefon',
+            photo_url: 'Surat',
+            proof_link: 'Tajriba havolasi',
+          };
+          const translated = result.failedFields.map((f: string) => fieldMap[f] || f).join(', ');
+          setSubmitError(`Quyidagi maydonlarda xatolik bor: ${translated}. Iltimos, tekshirib qayta yuboring.`);
+        } else if (result?.details) {
+          setSubmitError(`Xatolik: ${result.details}`);
+        } else if (result?.error) {
+          setSubmitError(`Xatolik: ${result.error}`);
+        } else {
+          setSubmitError("Arizani yuborishda xatolik yuz berdi. Iltimos, ma'lumotlarni tekshirib qayta yuboring.");
+        }
+        return;
+      }
+    } catch (error: unknown) {
+      console.error('[APPLICATION_SUBMIT_NETWORK_ERROR]', error);
       setIsSubmitting(false);
-      setSubmitError(t('submitError'));
+      setSubmitError(`Aloqa xatosi: ${error instanceof Error ? error.message : "Internet aloqasini tekshiring"}`);
       return;
     }
 
@@ -178,91 +355,92 @@ export default function BecomeCounselorPage() {
               <Sparkles className="w-3.5 h-3.5 text-[#D4A84B]" />
               <span>{t('badge')}</span>
             </div>
-            <h1 className="font-serif text-3xl sm:text-5xl font-bold text-[#18181B] tracking-tight leading-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#18181B] max-w-2xl mx-auto leading-[1.15]">
               {t('heroTitle')}
             </h1>
-            <p className="text-zinc-600 text-sm sm:text-base mt-3 max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-3.5 text-sm sm:text-base text-zinc-600 max-w-xl mx-auto leading-relaxed">
               {t('heroSubtitle')}
             </p>
           </div>
 
-          {/* Calculator & Perks Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-14">
-            {/* Left Col: Earnings Calculator */}
-            <div className="md:col-span-1 bg-[#0F4C5C] text-white p-6 sm:p-7 rounded-2xl border border-[#D4A84B]/30 shadow-md flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-[#D4A84B] text-[11px] font-mono font-semibold uppercase tracking-[0.14em]">
-                  <TrendingUp className="w-4 h-4" /> {t('calculator.badge')}
-                </div>
-                <h3 className="font-serif font-bold text-xl text-white mt-2">
-                  {t('calculator.heading')}
-                </h3>
-                <p className="text-xs text-zinc-200/80 mt-1 leading-relaxed">
-                  {t('calculator.subheading')}
-                </p>
-
-                {/* Session price input */}
-                <div className="mt-5 space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-200 block">{t('calculator.priceLabel')}</label>
-                  <input
-                    type="number"
-                    min={20000}
-                    step={5000}
-                    value={sessionPrice}
-                    onChange={(e) => setSessionPrice(e.target.value)}
-                    placeholder={t('calculator.pricePlaceholder')}
-                    className="w-full px-3.5 py-2.5 text-sm font-mono font-bold bg-white/10 border border-white/20 rounded-xl outline-none focus:border-[#D4A84B] placeholder:text-white/40 placeholder:font-sans placeholder:font-normal text-white"
-                  />
-                </div>
-
-                {/* Slider */}
-                <div className="my-6 space-y-3">
-                  <div className="flex justify-between text-xs font-medium">
-                    <span className="text-zinc-200">{t('calculator.weeklyLabel')}</span>
-                    <span className="text-[#D4A84B] font-mono font-bold text-sm">{t('calculator.sessionsCount', { count: sessionsPerWeek })}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={20}
-                    value={sessionsPerWeek}
-                    onChange={(e) => setSessionsPerWeek(parseInt(e.target.value, 10))}
-                    className="w-full accent-[#D4A84B] cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] font-mono text-zinc-300/70">
-                    <span>{t('calculator.sliderMin')}</span>
-                    <span>{t('calculator.sliderMax')}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Monthly Result Card */}
-              <div className="bg-[#09323D] border border-white/12 p-4 rounded-xl text-center">
-                <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-wider font-semibold block">{t('calculator.monthlyLabel')}</span>
-                <div className="text-2xl sm:text-3xl font-mono font-bold text-[#D4A84B] mt-1">
-                  ~{estimatedMonthlyEarnings.toLocaleString()} <span className="text-xs text-white font-sans font-normal">{t('calculator.perMonth')}</span>
-                </div>
-                {!isRealPrice && (
-                  <span className="text-[10px] text-zinc-300/70 block mt-1">
-                    {t('calculator.exampleNote', { price: EXAMPLE_SESSION_PRICE.toLocaleString() })}
-                  </span>
-                )}
-                <span className="text-[10px] text-zinc-300/70 block mt-1">
-                  {t('calculator.commissionNote')}
-                </span>
-              </div>
+          {/* Calculator Section */}
+          <div className="surface-card p-6 sm:p-8 rounded-2xl mb-12 border border-zinc-900/10">
+            <div className="text-center mb-6">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#0F4C5C] bg-[#0F4C5C]/8 px-2.5 py-1 rounded-full border border-[#0F4C5C]/15 font-semibold">
+                {t('calculator.badge')}
+              </span>
+              <h2 className="font-serif font-bold text-2xl text-[#18181B] mt-2">
+                {t('calculator.heading')}
+              </h2>
+              <p className="text-xs text-zinc-600 mt-1">{t('calculator.subheading')}</p>
             </div>
 
-            {/* Right Col: 4 Perks Cards */}
-            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="max-w-xl mx-auto space-y-6">
+              <div>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">
+                  {t('calculator.priceLabel')}
+                </label>
+                <input
+                  type="number"
+                  step="5000"
+                  min="20000"
+                  value={sessionPrice}
+                  onChange={(e) => setSessionPrice(e.target.value)}
+                  placeholder={t('calculator.pricePlaceholder')}
+                  className="w-full px-3.5 py-2.5 text-sm font-mono bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-medium text-zinc-700">{t('calculator.weeklyLabel')}</span>
+                  <span className="text-sm font-bold text-[#0F4C5C] font-mono">
+                    {t('calculator.sessionsCount', { count: sessionsPerWeek })}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="20"
+                  value={sessionsPerWeek}
+                  onChange={(e) => setSessionsPerWeek(parseInt(e.target.value, 10))}
+                  className="w-full accent-[#0F4C5C] cursor-pointer"
+                />
+                <div className="flex justify-between text-[11px] text-zinc-600 mt-1 font-mono">
+                  <span>{t('calculator.sliderMin')}</span>
+                  <span>{t('calculator.sliderMax')}</span>
+                </div>
+              </div>
+
+              <div className="bg-[#0F4C5C]/5 border border-[#0F4C5C]/15 rounded-2xl p-5 text-center">
+                <span className="text-xs font-medium text-zinc-600 block mb-1">
+                  {t('calculator.monthlyLabel')}
+                </span>
+                <div className="text-3xl sm:text-4xl font-bold font-mono text-[#0F4C5C]">
+                  {estimatedMonthlyEarnings.toLocaleString()}{' '}
+                  <span className="text-xs sm:text-sm font-sans font-semibold text-zinc-500">
+                    {t('calculator.perMonth')}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-600 mt-2">
+                  {t('calculator.exampleNote', { price: effectiveSessionPrice.toLocaleString() })}
+                </p>
+                <p className="text-[10px] text-zinc-600 mt-0.5 font-mono">
+                  {t('calculator.commissionNote')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Perks Grid */}
+          <div className="mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="surface-card p-6 rounded-2xl space-y-2.5">
                 <div className="w-10 h-10 rounded-xl bg-[#0F4C5C]/8 text-[#0F4C5C] border border-[#0F4C5C]/15 flex items-center justify-center">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.flexibleTitle')}</h4>
-                <p className="text-xs text-zinc-600 leading-relaxed">
-                  {t('perks.flexibleBody')}
-                </p>
+                <p className="text-xs text-zinc-600 leading-relaxed">{t('perks.flexibleBody')}</p>
               </div>
 
               <div className="surface-card p-6 rounded-2xl space-y-2.5">
@@ -270,9 +448,7 @@ export default function BecomeCounselorPage() {
                   <Globe className="w-5 h-5" />
                 </div>
                 <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.remoteTitle')}</h4>
-                <p className="text-xs text-zinc-600 leading-relaxed">
-                  {t('perks.remoteBody')}
-                </p>
+                <p className="text-xs text-zinc-600 leading-relaxed">{t('perks.remoteBody')}</p>
               </div>
 
               <div className="surface-card p-6 rounded-2xl space-y-2.5">
@@ -280,9 +456,7 @@ export default function BecomeCounselorPage() {
                   <Award className="w-5 h-5" />
                 </div>
                 <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.brandTitle')}</h4>
-                <p className="text-xs text-zinc-600 leading-relaxed">
-                  {t('perks.brandBody')}
-                </p>
+                <p className="text-xs text-zinc-600 leading-relaxed">{t('perks.brandBody')}</p>
               </div>
 
               <div className="surface-card p-6 rounded-2xl space-y-2.5">
@@ -290,9 +464,7 @@ export default function BecomeCounselorPage() {
                   <Shield className="w-5 h-5" />
                 </div>
                 <h4 className="font-serif font-bold text-base text-[#18181B]">{t('perks.guaranteedTitle')}</h4>
-                <p className="text-xs text-zinc-600 leading-relaxed">
-                  {t('perks.guaranteedBody')}
-                </p>
+                <p className="text-xs text-zinc-600 leading-relaxed">{t('perks.guaranteedBody')}</p>
               </div>
             </div>
           </div>
@@ -326,6 +498,44 @@ export default function BecomeCounselorPage() {
                 <UserCheck className="w-5 h-5 text-[#0F4C5C]" /> {t('form.heading')}
               </h2>
 
+              {/* Profile Photo (Optional, Non-blocking) */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-800 block mb-1.5">
+                  {t('form.photoLabel')} <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-3.5">
+                  <div className="w-16 h-16 rounded-2xl bg-[#FFF8E7] border border-zinc-900/12 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                    {photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-zinc-400" />
+                    )}
+                  </div>
+                  <label className="cursor-pointer inline-flex items-center gap-2 text-xs font-semibold text-[#0F4C5C] bg-[#0F4C5C]/8 hover:bg-[#0F4C5C]/15 px-4 py-2.5 rounded-xl border border-[#0F4C5C]/15 transition-colors">
+                    {uploadingPhoto && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>
+                      {uploadingPhoto
+                        ? t('form.photoUploading')
+                        : photoUrl
+                        ? t('form.photoChange')
+                        : t('form.photoLabel')}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handlePhotoChange}
+                      disabled={uploadingPhoto}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1.5">{t('form.photoHint')}</p>
+                {photoError && <p className="text-xs text-red-600 mt-1 font-medium">{photoError}</p>}
+                {errors.photo && <p className="text-xs text-red-600 mt-1 font-medium">{errors.photo}</p>}
+              </div>
+
+              {/* Full Name */}
               <div>
                 <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.fullNameLabel')}</label>
                 <input
@@ -339,27 +549,7 @@ export default function BecomeCounselorPage() {
                 {errors.fullName && <p className="text-xs text-red-600 mt-1">{errors.fullName}</p>}
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.photoLabel')}</label>
-                <div className="flex items-center gap-3.5">
-                  <div className="w-14 h-14 rounded-2xl bg-[#FFF8E7] border border-zinc-900/12 flex items-center justify-center overflow-hidden shrink-0">
-                    {photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photoUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <Camera className="w-5 h-5 text-zinc-400" />
-                    )}
-                  </div>
-                  <label className="cursor-pointer inline-flex items-center gap-2 text-xs font-semibold text-[#0F4C5C] bg-[#0F4C5C]/8 hover:bg-[#0F4C5C]/15 px-4 py-2.5 rounded-xl border border-[#0F4C5C]/15 transition-colors">
-                    {uploadingPhoto && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>{uploadingPhoto ? t('form.photoUploading') : photoUrl ? t('form.photoChange') : t('form.photoLabel')}</span>
-                    <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} className="hidden" />
-                  </label>
-                </div>
-                <p className="text-[11px] text-zinc-500 mt-1.5">{t('form.photoHint')}</p>
-                {photoError && <p className="text-xs text-red-600 mt-1">{photoError}</p>}
-              </div>
-
+              {/* Headline */}
               <div>
                 <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.headlineLabel')}</label>
                 <input
@@ -373,24 +563,61 @@ export default function BecomeCounselorPage() {
                 {errors.headline && <p className="text-xs text-red-600 mt-1">{errors.headline}</p>}
               </div>
 
+              {/* Primary Track (Phase 3: Required, no default) */}
               <div>
-                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.categoryLabel')}</label>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">
+                  {t('form.primaryTrackLabel')}
+                </label>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  value={primaryTrack}
+                  onChange={(e) => {
+                    const chosen = e.target.value;
+                    setPrimaryTrack(chosen);
+                    setSecondaryTracks((prev) => prev.filter((s) => s !== chosen));
+                  }}
                   className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C] cursor-pointer"
                 >
-                  {CATEGORY_KEYS.map((key) => (
-                    <option key={key} value={key}>
-                      {SPECIALTY_CONFIG[key].icon} {tSpecialties(key)}
+                  <option value="">-- {t('form.primaryTrackPlaceholder')} --</option>
+                  {availableTracks.map((tItem) => (
+                    <option key={tItem.slug} value={tItem.slug}>
+                      {tItem.icon} {tSpecialties(tItem.slug) || tItem.name_uz}
                     </option>
                   ))}
                 </select>
-                <p className="text-[11px] text-zinc-500 mt-1">
-                  {t('form.categoryHint')}
-                </p>
+                {errors.primaryTrack && <p className="text-xs text-red-600 mt-1">{errors.primaryTrack}</p>}
               </div>
 
+              {/* Secondary Tracks (Phase 3: Optional, up to 2) */}
+              {primaryTrack && (
+                <div>
+                  <label className="text-xs font-medium text-zinc-700 block mb-1.5">
+                    {t('form.secondaryTracksLabel')}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTracks.filter((tItem) => tItem.slug !== primaryTrack).map((tItem) => {
+                      const isSelected = secondaryTracks.includes(tItem.slug);
+                      return (
+                        <button
+                          key={tItem.slug}
+                          type="button"
+                          onClick={() => toggleSecondaryTrack(tItem.slug)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#0F4C5C] text-white border-[#0F4C5C]'
+                              : 'bg-white text-zinc-700 border-zinc-900/12 hover:bg-[#F5EFE0]'
+                          }`}
+                        >
+                          <span>{tItem.icon}</span>
+                          <span>{tSpecialties(tItem.slug)}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Specialties */}
               <div>
                 <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.specialtiesLabel')}</label>
                 <input
@@ -401,11 +628,20 @@ export default function BecomeCounselorPage() {
                   placeholder={t('form.specialtiesPlaceholder')}
                   className="w-full px-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
                 />
-                {errors.specialties && <p className="text-xs text-red-600 mt-1">{errors.specialties}</p>}
               </div>
 
+              {/* Bio (Min 100 characters) */}
               <div>
-                <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.bioLabel')}</label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-medium text-zinc-700">{t('form.bioLabel')}</label>
+                  <span
+                    className={`text-[11px] font-mono ${
+                      bio.trim().length >= 100 ? 'text-emerald-700 font-semibold' : 'text-zinc-500'
+                    }`}
+                  >
+                    {bio.trim().length}/100 ta belgi
+                  </span>
+                </div>
                 <textarea
                   rows={4}
                   maxLength={4000}
@@ -417,6 +653,27 @@ export default function BecomeCounselorPage() {
                 {errors.bio && <p className="text-xs text-red-600 mt-1">{errors.bio}</p>}
               </div>
 
+              {/* Proof Link (Phase 2: Required, Admin-only visibility) */}
+              <div>
+                <label className="text-xs font-medium text-zinc-700 block mb-1.5">
+                  {t('form.proofLinkLabel')}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    maxLength={500}
+                    value={proofLink}
+                    onChange={(e) => setProofLink(e.target.value)}
+                    placeholder={t('form.proofLinkPlaceholder')}
+                    className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-[#FFF8E7]/60 border border-zinc-900/12 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C]"
+                  />
+                  <LinkIcon className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1">{t('form.proofLinkHint')}</p>
+                {errors.proofLink && <p className="text-xs text-red-600 mt-1">{errors.proofLink}</p>}
+              </div>
+
+              {/* Contact Information */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-zinc-900/8">
                 <div>
                   <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.telegramLabel')}</label>
@@ -459,6 +716,7 @@ export default function BecomeCounselorPage() {
                 {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
               </div>
 
+              {/* Pricing */}
               <div className="grid grid-cols-2 gap-4 pt-3 border-t border-zinc-900/8">
                 <div>
                   <label className="text-xs font-medium text-zinc-700 block mb-1.5">{t('form.standardPriceLabel')}</label>
@@ -509,6 +767,22 @@ export default function BecomeCounselorPage() {
               <p className="text-[11px] text-zinc-500 -mt-2">
                 {t('form.pricePerQuestionHint')}
               </p>
+
+              {/* Consent Checkbox (Phase 2: Required) */}
+              <div className="pt-3 border-t border-zinc-900/8">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={consentPublished}
+                    onChange={(e) => setConsentPublished(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-zinc-300 text-[#0F4C5C] focus:ring-[#0F4C5C] accent-[#0F4C5C] cursor-pointer"
+                  />
+                  <span className="text-xs text-zinc-700 leading-relaxed">
+                    {t('form.consentLabel')}
+                  </span>
+                </label>
+                {errors.consent && <p className="text-xs text-red-600 mt-1">{errors.consent}</p>}
+              </div>
 
               {submitError && (
                 <p className="text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">

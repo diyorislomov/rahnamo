@@ -102,7 +102,12 @@ export default function CounselorPage() {
           }
           throw error;
         }
-        setCounselor(data ? mapCounselorRow(data) : sampleMatch);
+        const mapped = data ? mapCounselorRow(data) : sampleMatch;
+        if (mapped && mapped.isActive === false) {
+          setCounselor(undefined);
+        } else {
+          setCounselor(mapped);
+        }
         setCounselorLoading(false);
       })
       .catch((error) => {
@@ -170,6 +175,10 @@ export default function CounselorPage() {
   const [telegram, setTelegram] = useState('');
   const [education, setEducation] = useState('');
   const [question, setQuestion] = useState('');
+  const [educationStage, setEducationStage] = useState('');
+  const [isUnder18, setIsUnder18] = useState(false);
+  const [parentalConsent, setParentalConsent] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(true);
 
   const menteeEmail: string | null | false =
     authStatus === 'loading'
@@ -271,9 +280,26 @@ export default function CounselorPage() {
       }
     }
 
-    const phoneDigits = phone.replace(/\D/g, '').replace(/^998/, '');
-    if (phoneDigits.length !== 9) {
+    const rawDigits = phone.replace(/\D/g, '');
+    const phoneDigits = rawDigits.startsWith('998') ? rawDigits.slice(3) : rawDigits;
+    if (phone.trim() && phone !== '+998' && phone !== '+998 ' && phoneDigits.length > 0 && phoneDigits.length !== 9) {
       newErrors.phone = t('validation.phone');
+    }
+
+    if (!privacyConsent) {
+      newErrors.privacyConsent = locale === 'ru'
+        ? 'Требуется согласие с Политикой конфиденциальности'
+        : locale === 'en'
+        ? 'Privacy policy consent is required'
+        : 'Maxfiylik siyosatiga rozilik talab qilinadi';
+    }
+
+    if (isUnder18 && !parentalConsent) {
+      newErrors.parentalConsent = locale === 'ru'
+        ? 'Для несовершеннолетних требуется согласие родителей'
+        : locale === 'en'
+        ? 'Parental consent is required for minors'
+        : '18 yoshga to‘lmaganlar uchun ota-ona ruxsati talab qilinadi';
     }
 
     if (!education.trim()) {
@@ -289,7 +315,7 @@ export default function CounselorPage() {
   };
 
   const STEP1_FIELDS = ['slot'];
-  const STEP2_FIELDS = ['fullName', 'email', 'phone', 'telegram', 'education', 'question'];
+  const STEP2_FIELDS = ['fullName', 'email', 'phone', 'telegram', 'education', 'question', 'privacyConsent', 'parentalConsent'];
 
   function stepForErrors(errs: { [key: string]: string }): 1 | 2 | 3 {
     if (STEP1_FIELDS.some((f) => errs[f])) return 1;
@@ -353,9 +379,13 @@ export default function CounselorPage() {
         slot: selectedSlot,
         studentName: fullName,
         email: email.trim(),
-        phone,
+        phone: (phone.trim() && phone !== '+998' && phone !== '+998 ') ? phone : undefined,
         telegram: cleanedTelegram,
-        education,
+        education: education || educationStage || 'Student',
+        educationStage: educationStage || undefined,
+        isUnder18,
+        parentalConsent: isUnder18 ? parentalConsent : false,
+        privacyConsent,
         question,
         locale,
       }),
@@ -1068,6 +1098,7 @@ export default function CounselorPage() {
                   >
                     <Phone className="w-3 h-3 text-zinc-500" />
                     <span>{t('form.phoneLabel')}</span>
+                    <span className="text-[11px] font-normal text-zinc-400">({locale === 'ru' ? 'по желанию' : locale === 'en' ? 'optional' : 'ixtiyoriy'})</span>
                   </label>
                   <input
                     id="student-phone"
@@ -1166,7 +1197,122 @@ export default function CounselorPage() {
                     <p className="text-[11px] text-red-600 mt-1">{errors.question}</p>
                   )}
                 </div>
-              </div>
+              
+                {/* Education Stage */}
+                <div>
+                  <label htmlFor="student-stage" className="text-xs font-semibold text-zinc-700 block mb-1">
+                    {locale === 'ru' ? 'Стадия обучения' : locale === 'en' ? 'Education Stage' : 'Ta’lim bosqichi'}
+                  </label>
+                  <select
+                    id="student-stage"
+                    value={educationStage}
+                    onChange={(e) => setEducationStage(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs bg-[#FFF8E7]/40 border border-zinc-900/15 rounded-xl outline-none focus:bg-white focus:border-[#0F4C5C] text-zinc-900 cursor-pointer"
+                  >
+                    <option value="">{locale === 'ru' ? 'Выберите стадию' : locale === 'en' ? 'Select stage' : 'Bosqichni tanlang'}</option>
+                    <option value="school">{locale === 'ru' ? 'Школа / Лицей / Колледж' : locale === 'en' ? 'School / College' : 'Maktab / Litsey / Kollej'}</option>
+                    <option value="university">{locale === 'ru' ? 'Университет / Институт' : locale === 'en' ? 'University / Institute' : 'Universitet / Institut'}</option>
+                    <option value="working">{locale === 'ru' ? 'Работаю / Специалист' : locale === 'en' ? 'Working Professional' : 'Ishlayapman / Mutaxassis'}</option>
+                    <option value="other">{locale === 'ru' ? 'Другое' : locale === 'en' ? 'Other' : 'Boshqa'}</option>
+                  </select>
+                </div>
+
+                {/* Under 18 Minor Protection */}
+                <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/80 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      id="under18Booking"
+                      checked={isUnder18}
+                      onChange={(e) => setIsUnder18(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 text-[#0F4C5C] rounded border-zinc-300 focus:ring-[#0F4C5C] cursor-pointer"
+                    />
+                    <label htmlFor="under18Booking" className="text-xs font-medium text-amber-950 cursor-pointer">
+                      {locale === 'ru' ? 'Мне меньше 18 лет' : locale === 'en' ? 'I am under 18 years old' : 'Men 18 yoshga to‘lmaganman'}
+                    </label>
+                  </div>
+
+                  {isUnder18 && (
+                    <div className="pt-2 pl-6 space-y-2 border-t border-amber-200/60">
+                      <p className="text-[11px] text-amber-900 leading-relaxed">
+                        {locale === 'ru'
+                          ? 'Для несовершеннолетних пользователей индивидуальные сессии 1-на-1 проводятся с согласия родителей или опекуна.'
+                          : locale === 'en'
+                          ? '1-on-1 sessions for minors require parental or legal guardian consent.'
+                          : '18 yoshdan kichiklar uchun 1-ga-1 sessiyalarda ota-ona yoki qonuniy vasiy roziligi talab qilinadi.'}
+                      </p>
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          id="parentalConsentBooking"
+                          checked={parentalConsent}
+                          onChange={(e) => {
+                            setParentalConsent(e.target.checked);
+                            if (errors.parentalConsent) setErrors(prev => ({ ...prev, parentalConsent: '' }));
+                          }}
+                          className="w-4 h-4 mt-0.5 text-[#0F4C5C] rounded border-zinc-300 focus:ring-[#0F4C5C] cursor-pointer"
+                        />
+                        <label htmlFor="parentalConsentBooking" className="text-xs font-bold text-amber-950 cursor-pointer">
+                          {locale === 'ru'
+                            ? 'Подтверждаю согласие родителей или опекунов *'
+                            : locale === 'en'
+                            ? 'I confirm parental or guardian consent *'
+                            : 'Ota-onam yoki qonuniy vasiyim rozilik berganini tasdiqlayman *'}
+                        </label>
+                      </div>
+                      {errors.parentalConsent && (
+                        <p className="text-[11px] text-red-600 font-medium">{errors.parentalConsent}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Privacy Consent Checkbox */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      id="privacyConsentBooking"
+                      checked={privacyConsent}
+                      onChange={(e) => {
+                        setPrivacyConsent(e.target.checked);
+                        if (errors.privacyConsent) setErrors(prev => ({ ...prev, privacyConsent: '' }));
+                      }}
+                      className="w-4 h-4 mt-0.5 text-[#0F4C5C] rounded border-zinc-300 focus:ring-[#0F4C5C] cursor-pointer"
+                    />
+                    <label htmlFor="privacyConsentBooking" className="text-xs text-slate-700 cursor-pointer">
+                      {locale === 'ru' ? (
+                        <>
+                          Я даю согласие на обработку персональных данных ({' '}
+                          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#0F4C5C] font-semibold underline">
+                            Политика конфиденциальности
+                          </a>
+                          ) *
+                        </>
+                      ) : locale === 'en' ? (
+                        <>
+                          I consent to data processing ({' '}
+                          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#0F4C5C] font-semibold underline">
+                            Privacy Policy
+                          </a>
+                          ) *
+                        </>
+                      ) : (
+                        <>
+                          Shaxsiy ma’lumotlarimni qayta ishlashga roziman ({' '}
+                          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#0F4C5C] font-semibold underline">
+                            Maxfiylik siyosati
+                          </a>
+                          ) *
+                        </>
+                      )}
+                    </label>
+                  </div>
+                  {errors.privacyConsent && (
+                    <p className="text-[11px] text-red-600 font-medium mt-1 pl-6">{errors.privacyConsent}</p>
+                  )}
+                </div>
+</div>
 
               {currentStep === 2 && (
                 <div className="flex justify-between pt-2">

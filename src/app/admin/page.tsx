@@ -7,9 +7,10 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse, Counselor } from '@/types';
 import { mapCounselorRow } from '@/lib/counselors';
+import { DbTrack } from '@/lib/tracks';
 import { mapForumQuestion, mapForumAnswer } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
-import { ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, ClipboardList, Users, MessagesSquare, Flag, Target, Banknote } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, Link as LinkIcon, Pause, Play, AlertCircle, ClipboardList, Users, MessagesSquare, Flag, Target, Banknote } from 'lucide-react';
 
 interface CounselorApp {
   id?: string;
@@ -24,6 +25,8 @@ interface CounselorApp {
   phone: string;
   telegram: string;
   linkedin?: string;
+  proof_link?: string;
+  consent_published?: string;
   expected_standard_price: number;
   expected_premium_price: number;
   expected_price_per_question?: number | null;
@@ -128,9 +131,11 @@ export default function AdminDashboardPage() {
   const dateLocale = t('dateLocale');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'waitlist' | 'forum' | 'survey' | 'counselors' | 'threads'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'waitlist' | 'forum' | 'survey' | 'counselors' | 'threads' | 'tracks'>('bookings');
+  const [tracks, setTracks] = useState<DbTrack[]>([]);
   const [bookings, setBookings] = useState<BookingTicketData[]>([]);
   const [applications, setApplications] = useState<CounselorApp[]>([]);
   const [forumQuestions, setForumQuestions] = useState<ForumQuestion[]>([]);
@@ -138,6 +143,111 @@ export default function AdminDashboardPage() {
   const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [counselors, setCounselors] = useState<Counselor[]>([]);
   const [threads, setThreads] = useState<AdminThread[]>([]);
+  const [globalLaunchDate, setGlobalLaunchDate] = useState('2026-11-01');
+  const [savingLaunchDate, setSavingLaunchDate] = useState(false);
+  const [launchDateSaved, setLaunchDateSaved] = useState(false);
+
+  const handleToggleTrackActive = async (track: DbTrack) => {
+    const targetState = !track.is_active;
+    try {
+      const response = await fetch('/api/admin/tracks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_active', slug: track.slug, is_active: targetState }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error);
+      setTracks((prev) =>
+        prev.map((item) => (item.slug === track.slug ? { ...item, is_active: targetState } : item))
+      );
+    } catch (err) {
+      console.error('[TOGGLE_TRACK_ERROR]', err);
+      alert("Yo'nalish holatini o'zgartirishda xatolik yuz berdi");
+    }
+  };
+
+  const handleReorderTrack = async (track: DbTrack, direction: 'up' | 'down') => {
+    const currentIndex = tracks.findIndex((t) => t.slug === track.slug);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= tracks.length) return;
+    const targetTrack = tracks[targetIndex];
+    const newOrder = targetTrack.sort_order;
+    const oldOrder = track.sort_order;
+    try {
+      await fetch('/api/admin/tracks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reorder', slug: track.slug, sort_order: newOrder }),
+      });
+      await fetch('/api/admin/tracks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reorder', slug: targetTrack.slug, sort_order: oldOrder }),
+      });
+      const next = [...tracks];
+      next[currentIndex] = { ...targetTrack, sort_order: oldOrder };
+      next[targetIndex] = { ...track, sort_order: newOrder };
+      setTracks(next);
+    } catch (err) {
+      console.error('[REORDER_TRACK_ERROR]', err);
+    }
+  };
+
+  const handleToggleCounselorActive = async (c: Counselor) => {
+    const targetState = !c.isActive;
+    try {
+      const response = await fetch('/api/admin/counselors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: c.id, action: 'toggle_active', is_active: targetState }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error);
+      setCounselors((prev) =>
+        prev.map((item) => (item.id === c.id ? { ...item, isActive: targetState } : item))
+      );
+    } catch (err) {
+      console.error('[ADMIN_TOGGLE_ACTIVE_FAILED]', err);
+      alert("Holatni o'zgartirishda xatolik yuz berdi");
+    }
+  };
+
+  const handleDeleteCounselor = async (c: Counselor) => {
+    if (!window.confirm(`${c.fullName} ni platformadan butunlay o'chirmoqchimisiz?`)) return;
+    try {
+      const response = await fetch('/api/admin/counselors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: c.id, action: 'delete' }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error);
+      setCounselors((prev) => prev.filter((item) => item.id !== c.id));
+    } catch (err) {
+      console.error('[ADMIN_DELETE_COUNSELOR_FAILED]', err);
+      alert("Mentorni o'chirishda xatolik yuz berdi");
+    }
+  };
+
+  const handleSaveLaunchDate = async () => {
+    setSavingLaunchDate(true);
+    setLaunchDateSaved(false);
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ global_launch_date: new Date(globalLaunchDate).toISOString() }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error);
+      setLaunchDateSaved(true);
+      setTimeout(() => setLaunchDateSaved(false), 3000);
+    } catch (err) {
+      console.error('[ADMIN_SAVE_LAUNCH_DATE_FAILED]', err);
+      alert("Sanani saqlashda xatolik yuz berdi");
+    }
+    setSavingLaunchDate(false);
+  };
   const [waitlist, setWaitlist] = useState<WaitlistRow[]>([]);
   const [metrics, setMetrics] = useState<PlatformMetrics>(EMPTY_METRICS);
   const [threadActionId, setThreadActionId] = useState<string | null>(null);
@@ -217,9 +327,26 @@ export default function AdminDashboardPage() {
           }))
       );
       setCounselors(((overviewData && overviewData.counselors) || []).map(mapCounselorRow));
+
+      fetch('/api/admin/tracks')
+        .then((r) => r.json())
+        .then((res) => {
+          if (res?.success && Array.isArray(res.tracks)) {
+            setTracks(res.tracks);
+          }
+        })
+        .catch((err) => console.warn('[FETCH_ADMIN_TRACKS_ERROR]', err));
       setWaitlist(((overviewData && overviewData.waitlist) || []) as WaitlistRow[]);
       setMetrics({ ...EMPTY_METRICS, ...((overviewData && overviewData.metrics) || {}) });
       setThreads((threadsData && threadsData.threads) || []);
+      fetch('/api/admin/settings')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.global_launch_date) {
+            setGlobalLaunchDate(d.global_launch_date.split('T')[0]);
+          }
+        })
+        .catch(() => undefined);
     } catch (error) {
       console.warn('[ADMIN_DATA_FETCH_FAILED]', error);
       setBookings([]);
@@ -263,12 +390,16 @@ export default function AdminDashboardPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: entered }),
     })
-      .then((res) => res.json())
-      .then(({ success }) => {
-        if (success) {
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.success) {
           setIsAuthenticated(true);
           setLoginError('');
           fetchAdminData();
+        } else if (res.status === 429) {
+          setLoginError("Urinishlar soni cheklandi (429). Iltimos, bir oz kuting.");
+        } else if (res.status === 500) {
+          setLoginError("Serverda ADMIN_PASSWORD sozlanmagan.");
         } else {
           setLoginError(t('login.wrongPassword'));
         }
@@ -576,12 +707,19 @@ export default function AdminDashboardPage() {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
+                    className="w-full pl-10 pr-10 py-3 bg-amber-50/40 border border-amber-900/15 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-amber-700"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-3.5 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
                 {loginError && <p className="text-[11px] text-red-600 font-semibold mt-1.5">{loginError}</p>}
               </div>
@@ -977,15 +1115,26 @@ export default function AdminDashboardPage() {
                       <div>📞 {app.phone}</div>
                       <div>💬 {app.telegram}</div>
                       <div>
-                        {app.linkedin ? (
-                          <a href={app.linkedin} target="_blank" rel="noreferrer" className="text-amber-800 underline">
-                            {t('applications.linkedinProfile')}
+                        {(app.proof_link || app.linkedin) ? (
+                          <a
+                            href={app.proof_link || app.linkedin}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-amber-800 underline font-semibold inline-flex items-center gap-1"
+                          >
+                            <LinkIcon className="w-3 h-3" />
+                            <span>Tasdiqlovchi havola (Proof)</span>
                           </a>
                         ) : (
-                          <span className="text-stone-400">{t('applications.linkedinNotProvided')}</span>
+                          <span className="text-stone-400">Tasdiqlovchi havola yo'q</span>
                         )}
                       </div>
                     </div>
+                    {app.consent_published && (
+                      <div className="mt-2 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-medium">
+                        ✓ Platformada e'lon qilinishiga rozilik berilgan: {new Date(app.consent_published).toLocaleString()}
+                      </div>
+                    )}
 
                     <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between">
                       <div className="text-xs font-serif">
@@ -1244,6 +1393,40 @@ export default function AdminDashboardPage() {
                       <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
                         <span>{t('counselors.ratingLabel', { rating: c.rating, count: c.reviewsCount })}</span>
                         <span>{c.joinedAt ? t('counselors.joinedLabel', { date: new Date(c.joinedAt).toLocaleDateString(dateLocale) }) : ''}</span>
+                      </div>
+
+                      {/* Phase 4: Pause/Activate and Remove Controls */}
+                      <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between gap-2">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            c.isActive !== false
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              : 'bg-zinc-100 text-zinc-700 border border-zinc-300'
+                          }`}
+                        >
+                          {c.isActive !== false ? '● Faol' : '⏸ Pauza qilingan'}
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleCounselorActive(c)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer border ${
+                              c.isActive !== false
+                                ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                                : 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {c.isActive !== false ? 'Pauza qilish' : 'Faollashtirish'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCounselor(c)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors cursor-pointer"
+                          >
+                            O'chirish
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

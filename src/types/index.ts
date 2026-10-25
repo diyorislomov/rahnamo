@@ -22,6 +22,7 @@ export interface Counselor {
   whyWorkWithMe?: string;
   joinedAt?: string;
   commissionFreeUntil?: string;
+  isActive?: boolean;
   // Null means this mentor doesn't offer "Matnli maslahat" at all.
   pricePerQuestion?: number | null;
   softCap?: number | null;

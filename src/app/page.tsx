@@ -16,7 +16,7 @@ import GoalWaitlist from '@/components/GoalWaitlist';
 import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
 import { supabase } from '@/lib/supabase';
-import { SPECIALTY_CONFIG } from '@/lib/specialties';
+import { SPECIALTY_CONFIG, TRACKS, getTrackBySlug } from '@/lib/specialties';
 import { Counselor } from '@/types';
 import {
   Search,
@@ -62,12 +62,40 @@ export default function Home() {
       });
   }, []);
 
-  const specialtyKeys = useMemo(() => Object.keys(SPECIALTY_CONFIG), []);
+  // Only active counselors appear publicly in catalog and search
+  const activeCounselors = useMemo(() => {
+    return counselors.filter((c) => c.isActive !== false);
+  }, [counselors]);
+
+  // Phase 3: The public catalog filter should only show a track if at least 1 mentor is in it
+  const specialtyKeys = useMemo(() => {
+    const presentSpecialties = new Set<string>();
+    for (const c of activeCounselors) {
+      for (const s of c.specialties) {
+        presentSpecialties.add(s);
+      }
+    }
+    const populated = TRACKS.filter(
+      (t) =>
+        presentSpecialties.has(t.slug) ||
+        presentSpecialties.has(t.en) ||
+        presentSpecialties.has(t.uz) ||
+        presentSpecialties.has(t.ru)
+    ).map((t) => t.slug);
+
+    return ['All', ...populated];
+  }, [activeCounselors]);
 
   // Filter & Search logic — category and search combine (AND), not replace
-  const filteredCounselors = counselors.filter((counselor) => {
+  const filteredCounselors = activeCounselors.filter((counselor) => {
     const matchesTag =
-      selectedTag === 'All' || counselor.specialties.includes(selectedTag);
+      selectedTag === 'All' ||
+      counselor.specialties.some((s) => {
+        if (s === selectedTag) return true;
+        const track = getTrackBySlug(selectedTag);
+        if (track && (s === track.en || s === track.uz || s === track.ru || s === track.slug)) return true;
+        return false;
+      });
 
     const matchesSearch =
       searchQuery.trim() === '' ||

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveMentorFromRequest } from '@/lib/mentorSession';
 import { allowRequest } from '@/lib/rateLimit';
 import { postgres } from '@/lib/postgres';
+import { maskOffPlatformContacts } from '@/lib/disintermediation';
 
 export async function POST(request: Request) {
   const mentor = await resolveMentorFromRequest(request);
@@ -17,10 +18,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
   }
   const threadId = typeof input.threadId === 'string' ? input.threadId : '';
-  const body = typeof input.body === 'string' ? input.body.trim() : '';
-  if (!threadId || threadId.length > 100 || !body || body.length > 4000) {
+  const rawBody = typeof input.body === 'string' ? input.body.trim() : '';
+  if (!threadId || threadId.length > 100 || !rawBody || rawBody.length > 4000) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
+
+  // Mask off-platform contacts to protect platform escrow & safety
+  const body = maskOffPlatformContacts(rawBody);
 
   const threadResult = await postgres.query(
     'SELECT id, counselor_id, payment_status FROM question_threads WHERE id = $1',

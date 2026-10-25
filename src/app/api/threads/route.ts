@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveMenteeFromRequest } from '@/lib/menteeSession';
 import { postgres } from '@/lib/postgres';
 import { isSameOrigin } from '@/lib/serverSecurity';
+import { maskOffPlatformContacts } from '@/lib/disintermediation';
 
 function threadPayload(row: Record<string, unknown>) {
   return { ...row, student_auth_id: row.user_id, device_id: row.user_id };
@@ -60,8 +61,11 @@ export async function POST(request: Request) {
   }
 
   if (action !== 'ask') return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
-  const body = typeof input.body === 'string' ? input.body.trim() : '';
-  if (!body || body.length > 4000) return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
+  const rawBody = typeof input.body === 'string' ? input.body.trim() : '';
+  if (!rawBody || rawBody.length > 4000) return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
+
+  // Anti-disintermediation masking
+  const body = maskOffPlatformContacts(rawBody);
 
   const client = await postgres.connect();
   try {
@@ -94,8 +98,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, questions_used: questionsUsed, total_owed: totalOwed, awaiting_payment: nextStatus !== 'active' });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('[THREAD_ASK_FAILED]', error);
-    return NextResponse.json({ success: false, error: 'query_failed' }, { status: 500 });
+    console.error('[THREAD_POST_FAILED]', error);
+    return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
   } finally {
     client.release();
   }

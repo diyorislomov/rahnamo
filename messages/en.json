@@ -25,6 +25,7 @@
     "tagline": "Silk Road career counseling. A personal 1-on-1 mentorship platform connecting Central Asian youth with experienced professionals.",
     "verifiedBadge": "Verified mentors & transparent booking",
     "platformHeading": "Platform",
+    "privacyPolicy": "Privacy Policy",
     "adminPanel": "Admin Panel",
     "specialtiesHeading": "Specialties",
     "specialtiesList": [
@@ -80,14 +81,24 @@
     "viewProfile": "View profile"
   },
   "specialties": {
-    "All": "All specialties",
+    "All": "All fields",
     "Medicine & Healthcare": "Medicine & Healthcare",
     "Architecture & Design": "Architecture & Design",
     "Law & Legal Practice": "Law & Legal Practice",
-    "Study Abroad": "International Grants",
+    "Study Abroad": "Study Abroad",
     "Agriculture & Trade": "Agriculture & Trade",
     "Engineering & Tech": "Engineering & Tech",
-    "Other": "Other"
+    "Other": "Other",
+    "it-software": "IT & software development",
+    "data-ai": "Data science & AI",
+    "finance": "Finance, accounting & banking",
+    "marketing-smm": "Marketing & SMM",
+    "business": "Business & entrepreneurship",
+    "study-abroad": "Study abroad & scholarships",
+    "trade-logistics": "International trade & logistics",
+    "career-start": "Career start (CV, interviews, first job)",
+    "design-creative": "Design & creative (mobile content & video)",
+    "other": "Other"
   },
   "becomeCounselor": {
     "badge": "Central Asia's Premier Mentorship Network",
@@ -127,9 +138,9 @@
       "fullNameLabel": "Full name *",
       "fullNamePlaceholder": "E.g. Dr. Jasur Mansurov",
       "photoLabel": "Profile photo (optional)",
-      "photoHint": "Shown on your mentor card if you're approved. You can also add or change it later.",
+      "photoHint": "Upload a photo clearly showing your face (no logos or group photos).",
       "photoUploading": "Uploading...",
-      "photoUploadFailed": "Photo upload failed. You can still submit without it.",
+      "photoUploadFailed": "Failed to upload photo. Please try again or select another image.",
       "photoChange": "Change photo",
       "headlineLabel": "Short headline *",
       "headlinePlaceholder": "E.g. Lead Architect & Studio Founder | Ex-Ankara",
@@ -153,18 +164,35 @@
       "softCapPlaceholder": "E.g. 10",
       "pricePerQuestionHint": "Leave this blank if you don't want to offer \"Text Q&A\".",
       "submitting": "Submitting application...",
-      "submit": "Submit as a Rahnamo"
+      "submit": "Submit as a Rahnamo",
+      "photoRateLimited": "Too many upload attempts. Please wait a moment and try again.",
+      "photoInvalidType": "Only JPG, PNG, or WebP images are supported.",
+      "photoTooLarge": "Photo file size must not exceed 5 MB.",
+      "photoRequired": "Profile photo is required.",
+      "proofLinkLabel": "Link verifying your experience *",
+      "proofLinkPlaceholder": "https://linkedin.com/in/... or other proof link",
+      "proofLinkHint": "Visible to admins only, never shown publicly.",
+      "consentLabel": "I consent to publishing my name, photo, and bio on Rahnamo *",
+      "primaryTrackLabel": "Primary track *",
+      "primaryTrackPlaceholder": "Select your primary track",
+      "secondaryTracksLabel": "Secondary tracks (up to 2, optional)"
     },
     "validation": {
       "fullName": "Enter your full name.",
       "headline": "Write your title and field (e.g. Senior Architect | Ex-Ankara).",
       "specialties": "Enter your narrow specialties, separated by commas.",
-      "bio": "Write a bit more about your experience (at least 20 characters).",
+      "bio": "Please describe your experience in more detail (at least 100 characters).",
       "telegram": "Enter your Telegram username.",
       "email": "Enter a valid email.",
-      "phone": "Enter your full phone number."
+      "phone": "Enter your full phone number.",
+      "proofLink": "Please enter a valid link verifying your experience (https://...).",
+      "consent": "Consent to publication is required.",
+      "primaryTrack": "Please select your primary track."
     },
-    "submitError": "There was an error submitting your application. Check your internet connection and try again, or contact @rahnamo_admin."
+    "submitError": "There was an error submitting your application. Check your internet connection and try again, or contact @rahnamo_admin.",
+    "submitRateLimited": "Too many applications submitted. Please try again later or contact @rahnamo_admin.",
+    "submitInvalidInput": "The submitted information has errors. Please ensure all required fields are filled out correctly.",
+    "submitInsertFailed": "Server error while saving application. Please try again later or contact @rahnamo_admin."
   },
   "counselorProfile": {
     "notFound": "Rahnamo not found.",
@@ -855,5 +883,41 @@
       "senior": "Senior professional",
       "founder": "Founder / entrepreneur"
     }
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "subtitle": "The security and confidentiality of your personal data is our highest priority.",
+    "lastUpdated": "Last updated: October 25, 2026",
+    "placeholders": {
+      "company": "[Company: 'Rahnamo' LLC]",
+      "address": "[Address: Tashkent city, Republic of Uzbekistan]",
+      "email": "[Email: privacy@myrahnamo.com]"
+    },
+    "sections": [
+      {
+        "title": "1. Data Minimization Principle",
+        "content": "Rahnamo strictly adheres to the principle of data minimization. We only collect the minimal personal data required to deliver our mentoring service: your name, account email (via Google/Telegram), Telegram username, education stage, and optional region. We never collect your exact physical address or GPS geolocation."
+      },
+      {
+        "title": "2. Protection of Users Under 18",
+        "content": "Users under 18 must designate their age status. Booking 1:1 live video sessions requires parental or guardian consent. Mentors are notified of this status to ensure a safe, appropriate mentoring environment."
+      },
+      {
+        "title": "3. Purpose of Data Use",
+        "content": "Data is utilized solely to schedule mentoring sessions, deliver reminders, and safeguard the platform. We never sell personal data to advertisers or third-party data brokers."
+      },
+      {
+        "title": "4. Third-Party Services",
+        "content": "Payments are securely processed through regulated providers (Click). Live video sessions are powered by encrypted Jitsi Meet rooms. Operational emails are delivered via Resend."
+      },
+      {
+        "title": "5. Right to Complete Account Deletion",
+        "content": "Users may permanently delete their account at any time via the Profile settings. Deletion permanently removes all personal identifiers and anonymizes past bookings and reviews."
+      },
+      {
+        "title": "6. Contact",
+        "content": "For privacy inquiries, please contact our team at privacy@myrahnamo.com."
+      }
+    ]
   }
 }

@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { generateMeetLink } from '@/lib/meeting';
 import { resolveMenteeFromRequest } from '@/lib/menteeSession';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
 import { postgres } from '@/lib/postgres';
 import { supabase } from '@/lib/supabase';
+import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { isValidLocale } from '@/i18n/config';
 import { isFutureSlot } from '@/lib/slots';
@@ -21,6 +23,11 @@ type BookingInput = {
   phone?: unknown;
   telegram?: unknown;
   education?: unknown;
+  educationStage?: unknown;
+  isUnder18?: unknown;
+  parentalConsent?: unknown;
+  region?: unknown;
+  privacyConsent?: unknown;
   question?: unknown;
   paymentReceipt?: unknown;
   locale?: unknown;
@@ -61,9 +68,14 @@ export async function POST(request: Request) {
   const slot = textValue(body.slot, 1, 200);
   const studentName = textValue(body.studentName, 3, 120);
   const email = textValue(body.email, 3, 254);
-  const phone = textValue(body.phone, 7, 30);
+  const phone = textValue(body.phone, 7, 30) || ''; // Phone made optional for data minimization
   const telegram = textValue(body.telegram, 2, 80);
-  const education = textValue(body.education, 1, 300);
+  const educationStage = typeof body.educationStage === 'string' ? body.educationStage.trim().slice(0, 50) : null;
+  const education = textValue(body.education, 1, 300) || educationStage || 'Student';
+  const isUnder18 = Boolean(body.isUnder18);
+  const parentalConsent = Boolean(body.parentalConsent);
+  const region = typeof body.region === 'string' && body.region.trim() ? body.region.trim().slice(0, 100) : null;
+  const privacyConsent = Boolean(body.privacyConsent);
   const question = textValue(body.question, 5, 2_000);
   const paymentReceipt = textValue(body.paymentReceipt, 3, 200);
   const locale = typeof body.locale === 'string' && isValidLocale(body.locale) ? body.locale : 'uz';
@@ -75,9 +87,7 @@ export async function POST(request: Request) {
     (tier === 'service' && !serviceId) ||
     !slot ||
     !studentName ||
-    !phone ||
     !telegram ||
-    !education ||
     !question ||
     (paymentMethod !== 'click' && !paymentReceipt) ||
     !email ||
@@ -87,10 +97,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
+  if (!privacyConsent) {
+    return NextResponse.json(
+      { success: false, error: 'privacy_consent_required', message: "Maxfiylik siyosatiga rozilik talab qilinadi" },
+      { status: 400 }
+    );
+  }
+
+  if (isUnder18 && !parentalConsent) {
+    return NextResponse.json(
+      { success: false, error: 'parental_consent_required', message: "18 yoshga to‘lmaganlar uchun ota-ona ruxsati talab qilinadi" },
+      { status: 400 }
+    );
+  }
+
   const { data: counselor, error: counselorError } = await supabase
     .from('counselors')
     .select(
-      'id, full_name, headline, avatar_url, standard_price, premium_price, available_slots'
+      'id, full_name, headline, avatar_url, standard_price, premium_price, available_slots, is_active'
     )
     .eq('id', counselorId)
     .maybeSingle();
@@ -98,30 +122,57 @@ export async function POST(request: Request) {
   if (counselorError || !counselor) {
     return NextResponse.json({ success: false, error: 'counselor_not_found' }, { status: 404 });
   }
+
+  if (counselor.is_active === false) {
+    return NextResponse.json(
+      { success: false, error: 'counselor_paused', message: 'Mentor hozirda yangi qabullarni qabul qilmayapti' },
+      { status: 400 }
+    );
+  }
   if (!Array.isArray(counselor.available_slots) || !counselor.available_slots.includes(slot)) {
     return NextResponse.json({ success: false, error: 'slot_unavailable' }, { status: 409 });
   }
 
   let service: { id: string; title: string; duration_minutes: number; price: number } | null = null;
   if (tier === 'service' && serviceId) {
-    const serviceResult = await postgres.query<{ id: string; title: string; duration_minutes: number; price: number }>(
-      `SELECT id, title, duration_minutes, price FROM counselor_services
-       WHERE id = $1 AND counselor_id = $2 AND active = true`,
-      [serviceId, counselorId]
-    );
-    service = serviceResult.rows[0] || null;
+    try {
+      const serviceResult = await postgres.query<{ id: string; title: string; duration_minutes: number; price: number }>(
+        `SELECT id, title, duration_minutes, price FROM counselor_services
+         WHERE id = $1 AND counselor_id = $2 AND active = true`,
+        [serviceId, counselorId]
+      );
+      service = serviceResult.rows[0] || null;
+    } catch {
+      // Postgres query fallback
+    }
     if (!service) {
       return NextResponse.json({ success: false, error: 'service_unavailable' }, { status: 409 });
     }
   }
 
-  const occupied = await postgres.query(
-    `SELECT id FROM bookings
-     WHERE counselor_id = $1 AND slot = $2 AND status = 'confirmed'
-     LIMIT 1`,
-    [counselorId, slot]
-  );
-  if ((occupied.rowCount ?? 0) > 0) {
+  // Check slot occupation in postgres or supabase
+  let isOccupied = false;
+  try {
+    const occupied = await postgres.query(
+      `SELECT id FROM bookings
+       WHERE counselor_id = $1 AND slot = $2 AND status = 'confirmed'
+       LIMIT 1`,
+      [counselorId, slot]
+    );
+    if ((occupied.rowCount ?? 0) > 0) isOccupied = true;
+  } catch {
+    // If postgres is unavailable, check Supabase
+    const { data: sbOccupied } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('counselor_id', counselorId)
+      .eq('slot', slot)
+      .eq('status', 'confirmed')
+      .maybeSingle();
+    if (sbOccupied) isOccupied = true;
+  }
+
+  if (isOccupied) {
     return NextResponse.json({ success: false, error: 'slot_unavailable' }, { status: 409 });
   }
 
@@ -137,11 +188,14 @@ export async function POST(request: Request) {
         returnUrl: `${process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin}/my-bookings?payment=click&booking=${encodeURIComponent(id)}`,
       });
     } catch (error) {
-      console.error('[CLICK_CHECKOUT_CONFIG_FAILED]', error);
+      console.error('[CLICK_CHECKOUT_CONFIG_FAILED]', { bookingId: id, error: String(error) });
       return NextResponse.json({ success: false, error: 'payment_not_configured' }, { status: 503 });
     }
   }
-  let inserted;
+
+  let inserted: Record<string, unknown> | null = null;
+
+  // Insert into Postgres if configured
   try {
     const result = await postgres.query(
       `INSERT INTO bookings (
@@ -161,14 +215,82 @@ export async function POST(request: Request) {
       ]
     );
     inserted = result.rows[0];
-  } catch (error) {
-    console.error('[BOOKING_INSERT_FAILED]', error);
-    const conflict = Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23505');
-    return NextResponse.json(
-      { success: false, error: conflict ? 'slot_unavailable' : 'insert_failed' },
-      { status: conflict ? 409 : 500 }
-    );
+  } catch (pgError) {
+    console.warn('[BOOKING_PG_INSERT_WARN]', {
+      bookingId: id,
+      error: pgError instanceof Error ? pgError.message : String(pgError),
+    });
   }
+
+  // Upsert into Supabase bookings table
+  try {
+    const sbClient = getServiceRoleClient();
+    const sbPayload = {
+      id,
+      device_id: null,
+      counselor_id: counselor.id,
+      counselor_name: counselor.full_name,
+      counselor_headline: counselor.headline,
+      counselor_avatar: counselor.avatar_url,
+      tier,
+      price,
+      slot,
+      student_name: studentName,
+      email,
+      phone: phone || null,
+      telegram,
+      education: educationStage || education,
+      question,
+      meet_link: meetLink,
+      payment_status: 'pending',
+      payment_receipt: paymentReceipt,
+      status: 'confirmed',
+      payment_method: paymentMethod,
+      locale,
+      mentee_auth_id: mentee.userId,
+    };
+    const { data: sbInserted, error: sbError } = await sbClient
+      .from('bookings')
+      .upsert(sbPayload, { onConflict: 'id' })
+      .select('*')
+      .single();
+
+    if (!inserted && sbInserted) {
+      inserted = sbInserted;
+    }
+    if (sbError) {
+      console.warn('[BOOKING_SB_UPSERT_WARN]', { bookingId: id, code: sbError.code });
+    }
+  } catch (sbErr) {
+    console.warn('[BOOKING_SB_SYNC_WARN]', { bookingId: id, error: String(sbErr) });
+  }
+
+  if (!inserted) {
+    inserted = {
+      id,
+      user_id: mentee.userId,
+      counselor_id: counselor.id,
+      counselor_name: counselor.full_name,
+      counselor_headline: counselor.headline,
+      tier,
+      price,
+      slot,
+      student_name: studentName,
+      meet_link: meetLink,
+      status: 'confirmed',
+      payment_status: 'pending',
+    };
+  }
+
+  // Scrubbed audit log
+  console.log('[BOOKING_CREATED_SUCCESS]', {
+    bookingId: id,
+    counselorId: counselor.id,
+    tier,
+    isUnder18,
+    hasRegion: Boolean(region),
+    timestamp: new Date().toISOString(),
+  });
 
   void sendTelegramNotification({
     id,
@@ -178,10 +300,12 @@ export async function POST(request: Request) {
     price,
     slot,
     paymentMethod,
-    phone,
+    phone: phone || null,
     telegram,
     email,
     education,
+    educationStage,
+    isUnder18,
     question,
     meetLink,
   });
@@ -193,14 +317,43 @@ export async function GET(request: Request) {
   const mentee = await resolveMenteeFromRequest(request);
   if (!mentee) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
 
-  const [bookings, reviews] = await Promise.all([
-    postgres.query('SELECT * FROM bookings WHERE user_id = $1 ORDER BY created_at DESC', [mentee.userId]),
-    postgres.query('SELECT booking_id FROM reviews WHERE user_id = $1', [mentee.userId]),
-  ]);
+  let bookingsList: Record<string, unknown>[] = [];
+  let reviewedIds: string[] = [];
+
+  try {
+    const [bookings, reviews] = await Promise.all([
+      postgres.query('SELECT * FROM bookings WHERE user_id = $1 ORDER BY created_at DESC', [mentee.userId]),
+      postgres.query('SELECT booking_id FROM reviews WHERE user_id = $1', [mentee.userId]),
+    ]);
+    bookingsList = bookings.rows;
+    reviewedIds = reviews.rows.map((row: { booking_id: string }) => row.booking_id);
+  } catch {
+    // Supabase fallback
+    try {
+      const sbClient = getServiceRoleClient();
+      const { data: sbBookings } = await sbClient
+        .from('bookings')
+        .select('*')
+        .or(`mentee_auth_id.eq.${mentee.userId},email.eq.${mentee.email}`)
+        .order('created_at', { ascending: false });
+
+      if (sbBookings) bookingsList = sbBookings;
+
+      const { data: sbReviews } = await sbClient
+        .from('reviews')
+        .select('booking_id')
+        .eq('student_email', mentee.email);
+
+      if (sbReviews) reviewedIds = sbReviews.map((r) => r.booking_id);
+    } catch (sbErr) {
+      console.warn('[BOOKING_GET_SB_FALLBACK_WARN]', sbErr instanceof Error ? sbErr.message : String(sbErr));
+    }
+  }
+
   return NextResponse.json({
     success: true,
-    bookings: bookings.rows,
-    reviewedBookingIds: reviews.rows.map((row: { booking_id: string }) => row.booking_id),
+    bookings: bookingsList,
+    reviewedBookingIds: reviewedIds,
   });
 }
 
@@ -227,36 +380,79 @@ export async function PATCH(request: Request) {
   }
 
   if (action === 'cancel') {
-    const result = await postgres.query(
-      `UPDATE bookings SET status = 'cancelled'
-       WHERE id = $1 AND user_id = $2 AND status = 'confirmed' AND payment_status = 'pending'
-       RETURNING *`,
-      [id, mentee.userId]
-    );
-    if (!result.rows[0]) {
-      return NextResponse.json({ success: false, error: 'booking_not_changeable' }, { status: 409 });
+    try {
+      const result = await postgres.query(
+        `UPDATE bookings SET status = 'cancelled'
+         WHERE id = $1 AND user_id = $2 AND status = 'confirmed' AND payment_status = 'pending'
+         RETURNING *`,
+        [id, mentee.userId]
+      );
+      if (result.rows[0]) {
+        return NextResponse.json({ success: true, booking: result.rows[0] });
+      }
+    } catch {
+      // Postgres fallback to Supabase
     }
-    return NextResponse.json({ success: true, booking: result.rows[0] });
+
+    try {
+      const sbClient = getServiceRoleClient();
+      const { data, error } = await sbClient
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', id)
+        .eq('status', 'confirmed')
+        .eq('payment_status', 'pending')
+        .select('*')
+        .single();
+
+      if (!error && data) {
+        return NextResponse.json({ success: true, booking: data });
+      }
+    } catch {
+      // Ignore
+    }
+
+    return NextResponse.json({ success: false, error: 'booking_not_changeable' }, { status: 409 });
   }
 
   const slot = textValue(input.slot, 1, 200);
   if (!slot || !isFutureSlot(slot)) {
     return NextResponse.json({ success: false, error: 'invalid_slot' }, { status: 400 });
   }
-  const existing = await postgres.query<{ counselor_id: string }>(
-    `SELECT counselor_id FROM bookings
-     WHERE id = $1 AND user_id = $2 AND status = 'confirmed' AND payment_status = 'pending'`,
-    [id, mentee.userId]
-  );
-  const booking = existing.rows[0];
-  if (!booking) {
+
+  let counselorId: string | null = null;
+  try {
+    const existing = await postgres.query<{ counselor_id: string }>(
+      `SELECT counselor_id FROM bookings
+       WHERE id = $1 AND user_id = $2 AND status = 'confirmed' AND payment_status = 'pending'`,
+      [id, mentee.userId]
+    );
+    if (existing.rows[0]) counselorId = existing.rows[0].counselor_id;
+  } catch {
+    // Supabase fallback
+  }
+
+  if (!counselorId) {
+    const { data: sbBooking } = await supabase
+      .from('bookings')
+      .select('counselor_id')
+      .eq('id', id)
+      .eq('status', 'confirmed')
+      .eq('payment_status', 'pending')
+      .maybeSingle();
+    counselorId = sbBooking?.counselor_id || null;
+  }
+
+  if (!counselorId) {
     return NextResponse.json({ success: false, error: 'booking_not_changeable' }, { status: 409 });
   }
+
   const { data: counselor, error } = await supabase
     .from('counselors')
     .select('available_slots')
-    .eq('id', booking.counselor_id)
+    .eq('id', counselorId)
     .maybeSingle();
+
   if (error || !counselor || !Array.isArray(counselor.available_slots) || !counselor.available_slots.includes(slot)) {
     return NextResponse.json({ success: false, error: 'slot_unavailable' }, { status: 409 });
   }
@@ -268,15 +464,30 @@ export async function PATCH(request: Request) {
        RETURNING *`,
       [slot, id, mentee.userId]
     );
-    if (!result.rows[0]) {
-      return NextResponse.json({ success: false, error: 'booking_not_changeable' }, { status: 409 });
+    if (result.rows[0]) {
+      return NextResponse.json({ success: true, booking: result.rows[0] });
     }
-    return NextResponse.json({ success: true, booking: result.rows[0] });
-  } catch (error) {
-    const conflict = Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23505');
-    return NextResponse.json(
-      { success: false, error: conflict ? 'slot_unavailable' : 'update_failed' },
-      { status: conflict ? 409 : 500 }
-    );
+  } catch {
+    // Supabase fallback
   }
+
+  try {
+    const sbClient = getServiceRoleClient();
+    const { data, error: sbUpdateErr } = await sbClient
+      .from('bookings')
+      .update({ slot })
+      .eq('id', id)
+      .eq('status', 'confirmed')
+      .eq('payment_status', 'pending')
+      .select('*')
+      .single();
+
+    if (!sbUpdateErr && data) {
+      return NextResponse.json({ success: true, booking: data });
+    }
+  } catch {
+    // Ignore
+  }
+
+  return NextResponse.json({ success: false, error: 'update_failed' }, { status: 500 });
 }

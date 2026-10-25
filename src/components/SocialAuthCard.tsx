@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -115,7 +116,14 @@ export default function SocialAuthCard({ mode }: { mode: 'login' | 'signup' }) {
               {t('failed')}
             </p>
           )}
-          <p className="text-[11px] leading-relaxed text-zinc-500">{t('privacy')}</p>
+          <div className="space-y-1.5 pt-1">
+            <p className="text-[11px] leading-relaxed text-zinc-500">{t('privacy')}</p>
+            <p className="text-[11px] text-zinc-500">
+              <Link href="/privacy" className="text-[#0F4C5C] hover:underline font-semibold">
+                Maxfiylik siyosati
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
       <Footer />

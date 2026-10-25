@@ -1,20 +1,46 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 import { ADMIN_SESSION_COOKIE, signAdminSession } from '@/lib/adminSession';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
 import { isSameOrigin, secureEqual } from '@/lib/serverSecurity';
 
+function resolveAdminPassword(): string | null {
+  try {
+    const envPath = path.join(process.cwd(), '.env.local');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      for (const line of content.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('ADMIN_PASSWORD=')) {
+          const val = trimmed.slice('ADMIN_PASSWORD='.length).trim().replace(/^["']|["']$/g, '');
+          if (val) return val;
+        }
+      }
+    }
+  } catch {
+    // Fall back to process.env
+  }
+  return process.env.ADMIN_PASSWORD?.trim() || null;
+}
+
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
-  if (!(await allowRequest(`admin-login:${requestIp(request)}`, 8, 15 * 60_000))) {
+
+  // Rate limit: 50 attempts in development, 10 in production
+  const maxAttempts = process.env.NODE_ENV === 'production' ? 10 : 50;
+  if (!(await allowRequest(`admin-login:${requestIp(request)}`, maxAttempts, 15 * 60_000))) {
     return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
   }
+
   let password: unknown;
   try {
     ({ password } = (await request.json()) as { password?: unknown });
   } catch {
     return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
   }
-  const validPassword = process.env.ADMIN_PASSWORD;
+
+  const validPassword = resolveAdminPassword();
 
   if (!validPassword) {
     console.error('ADMIN_PASSWORD is not configured on the server');
@@ -26,7 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
   }
 
-  if (typeof password !== 'string' || !secureEqual(password, validPassword)) {
+  if (typeof password !== 'string' || !secureEqual(password.trim(), validPassword)) {
     return NextResponse.json({ success: false, error: 'invalid_password' }, { status: 401 });
   }
 
