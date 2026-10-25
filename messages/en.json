@@ -78,7 +78,8 @@
     "priceLabel": "Session price",
     "priceUnit": "UZS / 30m",
     "selectTime": "Select time",
-    "viewProfile": "View profile"
+    "viewProfile": "View profile",
+    "newMentor": "New mentor"
   },
   "specialties": {
     "All": "All fields",

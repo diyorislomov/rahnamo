@@ -78,7 +78,8 @@
     "priceLabel": "Sessiya narxi",
     "priceUnit": "UZS / 30m",
     "selectTime": "Vaqt tanlash",
-    "viewProfile": "Profilni ko'rish"
+    "viewProfile": "Profilni ko'rish",
+    "newMentor": "Yangi mentor"
   },
   "specialties": {
     "All": "Barcha sohalar",

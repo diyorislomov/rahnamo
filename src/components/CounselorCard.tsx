@@ -9,6 +9,7 @@ import {
   Clock,
   MapPin,
   ShieldCheck,
+  Sparkles,
   Star,
   UserRound,
   Zap,
@@ -48,7 +49,8 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
   const specialtyConfig = SPECIALTY_CONFIG[primarySpecialty];
   const nextSlot = counselor.availableSlots?.[0];
   const roots = inferMentorRoots(counselor);
-  const sessionsCount = counselor.totalSessions || counselor.reviewsCount || 24;
+  const sessionsCount = counselor.totalSessions ?? counselor.reviewsCount ?? 0;
+  const isNew = sessionsCount === 0 || !counselor.rating || counselor.rating === 0;
 
   return (
     <div
@@ -63,13 +65,20 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
         <div className="relative z-10 flex-1 flex flex-col">
           {/* Top Social Proof Strip: ADPList-style Rating + Sessions Count & Fast Response Badge */}
           <div className="flex items-center justify-between gap-2 pb-3.5 mb-4 border-b border-[#0F1E36]/[0.08]">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FBF9F5] border border-[#F59E0B]/40 text-xs font-bold text-[#0F1E36]">
-              <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-              <span>{counselor.rating.toFixed(1)}</span>
-              <span className="text-[#64748B] font-medium">
-                • {t('sessionsCount', { count: sessionsCount })}
-              </span>
-            </div>
+            {isNew ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-xs font-bold text-[#92400E]">
+                <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
+                <span>{t('newMentor')}</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FBF9F5] border border-[#F59E0B]/40 text-xs font-bold text-[#0F1E36]">
+                <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
+                <span>{counselor.rating.toFixed(1)}</span>
+                <span className="text-[#64748B] font-medium">
+                  • {t('sessionsCount', { count: sessionsCount })}
+                </span>
+              </div>
+            )}
 
             {counselor.responseTime && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#C25E38]/10 border border-[#C25E38]/25 text-[#C25E38] text-[10px] font-mono font-bold">

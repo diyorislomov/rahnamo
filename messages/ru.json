@@ -78,7 +78,8 @@
     "priceLabel": "Стоимость сессии",
     "priceUnit": "UZS / 30 мин",
     "selectTime": "Выбрать время",
-    "viewProfile": "Смотреть профиль"
+    "viewProfile": "Смотреть профиль",
+    "newMentor": "Новый ментор"
   },
   "specialties": {
     "All": "Все направления",
