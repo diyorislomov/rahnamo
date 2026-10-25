@@ -535,9 +535,7 @@ export default function AdminDashboardPage() {
     setBookingActionId(null);
   };
 
-  // admin session cookie) -- anon has no grant on payment_status, so a
-  // does it would just silently fail RLS the same way admin's "confirm
-  // payment" button used to before that got a real UPDATE policy.
+  // Thread payment changes require the signed admin session.
   const handleThreadAction = async (threadId: string, action: 'flag' | 'confirm_payment') => {
     setThreadActionId(threadId);
     setThreadActionErrors((prev) => ({ ...prev, [threadId]: '' }));
@@ -573,11 +571,19 @@ export default function AdminDashboardPage() {
     setThreadActionId(null);
   };
 
-  // insert -- approving now also invites a real mentor auth account
-  // the browser bundle). Local state only flips to "approved" AFTER a
-  // confirmed success, matching handleThreadAction's discipline above --
-  // not optimistically, since a failed invite or insert must not claim
-  // approval that didn't actually happen.
+  // Approval returns a local, single-use mentor activation link.
+  const handleMentorAccess = async (counselor: Counselor) => {
+    const email = window.prompt(locale === 'ru' ? 'Email ментора:' : locale === 'en' ? 'Mentor email:' : 'Mentorning email manzili:');
+    if (!email) return;
+    try {
+      const response = await fetch('/api/admin/mentor-access', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:counselor.id,email})});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'update_failed');
+      setActivationLinks(current=>({...current,[counselor.id]:result.activationUrl}));
+      setApplicationActionErrors(current=>({...current,[counselor.id]:''}));
+    } catch {setApplicationActionErrors(current=>({...current,[counselor.id]:t('applications.approveFailed')}));}
+  };
+
   const handleApproveApplication = async (app: CounselorApp) => {
     const appKey = app.id || app.email;
     if (!app.id) return;
@@ -1549,6 +1555,9 @@ export default function AdminDashboardPage() {
                         </span>
 
                         <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>handleMentorAccess(c)} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 bg-amber-50">
+                            {locale === 'ru' ? 'Ссылка для входа' : locale === 'en' ? 'Activation link' : 'Kirish havolasi'}
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleToggleCounselorActive(c)}
@@ -1568,6 +1577,8 @@ export default function AdminDashboardPage() {
                             O'chirish
                           </button>
                         </div>
+                        {activationLinks[c.id] && <input aria-label="Mentor activation link" readOnly value={activationLinks[c.id]} onFocus={e=>e.currentTarget.select()} className="w-full mt-2 border rounded p-2 text-xs" />}
+                        {applicationActionErrors[c.id] && <p className="text-xs text-red-600">{applicationActionErrors[c.id]}</p>}
                       </div>
                     </div>
                   );
@@ -1577,9 +1588,7 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Tab 6: Text Q&A threads. The only actions here go through
-            session) -- see handleThreadAction above for why a direct
-            work for this table. */}
+        {/* Text Q&A changes use the authenticated admin API. */}
         {activeTab === 'threads' && (
           <div className="space-y-6">
             {threads.length === 0 ? (

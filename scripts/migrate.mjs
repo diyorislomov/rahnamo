@@ -17,7 +17,9 @@ try {
     'CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())',
   );
   const directory = fileURLToPath(new URL('migrations/', root));
-  for (const name of (await readdir(directory)).filter((n) => n.endsWith('.sql')).sort()) {
+  for (const name of (await readdir(directory))
+    .filter((n) => /^[0-9]{8}_[a-z0-9_]+\.sql$/.test(n))
+    .sort()) {
     const sql = await readFile(new URL('migrations/' + name, root), 'utf8');
     const checksum = createHash('sha256').update(sql).digest('hex');
     const previous = await client.query('SELECT checksum FROM schema_migrations WHERE name=$1', [

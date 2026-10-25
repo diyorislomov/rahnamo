@@ -21,7 +21,7 @@ async function request(path, { method = 'GET', body, cookie, headers = {} } = {}
     headers: {
       ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       ...(cookie ? { Cookie: cookie } : {}),
-      Origin: base,
+      Origin: process.env.NEXT_PUBLIC_SITE_URL || base,
       ...headers,
     },
     body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
@@ -412,6 +412,22 @@ try {
     200,
   );
   expectStatus(await request('/api/mentor/profile', { cookie: mentorCookie }), 401);
+  expectStatus(
+    await request('/api/admin/mentor-access', {
+      method: 'POST',
+      body: { id: counselorId, email: application.email },
+    }),
+    401,
+  );
+  const renewal = expectStatus(
+    await request('/api/admin/mentor-access', {
+      method: 'POST',
+      cookie: adminCookie,
+      body: { id: counselorId, email: application.email },
+    }),
+    200,
+  );
+  assert(new URL(renewal.activationUrl).hash.includes('token='));
   console.log(`Local platform integration: ${checks} HTTP/data checks passed`);
 } finally {
   await db.end();
