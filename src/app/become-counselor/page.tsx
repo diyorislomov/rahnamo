@@ -187,6 +187,8 @@ export default function BecomeCounselorPage() {
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Let the same photo trigger another upload after a failed attempt.
+    e.target.value = '';
 
     const validMimes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validMimes.includes(file.type)) {

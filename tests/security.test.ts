@@ -18,6 +18,35 @@ describe('safeRedirectPath', () => {
 });
 
 describe('same-origin protection', () => {
+  it('accepts both deployed HTTPS hostnames behind the reverse proxy', () => {
+    const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    try {
+      for (const configured of ['https://myrahnamo.com', 'https://www.myrahnamo.com']) {
+        process.env.NEXT_PUBLIC_SITE_URL = configured;
+        for (const origin of ['https://myrahnamo.com', 'https://www.myrahnamo.com']) {
+          expect(isSameOrigin(new Request('http://127.0.0.1:3002/api/applications/photo', {
+            method: 'POST', headers: { origin },
+          }))).toBe(true);
+        }
+        for (const origin of [
+          'https://myrahnamo.com.evil.example', 'https://other.myrahnamo.com',
+          'https://www.myrahnamo.com:444', 'http://www.myrahnamo.com', 'null',
+        ]) {
+          expect(isSameOrigin(new Request('http://127.0.0.1:3002/api/applications/photo', {
+            method: 'POST', headers: { origin },
+          }))).toBe(false);
+        }
+      }
+      process.env.NEXT_PUBLIC_SITE_URL = 'https://another.example';
+      expect(isSameOrigin(new Request('http://127.0.0.1:3002/api/applications/photo', {
+        method: 'POST', headers: { origin: 'https://www.myrahnamo.com' },
+      }))).toBe(false);
+    } finally {
+      if (previousSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = previousSiteUrl;
+    }
+  });
+
   it('accepts the configured public origin behind a reverse proxy', () => {
     const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     process.env.NEXT_PUBLIC_SITE_URL = 'https://myrahnamo.com';
