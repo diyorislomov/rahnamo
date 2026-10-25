@@ -76,6 +76,7 @@ try {
     await new Promise((r) => setTimeout(r, 500));
   }
   expectStatus(await request('/api/admin/overview'), 401);
+  expectStatus(await request('/api/admin/users'), 401);
   expectStatus(await request('/api/mentor/profile'), 401);
   const admin = await request('/api/admin/login', {
     method: 'POST',
@@ -84,6 +85,12 @@ try {
   expectStatus(admin, 200);
   const adminCookie = cookieFrom(admin.response);
   assert(adminCookie);
+  // Use the encoded cookie exactly as issued by the real login endpoint.
+  expectStatus(await request('/api/admin/users', { cookie: adminCookie }), 200);
+  expectStatus(await request('/api/admin/users', { cookie: 'locale=uz; ' + adminCookie }), 200);
+  expectStatus(await request('/api/admin/users', { cookie: 'rahnamo_admin_session=invalid' }), 401);
+  expectStatus(await request('/api/admin/users', { method: 'POST', body: {} }), 401);
+  expectStatus(await request('/api/admin/users', { method: 'POST', body: {}, cookie: adminCookie }), 400);
 
   // Isolate failed-login checks from the other HTTP tests and real clients.
   const loginHeaders = { 'X-Forwarded-For': '192.0.2.19' };
