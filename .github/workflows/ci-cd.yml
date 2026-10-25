@@ -65,6 +65,7 @@ jobs:
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
           node scripts/test-local-platform.mjs || { cat "$RUNNER_TEMP/rahnamo-test.log"; exit 1; }
+          node scripts/test-network.mjs || { cat "$RUNNER_TEMP/rahnamo-test.log"; exit 1; }
 
   deploy:
     name: Deploy production

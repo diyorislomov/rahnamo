@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin', '/api/', '/mentor/dashboard', '/mentor/set-password', '/my-bookings'],
+      disallow: ['/admin', '/api/', '/mentor/dashboard', '/mentor/set-password', '/my-bookings', '/settings', '/saved', '/notifications', '/profile'],
     },
     sitemap: `${origin}/sitemap.xml`,
   };
