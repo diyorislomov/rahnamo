@@ -51,6 +51,7 @@ export function networkError(error: unknown, t: NetworkCopy) {
   const message = error instanceof Error ? error.message : "";
   if (message === "unauthorized") return t.loginRequired;
   if (message === "profile_required") return t.profileRequired;
+  if (message === "profile_incomplete") return t.profileBasicsRequired;
   if (message === "invalid_image") return t.imageError;
   if (message === "invalid_input" || message === "too_large")
     return t.invalidInput;

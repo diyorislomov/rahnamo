@@ -39,7 +39,13 @@ function Editor({ profile }: { profile: NetworkProfile }) {
     [error, setError] = useState<unknown>(null),
     [saved, setSaved] = useState(false),
     [confirm, setConfirm] = useState(false),
+    [detailsOpen, setDetailsOpen] = useState(
+      Boolean(profile.bio || profile.website || profile.experience || profile.education),
+    ),
     flight = useRef(false);
+  const basicsComplete =
+    Number(Boolean(draft.headline.trim())) +
+    Number(Boolean(draft.skills.split(",").some((skill) => skill.trim())));
   const blocks = useRemote<{ people: { id: string; name: string }[] }>(
     "blocks",
   );
@@ -90,6 +96,41 @@ function Editor({ profile }: { profile: NetworkProfile }) {
   return (
     <>
       <form className="network-card network-form" onSubmit={save}>
+        {!profile.published && (
+          <section
+            className="network-profile-onboarding"
+            aria-labelledby="profile-basics-title"
+          >
+            <div>
+              <h2 id="profile-basics-title">{t.profileBasics}</h2>
+              <p>{t.profileBasicsHint}</p>
+            </div>
+            <div
+              className="network-profile-progress"
+              role="progressbar"
+              aria-label={t.profileBasics}
+              aria-valuemin={0}
+              aria-valuemax={2}
+              aria-valuenow={basicsComplete}
+            >
+              <span style={{ width: `${basicsComplete * 50}%` }} />
+            </div>
+            <div className="network-profile-checklist">
+              <span className={draft.headline.trim() ? "complete" : ""}>
+                {draft.headline.trim() ? "✓" : "1"} {t.headline}
+              </span>
+              <span
+                className={
+                  draft.skills.split(",").some((skill) => skill.trim())
+                    ? "complete"
+                    : ""
+                }
+              >
+                {draft.skills.split(",").some((skill) => skill.trim()) ? "✓" : "2"} {t.skills}
+              </span>
+            </div>
+          </section>
+        )}
         <div className="network-form-photo">
           <Avatar
             person={{ name: draft.name, image: draft.image }}
@@ -140,6 +181,7 @@ function Editor({ profile }: { profile: NetworkProfile }) {
           <label className="network-field">
             {t.headline}
             <input
+              required={draft.published}
               maxLength={160}
               value={draft.headline}
               onChange={(e) => set("headline", e.target.value)}
@@ -147,22 +189,38 @@ function Editor({ profile }: { profile: NetworkProfile }) {
           </label>
         </div>
         <label className="network-field">
-          {t.bio}
-          <textarea
-            rows={4}
-            maxLength={2000}
-            value={draft.bio}
-            onChange={(e) => set("bio", e.target.value)}
+          {t.location}
+          <input
+            maxLength={100}
+            autoComplete="address-level2"
+            value={draft.location}
+            onChange={(e) => set("location", e.target.value)}
           />
         </label>
-        <div className="network-form-grid">
+        <label className="network-field">
+          {t.skills}
+          <input
+            required={draft.published}
+            maxLength={490}
+            value={draft.skills}
+            onChange={(e) => set("skills", e.target.value)}
+          />
+          <small>{t.skillsHint}</small>
+        </label>
+        <details
+          className="network-form-more"
+          open={detailsOpen}
+          onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
+        >
+          <summary>{t.moreProfileDetails}</summary>
+          <p>{t.moreProfileDetailsHint}</p>
           <label className="network-field">
-            {t.location}
-            <input
-              maxLength={100}
-              autoComplete="address-level2"
-              value={draft.location}
-              onChange={(e) => set("location", e.target.value)}
+            {t.bio}
+            <textarea
+              rows={4}
+              maxLength={2000}
+              value={draft.bio}
+              onChange={(e) => set("bio", e.target.value)}
             />
           </label>
           <label className="network-field">
@@ -175,36 +233,27 @@ function Editor({ profile }: { profile: NetworkProfile }) {
               onChange={(e) => set("website", e.target.value)}
             />
           </label>
-        </div>
-        <label className="network-field">
-          {t.skills}
-          <input
-            maxLength={490}
-            value={draft.skills}
-            onChange={(e) => set("skills", e.target.value)}
-          />
-          <small>{t.skillsHint}</small>
-        </label>
-        <label className="network-field">
-          {t.experience}
-          <textarea
-            rows={3}
-            maxLength={2000}
-            placeholder={t.experienceHint}
-            value={draft.experience}
-            onChange={(e) => set("experience", e.target.value)}
-          />
-        </label>
-        <label className="network-field">
-          {t.education}
-          <textarea
-            rows={2}
-            maxLength={1000}
-            placeholder={t.educationHint}
-            value={draft.education}
-            onChange={(e) => set("education", e.target.value)}
-          />
-        </label>
+          <label className="network-field">
+            {t.experience}
+            <textarea
+              rows={3}
+              maxLength={2000}
+              placeholder={t.experienceHint}
+              value={draft.experience}
+              onChange={(e) => set("experience", e.target.value)}
+            />
+          </label>
+          <label className="network-field">
+            {t.education}
+            <textarea
+              rows={2}
+              maxLength={1000}
+              placeholder={t.educationHint}
+              value={draft.education}
+              onChange={(e) => set("education", e.target.value)}
+            />
+          </label>
+        </details>
         <label className="network-check">
           <input
             type="checkbox"

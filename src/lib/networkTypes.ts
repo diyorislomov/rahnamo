@@ -6,6 +6,7 @@ export type NetworkProfile = {
   bio: string;
   location: string;
   skills: string[];
+  specialties?: string[];
   experience: string;
   education: string;
   website: string;
@@ -13,6 +14,8 @@ export type NetworkProfile = {
   published: boolean;
   followers: number;
   following: boolean;
+  starting_price?: number | null;
+  has_availability?: boolean;
 };
 export type NetworkPost = {
   id: string;

@@ -7,6 +7,8 @@ import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "./adminSession";
 import { isSameOrigin } from "./serverSecurity";
 import { checkRateLimit } from "./rateLimit";
 import { saveImage } from "./localUploads";
+import { getActiveTracks } from "./tracks";
+import { normalizeSlots } from "./slots";
 import {
   networkCursor,
   networkImage,
@@ -305,6 +307,18 @@ export async function networkRequest(request: Request, path: string[]) {
       }
       throw new NetworkError(404, "not_found");
     }
+    if (method === "GET" && route === "tracks") {
+      const tracks = await getActiveTracks();
+      return json({
+        tracks: tracks.map(({ slug, name_uz, name_ru, name_en, icon }) => ({
+          slug,
+          name_uz,
+          name_ru,
+          name_en,
+          icon,
+        })),
+      });
+    }
     const me = await actor(request),
       viewer = me?.id || null;
     if (method === "GET") {
@@ -333,21 +347,99 @@ export async function networkRequest(request: Request, path: string[]) {
           400,
           Math.max(0, Number(url.searchParams.get("page")) || 0),
         );
-        const result = await postgres.query(
-          `SELECT ${profileFields},${profileStats} FROM network_profiles p ${profileJoins}
-          WHERE ${publicProfile} AND ($2='' OR position(lower($2) in lower(p.name||' '||p.headline||' '||p.location||' '||array_to_string(p.skills,' ')))>0)
+        const skill = (url.searchParams.get("skill") || "").trim().slice(0, 80);
+        const city = (url.searchParams.get("city") || "").trim().slice(0, 100);
+        const rawMaxPrice = url.searchParams.get("maxPrice") || "";
+        const maxPrice = /^\d{1,9}$/.test(rawMaxPrice)
+          ? Number(rawMaxPrice)
+          : null;
+        const onlyAvailable = url.searchParams.get("available") === "true";
+        const matchedTrackSlugs = search
+          ? (
+              await postgres.query<{
+                slug: string;
+                name_uz: string;
+                name_ru: string | null;
+                name_en: string;
+              }>(
+                "SELECT slug,name_uz,name_ru,name_en FROM tracks WHERE is_active=true",
+              )
+            ).rows
+              .filter((track) =>
+                [track.name_uz, track.name_ru, track.name_en]
+                  .filter(Boolean)
+                  .some((label) =>
+                    label!.toLowerCase().includes(search.toLowerCase()),
+                  ),
+              )
+              .map((track) => track.slug)
+          : [];
+        const query = `SELECT ${profileFields},COALESCE(c.specialties,ARRAY[]::text[]) AS specialties,${profileStats},
+          COALESCE(NULLIF(c.standard_price,0),NULLIF(c.premium_price,0)) AS starting_price,
+          COALESCE((SELECT array_agg(DISTINCT btrim(slot))
+            FROM unnest(COALESCE(c.available_slots,ARRAY[]::text[])) AS slots(slot)
+            WHERE btrim(slot)<>'' AND NOT EXISTS(
+              SELECT 1 FROM bookings b WHERE b.counselor_id=p.counselor_id
+              AND b.status='confirmed' AND b.tier IN ('standard','premium','service')
+              AND b.slot=btrim(slot)
+            )),ARRAY[]::text[]) AS open_slots
+          FROM network_profiles p ${profileJoins}
+          WHERE ${publicProfile}
+          AND ($2='' OR position(lower($2) in lower(p.name||' '||p.headline||' '||p.location||' '||array_to_string(p.skills,' ')||' '||COALESCE(array_to_string(c.specialties,' '),'')))>0 OR p.skills && $7::text[] OR COALESCE(c.specialties,ARRAY[]::text[]) && $7::text[])
           AND ($3::boolean=false OR p.counselor_id IS NOT NULL)
-          ORDER BY (p.counselor_id IS NOT NULL) DESC,p.name,p.id LIMIT 25 OFFSET $4`,
-          [
-            viewer,
-            search,
-            url.searchParams.get("mentors") === "true",
-            Math.floor(page) * 24,
-          ],
-        );
+          AND ($4='' OR $4=ANY(p.skills) OR $4=ANY(COALESCE(c.specialties,ARRAY[]::text[])))
+          AND ($5='' OR position(lower($5) in lower(COALESCE(p.location,'')))>0)
+          AND ($6::integer IS NULL OR COALESCE(NULLIF(c.standard_price,0),NULLIF(c.premium_price,0)) <= $6)
+          ORDER BY (p.counselor_id IS NOT NULL) DESC,p.name,p.id LIMIT $8 OFFSET $9`;
+        const values = [
+          viewer,
+          search,
+          url.searchParams.get("mentors") === "true",
+          skill,
+          city,
+          maxPrice,
+          matchedTrackSlugs,
+        ];
+        const mapPerson = (row: Record<string, unknown>) => {
+          const { open_slots, ...person } = row;
+          return {
+            ...person,
+            has_availability:
+              Array.isArray(open_slots) &&
+              normalizeSlots(
+                open_slots.filter((slot): slot is string => typeof slot === "string"),
+              ).length > 0,
+          };
+        };
+        let resultRows: Record<string, unknown>[];
+        if (onlyAvailable) {
+          const matching: Record<string, unknown>[] = [];
+          let offset = 0;
+          const batchSize = 250;
+          const needed = (page + 1) * 24 + 1;
+          while (matching.length < needed) {
+            const batch = await postgres.query<Record<string, unknown>>(query, [
+              ...values,
+              batchSize,
+              offset,
+            ]);
+            const rows = batch.rows.map(mapPerson);
+            matching.push(...rows.filter((person) => person.has_availability));
+            offset += batch.rows.length;
+            if (batch.rows.length < batchSize) break;
+          }
+          resultRows = matching.slice(page * 24, (page + 1) * 24 + 1);
+        } else {
+          const result = await postgres.query<Record<string, unknown>>(query, [
+            ...values,
+            25,
+            page * 24,
+          ]);
+          resultRows = result.rows.map(mapPerson);
+        }
         return json({
-          people: result.rows.slice(0, 24),
-          hasMore: result.rows.length > 24,
+          people: resultRows.slice(0, 24),
+          hasMore: resultRows.length > 24,
         });
       }
       if (path[0] === "profiles" && path.length === 2) {
@@ -464,6 +556,8 @@ export async function networkRequest(request: Request, path: string[]) {
     if (route === "profile" && method === "POST") {
       const input = networkProfileInput(await body(request));
       if (!input) throw new NetworkError(400, "invalid_input");
+      if (input.published && !me.published && (!input.headline || !input.skills.length))
+        throw new NetworkError(400, "profile_incomplete");
       await postgres.query(
         `UPDATE network_profiles SET name=$2,headline=$3,bio=$4,location=$5,skills=$6,experience=$7,education=$8,website=$9,image=$10,published=$11 WHERE id=$1`,
         [

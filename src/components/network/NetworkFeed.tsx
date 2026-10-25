@@ -705,6 +705,12 @@ export function FeedList({
               {t.discover}
               <ArrowRight size={14} />
             </Link>
+            {!postId && mode !== "saved" && (
+              <Link className="network-button small" href="/mentors">
+                {t.findMentor}
+                <ArrowRight size={14} />
+              </Link>
+            )}
           </Empty>
         </div>
       )}

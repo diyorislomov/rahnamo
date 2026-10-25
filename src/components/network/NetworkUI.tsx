@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { useLocale } from "next-intl";
+import { getTrackLabel } from "@/lib/specialties";
 import { Avatar } from "./NetworkAvatar";
 export { Avatar } from "./NetworkAvatar";
 import type { NetworkProfile } from "@/lib/networkTypes";
@@ -258,12 +260,15 @@ export function PersonCard({
   person,
   onChange,
   compact = false,
+  trackLabels,
 }: {
   person: NetworkProfile;
   onChange?: () => void;
   compact?: boolean;
+  trackLabels?: Record<string, string>;
 }) {
-  const t = useNetworkCopy();
+  const t = useNetworkCopy(),
+    locale = useLocale();
   return (
     <article
       className={
@@ -283,11 +288,27 @@ export function PersonCard({
           )}
         </div>
       </Link>
-      {!compact && person.skills.length > 0 && (
+      {!compact && (person.skills.length > 0 || person.specialties?.length) && (
         <div className="network-tags">
-          {person.skills.slice(0, 3).map((skill) => (
-            <span key={skill}>{skill}</span>
-          ))}
+          {(person.skills.length ? person.skills : person.specialties || [])
+            .slice(0, 3)
+            .map((skill) => (
+              <span key={skill}>
+                {trackLabels?.[skill] || getTrackLabel(skill, locale)}
+              </span>
+            ))}
+        </div>
+      )}
+      {!compact && person.counselor_id && (
+        <div className="network-mentor-meta">
+          {person.starting_price != null && (
+            <span>
+              {t.startingPrice}: {new Intl.NumberFormat(locale, {
+                maximumFractionDigits: 0,
+              }).format(person.starting_price)} UZS
+            </span>
+          )}
+          {person.has_availability && <span>{t.availableBadge}</span>}
         </div>
       )}
       <div className="network-person-actions">
