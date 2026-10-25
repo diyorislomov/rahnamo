@@ -603,7 +603,9 @@
       "submit": "Enter Panel",
       "legalNotice": "Protected in accordance with the Law of the Republic of Uzbekistan \"On Personal Data.\"",
       "wrongPassword": "Incorrect administrator password. Please enter it again.",
-      "checkFailed": "There was an error checking your password. Please try again."
+      "checkFailed": "There was an error checking your password. Please try again.",
+      "checking": "Checking…",
+      "rateLimited": "Too many attempts. You can try again in {seconds} seconds."
     },
     "header": {
       "badge": "Rahnamo Admin Management",

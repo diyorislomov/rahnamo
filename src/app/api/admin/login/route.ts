@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { ADMIN_SESSION_COOKIE, signAdminSession } from '@/lib/adminSession';
-import { allowRequest, requestIp } from '@/lib/rateLimit';
+import { checkRateLimit, clearRateLimit, requestIp } from '@/lib/rateLimit';
 import { isSameOrigin, secureEqual } from '@/lib/serverSecurity';
 
 function resolveAdminPassword(): string | null {
@@ -37,19 +37,6 @@ function resolveAdminPassword(): string | null {
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
 
-  // Rate limit: 50 attempts in development, 10 in production
-  const maxAttempts = process.env.NODE_ENV === 'production' ? 10 : 50;
-  if (!(await allowRequest(`admin-login:${requestIp(request)}`, maxAttempts, 15 * 60_000))) {
-    return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
-  }
-
-  let password: unknown;
-  try {
-    ({ password } = (await request.json()) as { password?: unknown });
-  } catch {
-    return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
-  }
-
   const validPassword = resolveAdminPassword();
 
   if (!validPassword) {
@@ -62,9 +49,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
   }
 
+  // Rate limit: 50 attempts in development, 10 in production.
+  const rateLimitKey = `admin-login:${requestIp(request)}`;
+  const maxAttempts = process.env.NODE_ENV === 'production' ? 10 : 50;
+  const limit = await checkRateLimit(rateLimitKey, maxAttempts, 15 * 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'rate_limited', retryAfterSeconds: limit.retryAfterSeconds },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
+    );
+  }
+
+  let password: unknown;
+  try {
+    ({ password } = (await request.json()) as { password?: unknown });
+  } catch {
+    return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
+  }
+
   if (typeof password !== 'string' || !secureEqual(password.trim(), validPassword)) {
     return NextResponse.json({ success: false, error: 'invalid_password' }, { status: 401 });
   }
+
+  await clearRateLimit(rateLimitKey);
 
   const response = NextResponse.json({ success: true });
   response.cookies.set(ADMIN_SESSION_COOKIE, signAdminSession(), {

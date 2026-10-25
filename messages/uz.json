@@ -603,7 +603,9 @@
       "submit": "Panelga Kirish",
       "legalNotice": "O'zbekiston Respublikasining \"Shaxsga doir ma'lumotlar to'g'risida\"gi qonuniga muvofiq himoyalangan.",
       "wrongPassword": "Administrator paroli noto'g'ri. Parolni qaytadan kiriting.",
-      "checkFailed": "Tekshirishda xatolik yuz berdi. Qayta urinib ko'ring."
+      "checkFailed": "Tekshirishda xatolik yuz berdi. Qayta urinib ko'ring.",
+      "checking": "Tekshirilmoqda…",
+      "rateLimited": "Urinishlar soni cheklandi. {seconds} soniyadan keyin qayta urinishingiz mumkin."
     },
     "header": {
       "badge": "Rahnamo Admin Management",
