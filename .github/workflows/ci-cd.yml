@@ -19,10 +19,24 @@ jobs:
     name: Tests and production build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rahnamo
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: rahnamo_ci
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U rahnamo -d rahnamo_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      DATABASE_URL: postgresql://rahnamo:ci-only-password@127.0.0.1:5432/rahnamo_ci
+      AUTH_SECRET: ci-only-auth-secret-with-at-least-32-characters
+      SESSION_SECRET: ci-only-session-secret-with-at-least-32-characters
+      ADMIN_PASSWORD: ci-only-admin-password
+      UPLOAD_DIR: /tmp/rahnamo-ci-uploads
       NEXT_TELEMETRY_DISABLED: '1'
-      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key
       NEXT_PUBLIC_SITE_URL: https://myrahnamo.com
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,10 +50,21 @@ jobs:
         run: python3 -m unittest discover -s ops/tests -v
       - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Apply and verify database migrations
+        run: |
+          npm run db:migrate
+          npm run db:migrate
       - name: Run application tests
         run: npm test
       - name: Compile production application
         run: npm run build
+      - name: Exercise local storage, authentication and booking flows
+        run: |
+          set -euo pipefail
+          npm run start -- -H 127.0.0.1 -p 3102 > "$RUNNER_TEMP/rahnamo-test.log" 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          node scripts/test-local-platform.mjs || { cat "$RUNNER_TEMP/rahnamo-test.log"; exit 1; }
 
   deploy:
     name: Deploy production

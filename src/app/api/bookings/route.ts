@@ -4,8 +4,7 @@ import { generateMeetLink } from '@/lib/meeting';
 import { resolveMenteeFromRequest } from '@/lib/menteeSession';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
 import { postgres } from '@/lib/postgres';
-import { supabase } from '@/lib/supabase';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { one } from '@/lib/database';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { isValidLocale } from '@/i18n/config';
 import { isFutureSlot } from '@/lib/slots';
@@ -111,13 +110,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: counselor, error: counselorError } = await supabase
-    .from('counselors')
-    .select(
-      'id, full_name, headline, avatar_url, standard_price, premium_price, available_slots, is_active'
-    )
-    .eq('id', counselorId)
-    .maybeSingle();
+  const { data: counselor, error: counselorError } = await one('SELECT id, full_name, headline, avatar_url, standard_price, premium_price, available_slots, is_active FROM counselors WHERE id=$1 AND is_active=true', [counselorId]);
 
   if (counselorError || !counselor) {
     return NextResponse.json({ success: false, error: 'counselor_not_found' }, { status: 404 });
@@ -150,27 +143,8 @@ export async function POST(request: Request) {
     }
   }
 
-  // Check slot occupation in postgres or supabase
-  let isOccupied = false;
-  try {
-    const occupied = await postgres.query(
-      `SELECT id FROM bookings
-       WHERE counselor_id = $1 AND slot = $2 AND status = 'confirmed'
-       LIMIT 1`,
-      [counselorId, slot]
-    );
-    if ((occupied.rowCount ?? 0) > 0) isOccupied = true;
-  } catch {
-    // If postgres is unavailable, check Supabase
-    const { data: sbOccupied } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('counselor_id', counselorId)
-      .eq('slot', slot)
-      .eq('status', 'confirmed')
-      .maybeSingle();
-    if (sbOccupied) isOccupied = true;
-  }
+  const occupied = await postgres.query("SELECT id FROM bookings WHERE counselor_id=$1 AND slot=$2 AND status='confirmed' LIMIT 1",[counselorId,slot]);
+  const isOccupied = (occupied.rowCount ?? 0)>0;
 
   if (isOccupied) {
     return NextResponse.json({ success: false, error: 'slot_unavailable' }, { status: 409 });
@@ -202,16 +176,16 @@ export async function POST(request: Request) {
          id, user_id, counselor_id, counselor_name, counselor_headline,
          counselor_avatar, tier, service_id, service_title, duration_minutes,
          price, payment_method, payment_receipt, slot, student_name, email,
-         phone, telegram, education, question, meet_link, locale
+         phone, telegram, education, question, meet_link, locale, education_stage, is_under_18, parental_consent, region, privacy_consent, privacy_consent_at
        ) VALUES (
          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-         $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+         $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, now()
        ) RETURNING *`,
       [
         id, mentee.userId, counselor.id, counselor.full_name, counselor.headline,
         counselor.avatar_url, tier, service?.id ?? null, service?.title ?? null,
         service?.duration_minutes ?? null, price, paymentMethod, paymentReceipt,
-        slot, studentName, email, phone, telegram, education, question, meetLink, locale,
+        slot, studentName, email, phone, telegram, education, question, meetLink, locale, educationStage, isUnder18, parentalConsent, region, privacyConsent,
       ]
     );
     inserted = result.rows[0];
@@ -222,65 +196,7 @@ export async function POST(request: Request) {
     });
   }
 
-  // Upsert into Supabase bookings table
-  try {
-    const sbClient = getServiceRoleClient();
-    const sbPayload = {
-      id,
-      device_id: null,
-      counselor_id: counselor.id,
-      counselor_name: counselor.full_name,
-      counselor_headline: counselor.headline,
-      counselor_avatar: counselor.avatar_url,
-      tier,
-      price,
-      slot,
-      student_name: studentName,
-      email,
-      phone: phone || null,
-      telegram,
-      education: educationStage || education,
-      question,
-      meet_link: meetLink,
-      payment_status: 'pending',
-      payment_receipt: paymentReceipt,
-      status: 'confirmed',
-      payment_method: paymentMethod,
-      locale,
-      mentee_auth_id: mentee.userId,
-    };
-    const { data: sbInserted, error: sbError } = await sbClient
-      .from('bookings')
-      .upsert(sbPayload, { onConflict: 'id' })
-      .select('*')
-      .single();
-
-    if (!inserted && sbInserted) {
-      inserted = sbInserted;
-    }
-    if (sbError) {
-      console.warn('[BOOKING_SB_UPSERT_WARN]', { bookingId: id, code: sbError.code });
-    }
-  } catch (sbErr) {
-    console.warn('[BOOKING_SB_SYNC_WARN]', { bookingId: id, error: String(sbErr) });
-  }
-
-  if (!inserted) {
-    inserted = {
-      id,
-      user_id: mentee.userId,
-      counselor_id: counselor.id,
-      counselor_name: counselor.full_name,
-      counselor_headline: counselor.headline,
-      tier,
-      price,
-      slot,
-      student_name: studentName,
-      meet_link: meetLink,
-      status: 'confirmed',
-      payment_status: 'pending',
-    };
-  }
+  if (!inserted) return NextResponse.json({success:false,error:'booking_not_saved'},{status:503});
 
   // Scrubbed audit log
   console.log('[BOOKING_CREATED_SUCCESS]', {
@@ -328,26 +244,7 @@ export async function GET(request: Request) {
     bookingsList = bookings.rows;
     reviewedIds = reviews.rows.map((row: { booking_id: string }) => row.booking_id);
   } catch {
-    // Supabase fallback
-    try {
-      const sbClient = getServiceRoleClient();
-      const { data: sbBookings } = await sbClient
-        .from('bookings')
-        .select('*')
-        .or(`mentee_auth_id.eq.${mentee.userId},email.eq.${mentee.email}`)
-        .order('created_at', { ascending: false });
-
-      if (sbBookings) bookingsList = sbBookings;
-
-      const { data: sbReviews } = await sbClient
-        .from('reviews')
-        .select('booking_id')
-        .eq('student_email', mentee.email);
-
-      if (sbReviews) reviewedIds = sbReviews.map((r) => r.booking_id);
-    } catch (sbErr) {
-      console.warn('[BOOKING_GET_SB_FALLBACK_WARN]', sbErr instanceof Error ? sbErr.message : String(sbErr));
-    }
+    return NextResponse.json({success:false,error:'query_failed'},{status:503});
   }
 
   return NextResponse.json({
@@ -380,39 +277,8 @@ export async function PATCH(request: Request) {
   }
 
   if (action === 'cancel') {
-    try {
-      const result = await postgres.query(
-        `UPDATE bookings SET status = 'cancelled'
-         WHERE id = $1 AND user_id = $2 AND status = 'confirmed' AND payment_status = 'pending'
-         RETURNING *`,
-        [id, mentee.userId]
-      );
-      if (result.rows[0]) {
-        return NextResponse.json({ success: true, booking: result.rows[0] });
-      }
-    } catch {
-      // Postgres fallback to Supabase
-    }
-
-    try {
-      const sbClient = getServiceRoleClient();
-      const { data, error } = await sbClient
-        .from('bookings')
-        .update({ status: 'cancelled' })
-        .eq('id', id)
-        .eq('status', 'confirmed')
-        .eq('payment_status', 'pending')
-        .select('*')
-        .single();
-
-      if (!error && data) {
-        return NextResponse.json({ success: true, booking: data });
-      }
-    } catch {
-      // Ignore
-    }
-
-    return NextResponse.json({ success: false, error: 'booking_not_changeable' }, { status: 409 });
+    const result=await postgres.query("UPDATE bookings SET status='cancelled' WHERE id=$1 AND user_id=$2 AND status='confirmed' AND payment_status='pending' RETURNING *",[id,mentee.userId]);
+    return result.rows[0] ? NextResponse.json({success:true,booking:result.rows[0]}) : NextResponse.json({success:false,error:'booking_not_changeable'},{status:409});
   }
 
   const slot = textValue(input.slot, 1, 200);
@@ -420,38 +286,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_slot' }, { status: 400 });
   }
 
-  let counselorId: string | null = null;
-  try {
-    const existing = await postgres.query<{ counselor_id: string }>(
-      `SELECT counselor_id FROM bookings
-       WHERE id = $1 AND user_id = $2 AND status = 'confirmed' AND payment_status = 'pending'`,
-      [id, mentee.userId]
-    );
-    if (existing.rows[0]) counselorId = existing.rows[0].counselor_id;
-  } catch {
-    // Supabase fallback
-  }
+  const existing=await postgres.query<{counselor_id:string}>("SELECT counselor_id FROM bookings WHERE id=$1 AND user_id=$2 AND status='confirmed' AND payment_status='pending'",[id,mentee.userId]);
+  const counselorId=existing.rows[0]?.counselor_id;
+  if(!counselorId) return NextResponse.json({success:false,error:'booking_not_changeable'},{status:409});
 
-  if (!counselorId) {
-    const { data: sbBooking } = await supabase
-      .from('bookings')
-      .select('counselor_id')
-      .eq('id', id)
-      .eq('status', 'confirmed')
-      .eq('payment_status', 'pending')
-      .maybeSingle();
-    counselorId = sbBooking?.counselor_id || null;
-  }
-
-  if (!counselorId) {
-    return NextResponse.json({ success: false, error: 'booking_not_changeable' }, { status: 409 });
-  }
-
-  const { data: counselor, error } = await supabase
-    .from('counselors')
-    .select('available_slots')
-    .eq('id', counselorId)
-    .maybeSingle();
+  const { data: counselor, error } = await one('SELECT available_slots FROM counselors WHERE id=$1 AND is_active=true', [counselorId]);
 
   if (error || !counselor || !Array.isArray(counselor.available_slots) || !counselor.available_slots.includes(slot)) {
     return NextResponse.json({ success: false, error: 'slot_unavailable' }, { status: 409 });
@@ -468,26 +307,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true, booking: result.rows[0] });
     }
   } catch {
-    // Supabase fallback
+    return NextResponse.json({success:false,error:'slot_unavailable'},{status:409});
   }
-
-  try {
-    const sbClient = getServiceRoleClient();
-    const { data, error: sbUpdateErr } = await sbClient
-      .from('bookings')
-      .update({ slot })
-      .eq('id', id)
-      .eq('status', 'confirmed')
-      .eq('payment_status', 'pending')
-      .select('*')
-      .single();
-
-    if (!sbUpdateErr && data) {
-      return NextResponse.json({ success: true, booking: data });
-    }
-  } catch {
-    // Ignore
-  }
-
-  return NextResponse.json({ success: false, error: 'update_failed' }, { status: 500 });
+  return NextResponse.json({success:false,error:'booking_not_changeable'},{status:409});
 }

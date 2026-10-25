@@ -18,23 +18,7 @@ function currentBuildVersion(): string {
 
 const buildVersion = currentBuildVersion();
 
-function supabaseImageHostname(): string {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co').hostname;
-  } catch {
-    return 'example.supabase.co';
-  }
-}
-
 function contentSecurityPolicy(): string {
-  const projectOrigin = (() => {
-    try {
-      return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co').origin;
-    } catch {
-      return 'https://example.supabase.co';
-    }
-  })();
-  const websocketOrigin = projectOrigin.replace(/^http/, 'ws');
   const scriptSources = process.env.NODE_ENV === 'production'
     ? "'self' 'unsafe-inline'"
     : "'self' 'unsafe-inline' 'unsafe-eval'";
@@ -42,9 +26,9 @@ function contentSecurityPolicy(): string {
     "default-src 'self'",
     `script-src ${scriptSources}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: https://images.unsplash.com ${projectOrigin}`,
+    "img-src 'self' data: blob: https://images.unsplash.com https://lh3.googleusercontent.com",
     "font-src 'self' data:",
-    `connect-src 'self' ${projectOrigin} ${websocketOrigin}`,
+    "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -57,7 +41,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: supabaseImageHostname(), pathname: '/storage/v1/object/public/avatars/**' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },
   allowedDevOrigins: [

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveMentorFromRequest } from '@/lib/mentorSession';
 import { allowRequest } from '@/lib/rateLimit';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { one, updateRow } from '@/lib/database';
 import { isSameOrigin } from '@/lib/serverSecurity';
 import { isAllowedAvatarUrl } from '@/lib/avatarUrl';
 import { normalizeSlots } from '@/lib/slots';
@@ -15,11 +15,7 @@ export async function GET(request: Request) {
   if (!(await allowRequest(`mentor-profile:${mentor.authId}`, 120, 15 * 60_000))) {
     return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
   }
-  const { data, error } = await getServiceRoleClient()
-    .from('counselors')
-    .select(COLUMNS)
-    .eq('id', mentor.counselorId)
-    .single();
+  const { data, error } = await one(`SELECT ${COLUMNS} FROM counselors WHERE id=$1`, [mentor.counselorId]);
   if (error || !data) return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 });
   return NextResponse.json({ success: true, counselor: data });
 }
@@ -79,9 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  const { data, error } = await getServiceRoleClient()
-    .from('counselors')
-    .update({
+  const { data, error } = await updateRow('counselors', mentor.counselorId, {
       headline,
       bio,
       why_work_with_me: whyWorkWithMe || null,
@@ -92,10 +86,7 @@ export async function POST(request: Request) {
       soft_cap: softCap,
       available_slots: availableSlots,
       avatar_url: avatarUrl,
-    })
-    .eq('id', mentor.counselorId)
-    .select('id')
-    .single();
+    });
   if (error || !data) return NextResponse.json({ success: false, error: 'update_failed' }, { status: 500 });
   return NextResponse.json({ success: true });
 }

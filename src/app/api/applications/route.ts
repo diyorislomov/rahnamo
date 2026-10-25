@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { insertRow } from '@/lib/database';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { isAllowedAvatarUrl } from '@/lib/avatarUrl';
 
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
   // Consent checkbox is REQUIRED
   const consentPublished = input.consent_published ? String(input.consent_published) : null;
-  const consentValid = !!consentPublished;
+  const consentValid = !!consentPublished && Number.isFinite(Date.parse(consentPublished));
 
   const emailValid = !!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -121,38 +121,7 @@ export async function POST(request: Request) {
     consent_published: consentPublished,
   };
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('[APPLICATION_SUBMIT_FAILED]', { reason: 'server_misconfigured', err });
-    return NextResponse.json({ success: false, error: 'server_misconfigured', details: 'Database connection misconfigured' }, { status: 500 });
-  }
-
-  // Attempt insert with full columns; if columns don't exist yet on remote Supabase, fall back to base
-  let insertResult = await supabase
-    .from('counselor_applications')
-    .insert(fullApplication)
-    .select('id')
-    .single();
-
-  if (
-    insertResult.error &&
-    (insertResult.error.code === '42703' ||
-      insertResult.error.code === 'PGRST204' ||
-      insertResult.error.message?.includes('proof_link') ||
-      insertResult.error.message?.includes('consent_published') ||
-      insertResult.error.message?.includes('column'))
-  ) {
-    console.warn('[APPLICATION_INSERT_FALLBACK] New columns not found in schema cache, inserting base schema');
-    insertResult = await supabase
-      .from('counselor_applications')
-      .insert(baseApplication)
-      .select('id')
-      .single();
-  }
-
-  const { data, error } = insertResult;
+  const { data, error } = await insertRow('counselor_applications', fullApplication);
   if (error || !data) {
     console.error('[APPLICATION_SUBMIT_FAILED]', { reason: 'insert_failed', error });
     return NextResponse.json({ success: false, error: 'insert_failed', details: error?.message }, { status: 500 });

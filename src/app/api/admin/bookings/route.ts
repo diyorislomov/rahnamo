@@ -4,16 +4,7 @@ import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
 import { postgres } from '@/lib/postgres';
 import { isSameOrigin } from '@/lib/serverSecurity';
 
-// Stage 3 of the real-auth migration: bookings RLS is being tightened so
-// only a mentee can read/insert their own row (auth.uid() = mentee_auth_id)
-// and nobody but service_role can UPDATE at all -- admin's own read/confirm/
-// complete actions previously ran on the anon key against the old blanket
-// USING(true)/WITH CHECK(true) policies, which is also what let ANY
-// unauthenticated client insert a booking pre-marked payment_status
-// 'confirmed'/status 'completed' directly (confirmed live during this
-// stage's verification, predating this migration entirely). Everything
-// here goes through service_role behind the admin session cookie instead,
-// mirroring /api/admin/threads.
+// Payment and booking changes require the signed admin session.
 async function requireAdmin() {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;

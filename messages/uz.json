@@ -478,7 +478,7 @@
     }
   },
   "mentorAuth": {
-    "passwordTooShort": "Parol kamida 8 belgidan iborat bo'lishi kerak.",
+    "passwordTooShort": "Parol kamida 12 belgidan iborat bo'lishi kerak.",
     "passwordMismatch": "Parollar mos kelmadi.",
     "submitFailed": "Xatolik yuz berdi. Qayta urinib ko'ring.",
     "login": {

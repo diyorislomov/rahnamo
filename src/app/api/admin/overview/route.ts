@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { rows } from '@/lib/database';
 import { postgres } from '@/lib/postgres';
 
 async function requireAdmin() {
@@ -14,19 +14,12 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
   const [applications, questions, answers, survey, counselors, waitlist, metricResult] = await Promise.all([
-    supabase.from('counselor_applications').select('*').order('created_at', { ascending: false }).limit(500),
-    supabase.from('forum_questions').select('*').order('created_at', { ascending: false }).limit(500),
-    supabase.from('forum_answers').select('*').order('created_at', { ascending: true }).limit(2000),
-    supabase.from('survey_responses').select('*').order('created_at', { ascending: false }).limit(1000),
-    supabase.from('counselors').select('*').order('joined_at', { ascending: false }).limit(500),
+    rows('SELECT * FROM counselor_applications ORDER BY created_at DESC LIMIT 500'),
+    rows('SELECT * FROM forum_questions ORDER BY created_at DESC LIMIT 500'),
+    rows('SELECT * FROM forum_answers ORDER BY created_at ASC LIMIT 2000'),
+    rows('SELECT * FROM survey_responses ORDER BY created_at DESC LIMIT 1000'),
+    rows('SELECT * FROM counselors ORDER BY joined_at DESC LIMIT 500'),
     postgres.query(
       `SELECT id, full_name, contact, goal, field, experience_level, locale, status, created_at
        FROM career_waitlist ORDER BY created_at DESC LIMIT 1000`

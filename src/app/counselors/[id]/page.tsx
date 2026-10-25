@@ -4,10 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useTranslations, useLocale } from 'next-intl';
-import { INITIAL_COUNSELORS } from '@/lib/mockData';
 import { Tier, Review, Counselor, CounselorService } from '@/types';
-import { supabase } from '@/lib/supabase';
-import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
+import { mapCounselorRow } from '@/lib/counselors';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CamelIcon } from '@/components/Icons';
@@ -80,48 +78,19 @@ export default function CounselorPage() {
 
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
-  const [counselor, setCounselor] = useState<Counselor | undefined>(() =>
-    isSupabaseConfigured() ? undefined : INITIAL_COUNSELORS.find((c) => c.id === rawId)
-  );
-  const [counselorLoading, setCounselorLoading] = useState(() => isSupabaseConfigured());
-
+  const [counselor, setCounselor] = useState<Counselor | undefined>();
+  const [counselorLoading, setCounselorLoading] = useState(true);
   useEffect(() => {
-    if (!rawId || !isSupabaseConfigured()) return;
-
-    const sampleMatch = INITIAL_COUNSELORS.find((c) => c.id === rawId);
-
-    Promise.resolve(
-      supabase.from('counselors').select(PUBLIC_COUNSELOR_COLUMNS).eq('id', rawId).maybeSingle()
-    )
-      .then(({ data, error }) => {
-        if (error) {
-          if (sampleMatch) {
-            setCounselor(sampleMatch);
-            setCounselorLoading(false);
-            return;
-          }
-          throw error;
-        }
-        const mapped = data ? mapCounselorRow(data) : sampleMatch;
-        if (mapped && mapped.isActive === false) {
-          setCounselor(undefined);
-        } else {
-          setCounselor(mapped);
-        }
-        setCounselorLoading(false);
-      })
-      .catch((error) => {
-        console.error('[COUNSELOR_FETCH_FAILED]', error);
-        setCounselor(sampleMatch);
-        setCounselorLoading(false);
-      });
-  }, [rawId]);
-
+    if (!rawId) return;
+    setCounselorLoading(true);
+    fetch(`/api/counselors?id=${encodeURIComponent(rawId)}`)
+      .then(async response=>{if(!response.ok) throw new Error('catalog_unavailable');return response.json();})
+      .then(result=>setCounselor(result.counselors[0] ? mapCounselorRow(result.counselors[0]) : undefined))
+      .catch(()=>setCounselor(undefined))
+      .finally(()=>setCounselorLoading(false));
+  },[rawId]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    return !!url && !url.includes('placeholder');
-  });
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const verifiedRating =
     reviews.length > 0
       ? (reviews.reduce((total, review) => total + review.rating, 0) / reviews.length).toFixed(1)

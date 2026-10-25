@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { supabase } from '@/lib/supabase';
+import { watchMentorSession } from '@/lib/mentorClient';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
 import { mapForumQuestion, mapForumAnswer } from '@/lib/forum';
 import { ForumQuestion, ForumAnswer } from '@/types';
@@ -49,29 +49,10 @@ export default function ForumPage() {
   const [checkingMentorSession, setCheckingMentorSession] = useState(true);
   const [mentorSession, setMentorSession] = useState<{ fullName: string } | null>(null);
 
-  useEffect(() => {
-    async function loadMentorSession() {
-      const { data } = await supabase.auth.getSession();
-      const user = data.session?.user;
-      if (!user || user.is_anonymous) {
-        setMentorSession(null);
-        setCheckingMentorSession(false);
-        return;
-      }
-      const response = await fetch('/api/mentor/profile', {
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
-      });
-      const result = await response.json();
-      setMentorSession(response.ok && result.success ? { fullName: result.counselor.full_name } : null);
-      setCheckingMentorSession(false);
-    }
-    loadMentorSession();
-
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      loadMentorSession();
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  useEffect(() => watchMentorSession(session => {
+    if (!session) { setMentorSession(null);setCheckingMentorSession(false);return; }
+    fetch('/api/mentor/profile').then(r=>r.json()).then(result=>setMentorSession(result.success ? {fullName:result.counselor.full_name} : null)).catch(()=>setMentorSession(null)).finally(()=>setCheckingMentorSession(false));
+  }),[]);
 
   const loadData = useCallback(() => {
     fetch('/api/forum/questions')
@@ -156,16 +137,9 @@ export default function ForumPage() {
       return;
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      setAnswerErrors((prev) => ({ ...prev, [questionId]: t('answer.saveError') }));
-      return;
-    }
-
     const res = await fetch('/api/forum/answer', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionId, body: draftBody }),
     });
     const result = await res.json();

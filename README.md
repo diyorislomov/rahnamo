@@ -24,8 +24,7 @@ Live at [myrahnamo.com](https://myrahnamo.com).
 - [Next.js 16](https://nextjs.org) (App Router, Turbopack)
 - TypeScript, Tailwind CSS 4
 - Auth.js with Google and Telegram OIDC providers
-- Local PostgreSQL for mentee accounts, sessions, bookings, mentor services, reviews and rate limits
-- [Supabase](https://supabase.com) for the existing counselor catalog and legacy application/forum data
+- Local PostgreSQL for all application data: accounts, mentor sessions, catalog, applications, profiles, bookings, payments, forum, tracks and surveys
 - `next-intl` for i18n
 - Playwright for browser verification
 
@@ -46,16 +45,14 @@ Copy `.env.example` to `.env.local` and replace every placeholder:
 
 | Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key (client-side) |
 | `NEXT_PUBLIC_SITE_URL` | Canonical public origin used by metadata, robots and sitemap |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key — **server-only**, never exposed to the client. |
 | `ADMIN_PASSWORD` | Shared passcode gating `/admin` |
 | `SESSION_SECRET` | Signs admin/site session cookies; use at least 32 random characters |
 | `SITE_PASSWORD` | Legacy site-wide gate; currently unused (site is public) |
 | `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Outbound email via [Resend](https://resend.com) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Server-only Telegram notifications for bookings/applications |
 | `NEXT_PUBLIC_PAYMENT_CARD_NUMBER` / `NEXT_PUBLIC_PAYMENT_CARD_OWNER` | Public manual-payment details shown to customers |
+| `UPLOAD_DIR` | Persistent local upload directory |
 | `DATABASE_URL` | Server-local PostgreSQL connection string |
 | `AUTH_SECRET` | Auth.js session secret; use at least 32 random characters |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth web client credentials |
@@ -83,15 +80,11 @@ Configure these Click Business SHOP API URLs:
 
 In BotFather, add `https://myrahnamo.com` as an allowed Login Widget/OIDC URL.
 
-The existing Supabase-backed catalog and legacy tables still use the following schema files.
+Migrations in `database/migrations/` run once inside a transaction and record their checksums. Existing user and payment data is preserved. Run `node --env-file=.env.local scripts/migrate.mjs` locally, or use the server's `.env.production.local` file.
 
-For a new database, run [`supabase/schema.sql`](supabase/schema.sql), then apply every file in [`supabase/migrations`](supabase/migrations) in filename order. For an existing database, apply only migrations that have not run yet. Do not treat `schema.sql` as a re-runnable migration: it contains historical setup steps and policy names.
+Set `UPLOAD_DIR` to persistent storage outside release directories (production: `/var/lib/rahnamo/uploads`). JPEG, PNG and WebP uploads are validated, limited to 5 MB and served by `/api/uploads/`. Back up this directory together with PostgreSQL.
 
-The final migration closes direct client writes to bookings, applications, surveys and forum data. Those writes go through validated server routes. Student booking/thread reads remain scoped to `auth.uid()`, mentor actions are resolved from `counselors.auth_id`, and admin actions require the signed HTTP-only admin session.
-
-Create a public Supabase Storage bucket named `avatars` with a 5 MB limit and JPEG/PNG/WebP MIME allow-list. Application and mentor uploads go through authenticated/validated server routes.
-
-In Supabase Auth URL Configuration, add the deployed `/reset-password` URL to the redirect allow-list so password recovery links can complete.
+Admin approval creates a mentor account and a single-use activation link valid for 48 hours. The admin shares this link with the mentor. Mentor passwords use scrypt; sessions are opaque HTTP-only cookies, stored hashed in PostgreSQL. Mentees continue using Google/Telegram through Auth.js.
 
 ## Scripts
 

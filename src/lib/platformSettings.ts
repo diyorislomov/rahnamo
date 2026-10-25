@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getServiceRoleClient } from './supabaseServiceRole';
+import { one } from './database';
 
 export const DEFAULT_GLOBAL_LAUNCH_DATE = '2026-11-01T00:00:00.000Z';
 
@@ -10,12 +10,7 @@ export interface PlatformSettings {
 
 export async function getGlobalLaunchDate(): Promise<Date> {
   try {
-    const supabase = getServiceRoleClient();
-    const { data, error } = await supabase
-      .from('platform_settings')
-      .select('value')
-      .eq('key', 'global_launch_date')
-      .maybeSingle();
+    const { data, error } = await one("SELECT value FROM platform_settings WHERE key='global_launch_date'");
 
     if (!error && data?.value) {
       const parsed = new Date(data.value);
@@ -36,12 +31,7 @@ export async function setGlobalLaunchDate(dateIso: string): Promise<boolean> {
   }
 
   try {
-    const supabase = getServiceRoleClient();
-    const { error } = await supabase.from('platform_settings').upsert({
-      key: 'global_launch_date',
-      value: parsed.toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const { error } = await one("INSERT INTO platform_settings(key,value) VALUES('global_launch_date',$1::jsonb) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=now() RETURNING key", [JSON.stringify(parsed.toISOString())]);
 
     return !error;
   } catch (err) {

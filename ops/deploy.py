@@ -26,7 +26,6 @@ BACKUPS = Path('/var/www/rahnamo-backups')
 STATE = Path('/var/lib/rahnamo-deploy')
 BUILD_USER = 'rahnamo-build'
 PUBLIC_KEYS = frozenset({
-    'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_PAYMENT_CARD_NUMBER',
     'NEXT_PUBLIC_PAYMENT_CARD_OWNER',
 })
@@ -204,6 +203,17 @@ def write_state(stamp, data):
     temporary.replace(target)
 
 
+def require_schema_approval(previous, sha):
+    # Only an operator can write STATE. The CI SSH command cannot approve DDL.
+    receipt = STATE / 'schema-approvals' / (sha + '.json')
+    try:
+        approval = json.loads(receipt.read_text())
+    except (OSError, ValueError):
+        approval = {}
+    if not isinstance(approval, dict) or approval.get('previous') != previous or approval.get('target') != sha or approval.get('status') != 'applied':
+        raise RuntimeError('Database migration changes require a reviewed, applied migration receipt for this exact release')
+
+
 def deploy(sha):
     validate_sha(sha)
     if latest_main() != sha:
@@ -216,8 +226,8 @@ def deploy(sha):
         print('Already deployed and healthy: ' + sha, flush=True)
         return
     # Schema changes need an explicit database migration plan, not a blind deploy.
-    if git(LIVE, 'diff', '--name-only', previous, sha, '--', 'database', 'supabase/migrations'):
-        raise RuntimeError('Database migration changes require a reviewed migration plan')
+    if git(LIVE, 'diff', '--name-only', previous, sha, '--', 'database'):
+        require_schema_approval(previous, sha)
     if shutil.disk_usage(LIVE).free < 3 * 1024**3:
         raise RuntimeError('At least 3 GiB of free disk is required')
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')

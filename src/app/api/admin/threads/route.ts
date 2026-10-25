@@ -5,9 +5,7 @@ import { postgres } from '@/lib/postgres';
 import { isSameOrigin } from '@/lib/serverSecurity';
 
 // Admin's own thread actions (list, manually flag an uncapped thread for
-// payment, confirm payment) all go through the service_role key -- anon
 // has no grant on payment_status at all, by design, so admin can't just
-// call supabase.from('question_threads').update(...) directly from the
 // browser the way it does for bookings today. The admin session cookie
 // (the same one /api/admin/check verifies) is the gate here instead.
 async function requireAdmin() {

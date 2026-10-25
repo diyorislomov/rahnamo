@@ -34,8 +34,24 @@ to a timestamped backup. Startup or health-check failures restore that directory
 and restart it. `/api/build-version` and five public pages are checked. GitHub
 also verifies the version through the public HTTPS domain.
 
-Schema changes under `database/` or `supabase/migrations/` deliberately stop
-automatic deployment: review and apply a migration plan before deploying them.
+Schema changes under `database/` stop automatic deployment until an operator has
+backed up PostgreSQL, tested and applied the exact migration, then saved a
+root-owned receipt at `/var/lib/rahnamo-deploy/schema-approvals/<target-SHA>.json`:
+
+```json
+{"previous":"<live full SHA>","target":"<target full SHA>","status":"applied"}
+```
+
+The receipt authorizes only that exact transition. CI cannot create receipts or
+run database migrations. Rerun the failed deploy job after saving the receipt.
+Keep migrations additive so restoring an older application remains possible.
+New installations use `node --env-file=.env.production.local scripts/migrate.mjs`;
+the runner records and verifies migration checksums in `schema_migrations`.
+
+Uploads are stored outside releases in `/var/lib/rahnamo/uploads` (`UPLOAD_DIR`).
+Back up this directory and PostgreSQL together. PostgreSQL runs in the
+`rahnamo-postgres` container; use its `pg_dump -Fc`/`pg_restore` tools for backups.
+For an application rollback, keep `UPLOAD_DIR` configured to the same directory.
 Backups are retained for operator review; remove obsolete backups when disk
 space is low. The controller refuses a build with less than 3 GiB free.
 

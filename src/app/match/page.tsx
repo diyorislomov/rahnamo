@@ -7,9 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CounselorCard from '@/components/CounselorCard';
 import { SPECIALTY_CONFIG } from '@/lib/specialties';
-import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
-import { supabase } from '@/lib/supabase';
+import { mapCounselorRow } from '@/lib/counselors';
 import type { Counselor } from '@/types';
 
 const CATEGORIES = Object.keys(SPECIALTY_CONFIG).filter((key) => key !== 'All');
@@ -28,9 +26,7 @@ const GOAL_KEYWORDS: Record<(typeof GOALS)[number], string[]> = {
 export default function MatchPage() {
   const t = useTranslations('matching');
   const tSpecialties = useTranslations('specialties');
-  const [counselors, setCounselors] = useState<Counselor[]>(() =>
-    isSupabaseConfigured() ? [] : INITIAL_COUNSELORS
-  );
+  const [counselors, setCounselors] = useState<Counselor[]>([]);
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [goal, setGoal] = useState<(typeof GOALS)[number]>('explore');
   const [format, setFormat] = useState<(typeof FORMATS)[number]>('quick');
@@ -38,11 +34,9 @@ export default function MatchPage() {
   const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-    Promise.resolve(supabase.from('counselors').select(PUBLIC_COUNSELOR_COLUMNS))
-      .then(({ data, error }) => {
-        if (error) throw error;
-        setCounselors((data || []).map(mapCounselorRow));
+    fetch('/api/counselors').then(async response => { if (!response.ok) throw new Error('catalog_unavailable'); return response.json(); })
+      .then(({ counselors }) => {
+        setCounselors((counselors || []).map(mapCounselorRow));
       })
       .catch(() => setCounselors([]));
   }, []);
