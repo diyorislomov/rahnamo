@@ -4,8 +4,20 @@ import { postgres } from '@/lib/postgres';
 import { isSameOrigin } from '@/lib/serverSecurity';
 import { maskOffPlatformContacts } from '@/lib/disintermediation';
 
-function threadPayload(row: Record<string, unknown>) {
-  return { ...row, student_auth_id: row.user_id, device_id: row.user_id };
+function sanitizeThreadForMentee(row: Record<string, unknown>) {
+  // Strict data minimization: admin audit fields must NEVER be readable by mentees
+  const {
+    bank_reference,
+    confirmed_amount,
+    confirmed_by_admin,
+    admin_confirmed_at,
+    ...safe
+  } = row;
+  return {
+    ...safe,
+    student_auth_id: row.user_id,
+    device_id: row.user_id,
+  };
 }
 
 export async function GET(request: Request) {
@@ -29,13 +41,15 @@ export async function GET(request: Request) {
     'SELECT id, thread_id, sender_role, body, created_at FROM thread_messages WHERE thread_id = $1 ORDER BY created_at',
     [thread.id]
   );
-  return NextResponse.json({ success: true, thread: threadPayload(thread), messages: messages.rows });
+  return NextResponse.json({ success: true, thread: sanitizeThreadForMentee(thread), messages: messages.rows });
 }
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
   const mentee = await resolveMenteeFromRequest(request);
   if (!mentee) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+
+  if (mentee.isBlocked) return NextResponse.json({ success: false, error: 'user_blocked' }, { status: 403 });
   let input: Record<string, unknown>;
   try {
     input = (await request.json()) as Record<string, unknown>;
@@ -57,7 +71,7 @@ export async function POST(request: Request) {
       [receipt, threadId, mentee.userId]
     );
     if (!result.rows[0]) return NextResponse.json({ success: false, error: 'thread_not_found' }, { status: 404 });
-    return NextResponse.json({ success: true, thread: threadPayload(result.rows[0]) });
+    return NextResponse.json({ success: true, thread: sanitizeThreadForMentee(result.rows[0]) });
   }
 
   if (action !== 'ask') return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
@@ -70,32 +84,54 @@ export async function POST(request: Request) {
   const client = await postgres.connect();
   try {
     await client.query('BEGIN');
-    const result = await client.query(
-      'SELECT * FROM question_threads WHERE id = $1 AND user_id = $2 FOR UPDATE',
+
+    // Atomic consumption: check-and-increment in a single statement
+    // Strict pre-paid requirement: must be 'paid' and questions_used < questions_paid
+    const updateResult = await client.query(
+      `UPDATE question_threads
+       SET questions_used = questions_used + 1,
+           reply_deadline_at = now() + interval '48 hours',
+           reply_status = 'pending_mentor_reply'
+       WHERE id = $1 AND user_id = $2 AND payment_status = 'paid' AND questions_used < questions_paid
+       RETURNING *`,
       [threadId, mentee.userId]
     );
-    const thread = result.rows[0];
-    if (!thread) {
+
+    const updatedThread = updateResult.rows[0];
+    if (!updatedThread) {
+      // Find out why the atomic update matched 0 rows to return precise status code
+      const checkResult = await client.query(
+        'SELECT payment_status, questions_used, questions_paid FROM question_threads WHERE id = $1 AND user_id = $2',
+        [threadId, mentee.userId]
+      );
       await client.query('ROLLBACK');
-      return NextResponse.json({ success: false, error: 'thread_not_found' }, { status: 404 });
+
+      const existingThread = checkResult.rows[0];
+      if (!existingThread) {
+        return NextResponse.json({ success: false, error: 'thread_not_found' }, { status: 404 });
+      }
+      if (existingThread.payment_status !== 'paid') {
+        return NextResponse.json({ success: false, error: 'payment_required' }, { status: 402 });
+      }
+      if (Number(existingThread.questions_used) >= Number(existingThread.questions_paid)) {
+        return NextResponse.json({ success: false, error: 'pack_exhausted' }, { status: 402 });
+      }
+      return NextResponse.json({ success: false, error: 'ask_not_allowed' }, { status: 400 });
     }
-    if (thread.payment_status !== 'active') {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ success: false, error: 'awaiting_payment' }, { status: 409 });
-    }
+
     await client.query(
       `INSERT INTO thread_messages (thread_id, sender_role, body) VALUES ($1, 'student', $2)`,
       [threadId, body]
     );
-    const questionsUsed = Number(thread.questions_used) + 1;
-    const totalOwed = questionsUsed * Number(thread.price_per_question);
-    const nextStatus = thread.soft_cap != null && questionsUsed >= Number(thread.soft_cap) ? 'awaiting_payment' : 'active';
-    await client.query(
-      'UPDATE question_threads SET questions_used = $1, total_owed = $2, payment_status = $3 WHERE id = $4',
-      [questionsUsed, totalOwed, nextStatus, threadId]
-    );
+
     await client.query('COMMIT');
-    return NextResponse.json({ success: true, questions_used: questionsUsed, total_owed: totalOwed, awaiting_payment: nextStatus !== 'active' });
+    return NextResponse.json({
+      success: true,
+      thread: sanitizeThreadForMentee(updatedThread),
+      questions_used: updatedThread.questions_used,
+      questions_paid: updatedThread.questions_paid,
+      reply_deadline_at: updatedThread.reply_deadline_at,
+    });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('[THREAD_POST_FAILED]', error);

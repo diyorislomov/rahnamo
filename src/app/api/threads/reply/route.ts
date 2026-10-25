@@ -35,15 +35,37 @@ export async function POST(request: Request) {
   if (thread.counselor_id !== mentor.counselorId) {
     return NextResponse.json({ success: false, error: 'counselor_mismatch' }, { status: 403 });
   }
-  if (thread.payment_status === 'closed') {
-    return NextResponse.json({ success: false, error: 'thread_closed' }, { status: 409 });
+
+  // Strictly enforce pre-paid requirement: mentor can only answer 'paid' threads
+  if (thread.payment_status !== 'paid') {
+    return NextResponse.json({ success: false, error: 'thread_not_paid' }, { status: 403 });
   }
 
-  const result = await postgres.query(
-    `INSERT INTO thread_messages (thread_id, sender_role, body)
-     VALUES ($1, 'counselor', $2)
-     RETURNING id, thread_id, sender_role, body, created_at`,
-    [threadId, body]
-  );
-  return NextResponse.json({ success: true, message: result.rows[0] });
+  const client = await postgres.connect();
+  try {
+    await client.query('BEGIN');
+    const msgResult = await client.query(
+      `INSERT INTO thread_messages (thread_id, sender_role, body)
+       VALUES ($1, 'counselor', $2)
+       RETURNING id, thread_id, sender_role, body, created_at`,
+      [threadId, body]
+    );
+
+    // Mentor has answered: clear deadline and mark replied
+    await client.query(
+      `UPDATE question_threads
+       SET reply_status = 'replied', reply_deadline_at = NULL
+       WHERE id = $1`,
+      [threadId]
+    );
+
+    await client.query('COMMIT');
+    return NextResponse.json({ success: true, message: msgResult.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[THREAD_REPLY_FAILED]', error);
+    return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
+  } finally {
+    client.release();
+  }
 }

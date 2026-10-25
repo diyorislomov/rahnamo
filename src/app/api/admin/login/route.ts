@@ -1,43 +1,13 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import { ADMIN_SESSION_COOKIE, signAdminSession } from '@/lib/adminSession';
 import { checkRateLimit, clearRateLimit, requestIp } from '@/lib/rateLimit';
 import { isSameOrigin, secureEqual } from '@/lib/serverSecurity';
 
-function resolveAdminPassword(): string | null {
-  const candidateFiles = [
-    '.env.production.local',
-    '.env.local',
-    '.env.production',
-    '.env',
-  ];
-
-  for (const filename of candidateFiles) {
-    try {
-      const envPath = path.join(process.cwd(), filename);
-      if (fs.existsSync(envPath)) {
-        const content = fs.readFileSync(envPath, 'utf8');
-        for (const line of content.split(/\r?\n/)) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('ADMIN_PASSWORD=')) {
-            const val = trimmed.slice('ADMIN_PASSWORD='.length).trim().replace(/^["']|["']$/g, '');
-            if (val) return val;
-          }
-        }
-      }
-    } catch {
-      // Continue to next candidate
-    }
-  }
-
-  return process.env.ADMIN_PASSWORD?.trim() || null;
-}
-
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
 
-  const validPassword = resolveAdminPassword();
+  // Read admin password strictly from environment variables without dynamic runtime file reads
+  const validPassword = process.env.ADMIN_PASSWORD?.trim() || null;
 
   if (!validPassword) {
     console.error('ADMIN_PASSWORD is not configured on the server');
@@ -49,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
   }
 
-  // Rate limit: 50 attempts in development, 10 in production.
+  // Rate limit: 50 attempts in development, 10 in production per 15-minute window.
   const rateLimitKey = `admin-login:${requestIp(request)}`;
   const maxAttempts = process.env.NODE_ENV === 'production' ? 10 : 50;
   const limit = await checkRateLimit(rateLimitKey, maxAttempts, 15 * 60_000);
@@ -67,6 +37,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
   }
 
+  // Constant-time comparison using secureEqual (SHA-256 + crypto.timingSafeEqual)
   if (typeof password !== 'string' || !secureEqual(password.trim(), validPassword)) {
     return NextResponse.json({ success: false, error: 'invalid_password' }, { status: 401 });
   }
@@ -77,9 +48,9 @@ export async function POST(request: Request) {
   response.cookies.set(ADMIN_SESSION_COOKIE, signAdminSession(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict', // Upgraded to 'strict' so session cookie is never sent with cross-site requests
     path: '/',
-    maxAge: 60 * 60 * 12,
+    maxAge: 60 * 60 * 12, // 12 hours
   });
   return response;
 }

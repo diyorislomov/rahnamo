@@ -413,7 +413,15 @@
       "authFailed": "Не удалось подтвердить вашу сессию. Войдите снова.",
       "loginRequiredTitle": "Войдите, чтобы начать консультацию",
       "loginRequiredSubtitle": "Создайте бесплатный аккаунт или войдите, чтобы задавать вопросы и отслеживать консультацию.",
-      "loginRequiredCta": "Войти или создать аккаунт"
+      "loginRequiredCta": "Войти или создать аккаунт",
+      "packLabel": "Выберите пакет вопросов",
+      "singleQuestion": "1 вопрос",
+      "packQuestions": "Пакет из {count} вопросов",
+      "paymentMethodLabel": "Способ оплаты",
+      "methodClick": "Оплата через Click (онлайн)",
+      "methodCard": "Перевод на карту (ручное подтверждение)",
+      "totalPayable": "К оплате",
+      "payAndStart": "Перейти к оплате"
     },
     "thread": {
       "questionsLabel": "Вопросы: {used}",
@@ -428,7 +436,15 @@
       "startNewButton": "Начать новую консультацию",
       "studentLabel": "Вы",
       "counselorLabel": "Рахнамо",
-      "noMessagesYet": "Сообщений пока нет. Напишите свой первый вопрос!"
+      "noMessagesYet": "Сообщений пока нет. Напишите свой первый вопрос!",
+      "packStatus": "Вопросы: {used} / {paid}",
+      "statusPaid": "Активный пакет",
+      "statusPendingPayment": "Ожидание оплаты",
+      "statusClosed": "Закрыто",
+      "packExhausted": "Все вопросы из пакета использованы. Оформите новый пакет для новых вопросов.",
+      "paymentRequiredError": "Для отправки вопроса требуется оплата.",
+      "replyDeadlineNotice": "Ожидается ответ ментора (в течение 48 часов).",
+      "clickPayNow": "Оплатить через Click"
     },
     "payment": {
       "cardBoxLabel": "Центральная платёжная карта Rahnamo (Uzcard / Humo)",
@@ -703,12 +719,23 @@
       "colActions": "Действия",
       "statusActive": "АКТИВНО",
       "statusAwaitingPayment": "ОЖИДАЕТ ОПЛАТЫ",
-      "statusClosed": "ЗАКРЫТО",
+      "statusClosed": "Закрыто",
       "flagButton": "Отметить для оплаты",
       "confirmPaymentButton": "Подтвердить оплату",
       "flagFailed": "Ошибка при отметке для оплаты. Попробуйте снова.",
       "confirmFailed": "Ошибка при подтверждении оплаты. Попробуйте снова.",
-      "networkError": "Произошла ошибка сети. Попробуйте снова."
+      "networkError": "Произошла ошибка сети. Попробуйте снова.",
+      "statusPendingPayment": "Ожидание оплаты",
+      "statusPaid": "Оплачено",
+      "overdueBadge": "Просрочено (>48ч)",
+      "refundButton": "Возврат",
+      "reassignButton": "Переназначить",
+      "confirmPaymentModalTitle": "Подтверждение оплаты",
+      "bankReferenceLabel": "Номер/референс транзакции",
+      "confirmedAmountLabel": "Подтвержденная сумма (UZS)",
+      "cancelButton": "Отмена",
+      "saveButton": "Подтвердить и активировать",
+      "colDeadline": "Срок / Статус"
     },
     "metrics": {
       "heading": "Показатели платформы",
@@ -743,6 +770,38 @@
         "senior": "Senior",
         "founder": "Основатель"
       }
+    },
+    "users": {
+      "tabLabel": "Пользователи ({count})",
+      "metricTotal": "Всего пользователей",
+      "metricSignups7d": "За последние 7 дней",
+      "metricSignups30d": "За последние 30 дней",
+      "metricConversion": "Конверсия в оплату",
+      "metricRepeat": "Повторные клиенты (2+)",
+      "colName": "Пользователь",
+      "colProvider": "Способ входа",
+      "colSignup": "Регистрация",
+      "colOrders": "Заказы и отзывы",
+      "colLastActivity": "Активность",
+      "colStatus": "Статус",
+      "colActions": "Действия",
+      "statusActive": "Активен",
+      "statusBlocked": "Заблокирован",
+      "statusTest": "Тестовый",
+      "under18Badge": "До 18 лет",
+      "blockButton": "Заблокировать",
+      "unblockButton": "Разблокировать",
+      "deleteButton": "Удалить",
+      "confirmBlockTitle": "Блокировка пользователя",
+      "confirmBlockPrompt": "Подтвердите блокировку. Пользователь не сможет бронировать слоты и отправлять вопросы.",
+      "confirmDeleteTitle": "Удаление пользователя (Анонимизация)",
+      "confirmDeletePrompt": "ВНИМАНИЕ! Личные данные будут безвозвратно удалены, а история заказов анонимизирована.",
+      "searchPlaceholder": "Поиск по имени или email...",
+      "emptyTitle": "Пользователи не найдены",
+      "emptyBody": "По вашему запросу ничего не найдено.",
+      "bookingCount": "{count} броней",
+      "threadCount": "{count} текстовых",
+      "reviewCount": "{count} отзывов"
     }
   },
   "home": {

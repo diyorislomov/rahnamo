@@ -47,6 +47,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: '/login',
   },
   callbacks: {
+    async signIn({ user }) {
+      if (user?.id) {
+        try {
+          const res = await postgres.query(
+            'SELECT is_blocked, deleted_at FROM users WHERE id = $1',
+            [user.id]
+          );
+          if (res.rows[0]?.is_blocked || res.rows[0]?.deleted_at) {
+            return false; // Reject login for blocked or deleted users
+          }
+        } catch {
+          // Allow in case column is not yet queried
+        }
+      }
+      return true;
+    },
     session({ session, user }) {
       if (session.user) session.user.id = String(user.id);
       return session;

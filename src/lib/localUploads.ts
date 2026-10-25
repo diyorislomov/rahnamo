@@ -1,5 +1,5 @@
 import 'server-only';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -34,4 +34,18 @@ export async function readImage(name: string) {
   return readFile(
     /* turbopackIgnore: true */ path.join(/* turbopackIgnore: true */ uploadDirectory(), name),
   );
+}
+
+export async function deleteImage(nameOrUrl: string): Promise<boolean> {
+  const name = nameOrUrl.replace(/^\/api\/uploads\//, '').trim();
+  if (!uploadNamePattern.test(name)) return false;
+  try {
+    await unlink(path.join(/* turbopackIgnore: true */ uploadDirectory(), name));
+    return true;
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'ENOENT') {
+      return false;
+    }
+    throw err;
+  }
 }

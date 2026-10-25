@@ -199,6 +199,12 @@ async function complete(fields: ClickRequestFields): Promise<Response> {
        WHERE id = $1 AND payment_status = 'pending'`,
       [booking.id]
     );
+    await client.query(
+      `UPDATE question_threads
+       SET payment_status = 'paid', total_paid = $1
+       WHERE booking_id = $2 AND payment_status = 'pending_payment'`,
+      [booking.price, booking.id]
+    );
     await client.query('COMMIT');
     const emailResult = await sendBookingEmailById('payment_confirmed', booking.id).catch((error) => {
       console.error('[CLICK_PAYMENT_EMAIL_FAILED]', error);

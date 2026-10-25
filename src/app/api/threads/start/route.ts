@@ -4,11 +4,13 @@ import { allowRequest } from '@/lib/rateLimit';
 import { postgres } from '@/lib/postgres';
 import { one } from '@/lib/database';
 import { isSameOrigin } from '@/lib/serverSecurity';
+import { clickPaymentUrl } from '@/lib/click';
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
   const mentee = await resolveMenteeFromRequest(request);
   if (!mentee) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+  if (mentee.isBlocked) return NextResponse.json({ success: false, error: 'user_blocked' }, { status: 403 });
   if (!(await allowRequest(`thread-start:${mentee.userId}`, 6, 60 * 60 * 1000))) {
     return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });
   }
@@ -33,10 +35,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'thread_already_open', threadId: existing.rows[0].id }, { status: 409 });
   }
 
-  const { data: counselor, error: counselorError } = await one('SELECT id, full_name, headline, avatar_url, price_per_question, soft_cap FROM counselors WHERE id=$1 AND is_active=true', [counselorId]);
+  const { data: counselor, error: counselorError } = await one(
+    'SELECT id, full_name, headline, avatar_url, price_per_question, soft_cap FROM counselors WHERE id=$1 AND is_active=true',
+    [counselorId]
+  );
   if (counselorError || !counselor || counselor.price_per_question == null || counselor.price_per_question <= 0) {
     return NextResponse.json({ success: false, error: 'counselor_unavailable' }, { status: 404 });
   }
+
+  // Pre-paid pack configuration
+  const defaultPackSize = counselor.soft_cap && counselor.soft_cap > 0 ? counselor.soft_cap : 3;
+  let packSize = defaultPackSize;
+  if (typeof input.packSize === 'number' && Number.isInteger(input.packSize) && input.packSize >= 1 && input.packSize <= 20) {
+    packSize = input.packSize;
+  }
+
+  const paymentMethodInput = typeof input.paymentMethod === 'string' ? input.paymentMethod.toLowerCase() : 'click';
+  const paymentMethod = paymentMethodInput === 'card' ? 'card' : 'click';
+  const totalPrice = Number(counselor.price_per_question) * packSize;
 
   const bookingId = crypto.randomUUID();
   const client = await postgres.connect();
@@ -46,25 +62,57 @@ export async function POST(request: Request) {
       `INSERT INTO bookings (
          id, user_id, counselor_id, counselor_name, counselor_headline, counselor_avatar,
          tier, price, payment_method, slot, student_name, email, phone, telegram,
-         education, question, locale
-       ) VALUES ($1, $2, $3, $4, $5, $6, 'text_qa', 0, 'payme', $7, $8, $9, '', '', '', $10, 'uz')`,
+         education, question, locale, payment_status, status
+       ) VALUES ($1, $2, $3, $4, $5, $6, 'text_qa', $7, $8, $9, $10, $11, '', '', '', $12, 'uz', 'pending', 'confirmed')`,
       [
-        bookingId, mentee.userId, counselor.id, counselor.full_name, counselor.headline,
-        counselor.avatar_url, 'Ochiq matnli maslahat', mentee.name || mentee.email?.split('@')[0] || 'Mentee',
-        mentee.email || '', 'Matnli maslahat',
+        bookingId,
+        mentee.userId,
+        counselor.id,
+        counselor.full_name,
+        counselor.headline,
+        counselor.avatar_url,
+        totalPrice,
+        paymentMethod,
+        `Matnli maslahat (${packSize} ta savol)`,
+        mentee.name || mentee.email?.split('@')[0] || 'Mentee',
+        mentee.email || '',
+        `Matnli maslahat to'plami: ${packSize} ta savol`,
       ]
     );
+
     const threadResult = await client.query(
       `INSERT INTO question_threads (
-         booking_id, counselor_id, user_id, price_per_question, soft_cap, age_confirmed_at
-       ) VALUES ($1, $2, $3, $4, $5, now()) RETURNING *`,
-      [bookingId, counselor.id, mentee.userId, counselor.price_per_question, counselor.soft_cap]
+         booking_id, counselor_id, user_id, price_per_question, soft_cap,
+         questions_paid, questions_used, total_paid, payment_method, payment_status,
+         reply_status, age_confirmed_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, 0, 0, $7, 'pending_payment', 'none', now())
+       RETURNING *`,
+      [bookingId, counselor.id, mentee.userId, counselor.price_per_question, packSize, packSize, paymentMethod]
     );
     await client.query('COMMIT');
+
     const thread = threadResult.rows[0];
+    let clickUrl: string | null = null;
+    if (paymentMethod === 'click') {
+      try {
+        clickUrl = clickPaymentUrl({
+          bookingId,
+          amount: totalPrice,
+          returnUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://myrahnamo.com'}/counselors/${counselor.id}?payment=click&threadId=${thread.id}`,
+        });
+      } catch (err) {
+        console.warn('[CLICK_URL_GENERATE_WARN]', err);
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      thread: { ...thread, student_auth_id: thread.user_id, device_id: thread.user_id },
+      clickUrl,
+      thread: {
+        ...thread,
+        student_auth_id: thread.user_id,
+        device_id: thread.user_id,
+      },
     }, { status: 201 });
   } catch (error) {
     await client.query('ROLLBACK');

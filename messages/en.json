@@ -413,7 +413,15 @@
       "authFailed": "Your session could not be confirmed. Please sign in again.",
       "loginRequiredTitle": "Sign in to start a conversation",
       "loginRequiredSubtitle": "Create a free account or sign in to ask questions and track your conversation.",
-      "loginRequiredCta": "Sign in or create an account"
+      "loginRequiredCta": "Sign in or create an account",
+      "packLabel": "Choose question pack",
+      "singleQuestion": "1 question",
+      "packQuestions": "Pack of {count} questions",
+      "paymentMethodLabel": "Payment method",
+      "methodClick": "Pay via Click (instant online)",
+      "methodCard": "Card transfer (manual confirmation)",
+      "totalPayable": "Total amount",
+      "payAndStart": "Proceed to payment"
     },
     "thread": {
       "questionsLabel": "Questions: {used}",
@@ -428,7 +436,15 @@
       "startNewButton": "Start a new conversation",
       "studentLabel": "You",
       "counselorLabel": "Rahnamo",
-      "noMessagesYet": "No messages yet. Write your first question!"
+      "noMessagesYet": "No messages yet. Write your first question!",
+      "packStatus": "Questions: {used} / {paid}",
+      "statusPaid": "Active pack",
+      "statusPendingPayment": "Payment pending",
+      "statusClosed": "Closed",
+      "packExhausted": "All questions in this pack have been used. Start a new pack to ask more.",
+      "paymentRequiredError": "Payment is required before asking a question.",
+      "replyDeadlineNotice": "Awaiting mentor response (within 48 hours).",
+      "clickPayNow": "Pay with Click"
     },
     "payment": {
       "cardBoxLabel": "Rahnamo Central Platform Card (Uzcard / Humo)",
@@ -703,12 +719,23 @@
       "colActions": "Actions",
       "statusActive": "ACTIVE",
       "statusAwaitingPayment": "AWAITING PAYMENT",
-      "statusClosed": "CLOSED",
+      "statusClosed": "Closed",
       "flagButton": "Flag for payment",
       "confirmPaymentButton": "Confirm payment",
       "flagFailed": "There was an error flagging this for payment. Please try again.",
       "confirmFailed": "There was an error confirming payment. Please try again.",
-      "networkError": "A network error occurred. Please try again."
+      "networkError": "A network error occurred. Please try again.",
+      "statusPendingPayment": "Payment pending",
+      "statusPaid": "Paid",
+      "overdueBadge": "Overdue (>48h)",
+      "refundButton": "Refund",
+      "reassignButton": "Reassign",
+      "confirmPaymentModalTitle": "Confirm Bank Payment",
+      "bankReferenceLabel": "Bank transaction reference / receipt ID",
+      "confirmedAmountLabel": "Confirmed amount (UZS)",
+      "cancelButton": "Cancel",
+      "saveButton": "Confirm & Activate",
+      "colDeadline": "Deadline / Status"
     },
     "metrics": {
       "heading": "Platform metrics",
@@ -743,6 +770,38 @@
         "senior": "Senior",
         "founder": "Founder"
       }
+    },
+    "users": {
+      "tabLabel": "Users ({count})",
+      "metricTotal": "Total Users",
+      "metricSignups7d": "Last 7 days",
+      "metricSignups30d": "Last 30 days",
+      "metricConversion": "Paid Conversion",
+      "metricRepeat": "Repeat Clients (2+)",
+      "colName": "User",
+      "colProvider": "Provider",
+      "colSignup": "Registered",
+      "colOrders": "Orders & Reviews",
+      "colLastActivity": "Last Activity",
+      "colStatus": "Status",
+      "colActions": "Actions",
+      "statusActive": "Active",
+      "statusBlocked": "Blocked",
+      "statusTest": "Test Account",
+      "under18Badge": "Under 18",
+      "blockButton": "Block",
+      "unblockButton": "Unblock",
+      "deleteButton": "Delete",
+      "confirmBlockTitle": "Block User",
+      "confirmBlockPrompt": "Are you sure you want to block this user? They will not be able to book or ask questions.",
+      "confirmDeleteTitle": "Permanently Delete User (Anonymize)",
+      "confirmDeletePrompt": "WARNING! Personal data will be permanently deleted and existing orders anonymized. This action is irreversible.",
+      "searchPlaceholder": "Search by name or email...",
+      "emptyTitle": "No users found",
+      "emptyBody": "No users matching your search criteria.",
+      "bookingCount": "{count} bookings",
+      "threadCount": "{count} text Q&A",
+      "reviewCount": "{count} reviews"
     }
   },
   "home": {

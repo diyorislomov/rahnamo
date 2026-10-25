@@ -35,16 +35,55 @@ interface CounselorApp {
   status?: 'pending' | 'approved' | 'rejected';
 }
 
+interface AdminUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  login_provider: string;
+  signup_date: string;
+  preferred_language: string | null;
+  education_stage: string | null;
+  is_under_18: boolean;
+  bookings_count: number;
+  paid_threads_count: number;
+  reviews_count: number;
+  last_activity: string | null;
+  is_blocked: boolean;
+  blocked_at: string | null;
+  blocked_reason: string | null;
+  is_test: boolean;
+}
+
+interface UserMetrics {
+  total_users: number;
+  signups_7d: number;
+  signups_30d: number;
+  paid_users_count: number;
+  repeat_users_count: number;
+  paid_conversion_rate: number;
+  repeat_rate: number;
+}
+
 interface AdminThread {
   id: string;
   booking_id: string;
   counselor_id: string;
   price_per_question: number;
   soft_cap: number | null;
+  questions_paid: number;
   questions_used: number;
-  total_owed: number;
-  payment_status: 'active' | 'awaiting_payment' | 'closed';
+  total_paid: number;
+  total_owed?: number;
+  payment_method: 'click' | 'card';
+  payment_status: 'pending_payment' | 'paid' | 'closed';
   payment_receipt: string | null;
+  bank_reference?: string | null;
+  confirmed_amount?: number | null;
+  confirmed_by_admin?: string | null;
+  admin_confirmed_at?: string | null;
+  reply_deadline_at?: string | null;
+  reply_status?: 'none' | 'pending_mentor_reply' | 'replied' | 'overdue' | 'refunded' | 'reassigned';
+  is_overdue?: boolean;
   created_at: string;
   closed_at: string | null;
   booking: { student_name: string; email: string; telegram: string } | null;
@@ -151,7 +190,18 @@ export default function AdminDashboardPage() {
     return () => clearInterval(timer);
   }, [loginRetryAt]);
 
-  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'waitlist' | 'forum' | 'survey' | 'counselors' | 'threads' | 'tracks'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'waitlist' | 'forum' | 'survey' | 'counselors' | 'threads' | 'tracks' | 'users'>('bookings');
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [userMetrics, setUserMetrics] = useState<UserMetrics | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [userPage, setUserPage] = useState(1);
+  const [userTotalPages, setUserTotalPages] = useState(1);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userActionError, setUserActionError] = useState('');
+  const [confirmingBlockUser, setConfirmingBlockUser] = useState<AdminUser | null>(null);
+  const [blockReasonInput, setBlockReasonInput] = useState('');
+  const [confirmingDeleteUser, setConfirmingDeleteUser] = useState<AdminUser | null>(null);
+  const [isSubmittingUserAction, setIsSubmittingUserAction] = useState(false);
   const [tracks, setTracks] = useState<DbTrack[]>([]);
   const [bookings, setBookings] = useState<BookingTicketData[]>([]);
   const [applications, setApplications] = useState<CounselorApp[]>([]);
@@ -563,43 +613,234 @@ export default function AdminDashboardPage() {
     setBookingActionId(null);
   };
 
-  // Thread payment changes require the signed admin session.
-  const handleThreadAction = async (threadId: string, action: 'flag' | 'confirm_payment') => {
-    setThreadActionId(threadId);
-    setThreadActionErrors((prev) => ({ ...prev, [threadId]: '' }));
+  const [confirmModalThread, setConfirmModalThread] = useState<AdminThread | null>(null);
+  const [modalBankRef, setModalBankRef] = useState('');
+  const [modalAmount, setModalAmount] = useState<number>(0);
+  const [modalError, setModalError] = useState('');
+  const [isSubmittingModal, setIsSubmittingModal] = useState(false);
 
+  const openConfirmModal = (th: AdminThread) => {
+    setConfirmModalThread(th);
+    setModalBankRef('');
+    setModalAmount(th.questions_paid ? th.questions_paid * th.price_per_question : th.price_per_question);
+    setModalError('');
+  };
+
+  const handleConfirmPaymentModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirmModalThread) return;
+    if (!modalBankRef.trim() || modalBankRef.trim().length < 3) {
+      setModalError(locale === 'ru' ? 'Введите референс транзакции (минимум 3 символа)' : locale === 'en' ? 'Enter a valid bank reference (min 3 chars)' : 'Bank referensini kiriting (kamida 3 belgi)');
+      return;
+    }
+    if (!modalAmount || modalAmount <= 0) {
+      setModalError(locale === 'ru' ? 'Сумма должна быть больше нуля' : locale === 'en' ? 'Amount must be greater than 0' : 'Summa 0 dan katta bo\'lishi kerak');
+      return;
+    }
+    setIsSubmittingModal(true);
+    setModalError('');
     try {
       const res = await fetch('/api/admin/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId, action }),
+        body: JSON.stringify({
+          action: 'confirm_payment',
+          threadId: confirmModalThread.id,
+          bankReference: modalBankRef.trim(),
+          confirmedAmount: modalAmount,
+        }),
       });
       const data = await res.json();
-
       if (!data.success) {
-        console.error('[THREAD_ACTION_FAILED]', action, threadId, data.error);
-        setThreadActionErrors((prev) => ({
-          ...prev,
-          [threadId]: action === 'flag' ? t('threads.flagFailed') : t('threads.confirmFailed'),
-        }));
-        setThreadActionId(null);
+        setModalError(data.message || data.error || 'Failed');
+        setIsSubmittingModal(false);
         return;
       }
-
       setThreads((prev) =>
-        prev.map((th) => (th.id === threadId ? { ...th, payment_status: data.thread.payment_status } : th))
+        prev.map((th) => (th.id === confirmModalThread.id ? { ...th, ...data.thread, payment_status: 'paid' } : th))
       );
-    } catch (err) {
-      console.error('[THREAD_ACTION_FAILED]', action, threadId, err);
-      setThreadActionErrors((prev) => ({
-        ...prev,
-        [threadId]: t('threads.networkError'),
-      }));
+      setConfirmModalThread(null);
+    } catch {
+      setModalError('Network error');
+    } finally {
+      setIsSubmittingModal(false);
     }
-    setThreadActionId(null);
+  };
+
+  const handleRefundThread = async (threadId: string) => {
+    if (!window.confirm(locale === 'ru' ? 'Подтвердите возврат средств' : locale === 'en' ? 'Confirm refund' : 'To\'lovni qaytarishni tasdiqlaysizmi?')) return;
+    try {
+      const res = await fetch('/api/admin/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'refund', threadId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setThreads((prev) =>
+          prev.map((th) => (th.id === threadId ? { ...th, payment_status: 'closed', reply_status: 'refunded' } : th))
+        );
+      }
+    } catch (err) {
+      console.error('[REFUND_FAILED]', err);
+    }
+  };
+
+  const handleReassignThread = async (threadId: string) => {
+    const newCounselorId = window.prompt(
+      locale === 'ru' ? 'Введите ID нового ментора:' : locale === 'en' ? 'Enter new mentor ID:' : 'Yangi mentor ID sini kiriting:'
+    );
+    if (!newCounselorId || !newCounselorId.trim()) return;
+    try {
+      const res = await fetch('/api/admin/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reassign', threadId, newCounselorId: newCounselorId.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setThreads((prev) =>
+          prev.map((th) => (th.id === threadId ? { ...th, counselor_id: newCounselorId.trim(), reply_status: 'reassigned', is_overdue: false } : th))
+        );
+      }
+    } catch (err) {
+      console.error('[REASSIGN_FAILED]', err);
+    }
   };
 
   // Approval returns a local, single-use mentor activation link.
+  const fetchAdminUsers = async (page = 1, search = '') => {
+    setUserLoading(true);
+    setUserActionError('');
+    try {
+      const res = await fetch(`/api/admin/users?page=${page}&limit=20&search=${encodeURIComponent(search)}`);
+      const data = await res.json();
+      if (data.success) {
+        setAdminUsers(data.users || []);
+        setUserMetrics(data.metrics || null);
+        setUserPage(data.pagination?.page || 1);
+        setUserTotalPages(data.pagination?.totalPages || 1);
+      } else {
+        setUserActionError(data.error || 'Failed to load users');
+      }
+    } catch {
+      setUserActionError('Network error loading users');
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchAdminUsers(userPage, userSearch);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const handleBlockUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirmingBlockUser) return;
+    setIsSubmittingUserAction(true);
+    setUserActionError('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'block',
+          userId: confirmingBlockUser.id,
+          reason: blockReasonInput.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminUsers((prev) =>
+          prev.map((u) => (u.id === confirmingBlockUser.id ? { ...u, is_blocked: true, blocked_at: new Date().toISOString(), blocked_reason: blockReasonInput.trim() } : u))
+        );
+        setConfirmingBlockUser(null);
+        setBlockReasonInput('');
+      } else {
+        setUserActionError(data.message || data.error);
+      }
+    } catch {
+      setUserActionError('Network error');
+    } finally {
+      setIsSubmittingUserAction(false);
+    }
+  };
+
+  const handleUnblockUser = async (user: AdminUser) => {
+    if (!window.confirm(`${user.name || user.email} blokdan chiqarilsinmi?`)) return;
+    setIsSubmittingUserAction(true);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unblock', userId: user.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, is_blocked: false, blocked_at: null, blocked_reason: null } : u))
+        );
+      } else {
+        alert(data.message || data.error);
+      }
+    } catch {
+      alert('Network error');
+    } finally {
+      setIsSubmittingUserAction(false);
+    }
+  };
+
+  const handleDeleteUserSubmit = async () => {
+    if (!confirmingDeleteUser) return;
+    setIsSubmittingUserAction(true);
+    setUserActionError('');
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', userId: confirmingDeleteUser.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminUsers((prev) => prev.filter((u) => u.id !== confirmingDeleteUser.id));
+        setConfirmingDeleteUser(null);
+        if (userMetrics) {
+          setUserMetrics({
+            ...userMetrics,
+            total_users: Math.max(0, userMetrics.total_users - 1),
+          });
+        }
+      } else {
+        setUserActionError(data.message || data.error);
+      }
+    } catch {
+      setUserActionError('Network error');
+    } finally {
+      setIsSubmittingUserAction(false);
+    }
+  };
+
+  const handleToggleTestUser = async (user: AdminUser) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_test', userId: user.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, is_test: data.is_test } : u))
+        );
+      }
+    } catch (err) {
+      console.error('[TOGGLE_TEST_FAILED]', err);
+    }
+  };
+
   const handleMentorAccess = async (counselor: Counselor) => {
     const email = window.prompt(locale === 'ru' ? 'Email ментора:' : locale === 'en' ? 'Mentor email:' : 'Mentorning email manzili:');
     if (!email) return;
@@ -961,6 +1202,18 @@ export default function AdminDashboardPage() {
             <MessagesSquare className="w-4 h-4" />
             <span>{t('threads.tabLabel', { count: threads.length })}</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'users'
+                ? 'bg-amber-900 text-amber-50 shadow-sm'
+                : 'bg-amber-50/70 text-stone-700 hover:bg-amber-100/60 border border-amber-900/10'
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>{t('users.tabLabel', { count: userMetrics?.total_users ?? adminUsers.length })}</span>
+          </button>
         </div>
 
         {/* Tab 8: Tracks Management */}
@@ -1228,6 +1481,91 @@ export default function AdminDashboardPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* Modal for admin manual payment confirmation */}
+            {confirmModalThread && (
+              <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl border border-amber-900/15">
+                  <div className="flex items-center justify-between border-b border-amber-900/10 pb-3">
+                    <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                      {t('threads.confirmPaymentModalTitle')}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmModalThread(null)}
+                      className="text-stone-400 hover:text-stone-600 text-sm font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-900/10 text-xs space-y-1">
+                    <div><strong>Talaba:</strong> {confirmModalThread.booking?.student_name} ({confirmModalThread.booking?.email})</div>
+                    <div><strong>Rahnamo:</strong> {confirmModalThread.counselor?.full_name}</div>
+                    <div><strong>Savollar soni:</strong> {confirmModalThread.questions_paid || confirmModalThread.soft_cap || 1} ta</div>
+                    {confirmModalThread.payment_receipt && (
+                      <div className="pt-1 text-stone-600">
+                        <strong>Yuborilgan chek:</strong> <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-200">{confirmModalThread.payment_receipt}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <form onSubmit={handleConfirmPaymentModalSubmit} className="space-y-3 text-xs">
+                    <div>
+                      <label className="font-bold text-stone-800 block mb-1">
+                        {t('threads.bankReferenceLabel')} *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={modalBankRef}
+                        onChange={(e) => setModalBankRef(e.target.value)}
+                        placeholder="TRX-123456789 yoki chek raqami"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none focus:bg-white focus:border-amber-700"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-stone-800 block mb-1">
+                        {t('threads.confirmedAmountLabel')} *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={1}
+                        value={modalAmount || ''}
+                        onChange={(e) => setModalAmount(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none focus:bg-white focus:border-amber-700 font-mono"
+                      />
+                    </div>
+
+                    {modalError && (
+                      <p className="text-red-700 font-medium bg-red-50 border border-red-200 rounded-lg p-2">
+                        {modalError}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmModalThread(null)}
+                        className="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 font-semibold cursor-pointer"
+                      >
+                        {t('threads.cancelButton')}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingModal}
+                        className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold cursor-pointer disabled:opacity-50"
+                      >
+                        {isSubmittingModal ? '...' : t('threads.saveButton')}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}
@@ -1622,6 +1960,368 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Text Q&A changes use the authenticated admin API. */}
+        {activeTab === 'users' && (
+          <div className="space-y-6">
+            {/* Overview Metric Cards */}
+            {userMetrics && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <MetricCard
+                  icon={<Users className="w-4 h-4" />}
+                  label={t('users.metricTotal')}
+                  value={userMetrics.total_users.toLocaleString()}
+                  detail={`7k: +${userMetrics.signups_7d} | 30k: +${userMetrics.signups_30d}`}
+                />
+                <MetricCard
+                  icon={<Calendar className="w-4 h-4" />}
+                  label={t('users.metricSignups7d')}
+                  value={`+${userMetrics.signups_7d}`}
+                  detail={`${t('users.metricSignups30d')}: +${userMetrics.signups_30d}`}
+                />
+                <MetricCard
+                  icon={<Banknote className="w-4 h-4" />}
+                  label={t('users.metricConversion')}
+                  value={`${userMetrics.paid_conversion_rate}%`}
+                  detail={`${userMetrics.paid_users_count} ta to'lovchi talaba`}
+                />
+                <MetricCard
+                  icon={<Target className="w-4 h-4" />}
+                  label={t('users.metricRepeat')}
+                  value={`${userMetrics.repeat_rate}%`}
+                  detail={`${userMetrics.repeat_users_count} ta takroriy (2+)`}
+                />
+              </div>
+            )}
+
+            {/* Search and Filters */}
+            <div className="bg-white/95 rounded-3xl border border-amber-900/15 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  fetchAdminUsers(1, userSearch);
+                }}
+                className="w-full sm:w-80 flex items-center gap-2"
+              >
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder={t('users.searchPlaceholder')}
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-stone-50 border border-stone-300 rounded-xl outline-none focus:bg-white focus:border-amber-700"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={userLoading}
+                  className="px-3 py-2 rounded-xl bg-amber-900 hover:bg-amber-950 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
+                >
+                  {userLoading ? '...' : <Search className="w-3.5 h-3.5" />}
+                </button>
+              </form>
+
+              {userActionError && (
+                <div className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{userActionError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Users Table */}
+            {adminUsers.length === 0 ? (
+              <div className="bg-white/95 rounded-3xl p-12 text-center border border-amber-900/15 shadow-xs">
+                <Users className="w-12 h-12 text-stone-400 mx-auto mb-3" />
+                <h4 className="font-serif font-bold text-base text-amber-950">{t('users.emptyTitle')}</h4>
+                <p className="text-xs text-stone-500 mt-1">{t('users.emptyBody')}</p>
+              </div>
+            ) : (
+              <div className="bg-white/95 rounded-3xl border border-amber-900/15 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-amber-50/80 border-b border-amber-900/10 text-amber-950 font-serif font-bold">
+                        <th className="p-4">{t('users.colName')}</th>
+                        <th className="p-4">{t('users.colProvider')}</th>
+                        <th className="p-4">{t('users.colSignup')}</th>
+                        <th className="p-4">{t('users.colOrders')}</th>
+                        <th className="p-4">{t('users.colLastActivity')}</th>
+                        <th className="p-4">{t('users.colStatus')}</th>
+                        <th className="p-4">{t('users.colActions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-900/10">
+                      {adminUsers.map((u) => {
+                        const signupDate = u.signup_date ? new Date(u.signup_date).toLocaleDateString() : '—';
+                        const lastAct = u.last_activity ? new Date(u.last_activity).toLocaleDateString() : '—';
+
+                        return (
+                          <tr key={u.id} className="hover:bg-amber-50/30 transition-colors">
+                            <td className="p-4">
+                              <div className="font-bold text-stone-900">{u.name || '—'}</div>
+                              <div className="text-[11px] text-stone-500 font-mono">{u.email || '—'}</div>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                {u.is_under_18 && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                                    {t('users.under18Badge')}
+                                  </span>
+                                )}
+                                {u.education_stage && (
+                                  <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 border border-stone-200">
+                                    {u.education_stage}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                                {u.login_provider}
+                              </span>
+                            </td>
+                            <td className="p-4 font-mono text-stone-600">
+                              {signupDate}
+                            </td>
+                            <td className="p-4">
+                              <div className="space-y-0.5 text-[11px]">
+                                <div className="font-medium text-stone-800">
+                                  {t('users.bookingCount', { count: u.bookings_count })}
+                                </div>
+                                <div className="text-emerald-800 font-medium">
+                                  {t('users.threadCount', { count: u.paid_threads_count })}
+                                </div>
+                                <div className="text-stone-500">
+                                  {t('users.reviewCount', { count: u.reviews_count })}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 font-mono text-stone-600">
+                              {lastAct}
+                            </td>
+                            <td className="p-4 space-y-1">
+                              <div>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                    u.is_blocked
+                                      ? 'bg-red-100 text-red-800 border border-red-300'
+                                      : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  }`}
+                                >
+                                  {u.is_blocked ? t('users.statusBlocked') : t('users.statusActive')}
+                                </span>
+                              </div>
+                              {u.is_test && (
+                                <div>
+                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                                    {t('users.statusTest')}
+                                  </span>
+                                </div>
+                              )}
+                              {u.blocked_reason && (
+                                <div className="text-[10px] text-red-700 italic max-w-[150px] truncate" title={u.blocked_reason}>
+                                  {u.blocked_reason}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-1.5">
+                                {u.is_blocked ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUnblockUser(u)}
+                                    disabled={isSubmittingUserAction}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold transition-all cursor-pointer disabled:opacity-50"
+                                  >
+                                    {t('users.unblockButton')}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setConfirmingBlockUser(u);
+                                      setBlockReasonInput('');
+                                    }}
+                                    disabled={isSubmittingUserAction}
+                                    className="px-2.5 py-1 rounded-lg bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold transition-all cursor-pointer disabled:opacity-50"
+                                  >
+                                    {t('users.blockButton')}
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmingDeleteUser(u)}
+                                  disabled={isSubmittingUserAction}
+                                  className="px-2.5 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white text-[10px] font-bold transition-all cursor-pointer disabled:opacity-50"
+                                >
+                                  {t('users.deleteButton')}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleTestUser(u)}
+                                  title="Test hisob sifatida belgilash / yechish"
+                                  className={`p-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                                    u.is_test
+                                      ? 'bg-purple-100 text-purple-800 border-purple-300'
+                                      : 'bg-stone-100 text-stone-500 border-stone-200 hover:bg-stone-200'
+                                  }`}
+                                >
+                                  T
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {userTotalPages > 1 && (
+                  <div className="p-4 border-t border-amber-900/10 flex items-center justify-between text-xs text-stone-600 bg-amber-50/40">
+                    <span>Sahifa: {userPage} / {userTotalPages}</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={userPage <= 1 || userLoading}
+                        onClick={() => fetchAdminUsers(userPage - 1, userSearch)}
+                        className="px-3 py-1 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 disabled:opacity-40 cursor-pointer"
+                      >
+                        « Oldingi
+                      </button>
+                      <button
+                        type="button"
+                        disabled={userPage >= userTotalPages || userLoading}
+                        onClick={() => fetchAdminUsers(userPage + 1, userSearch)}
+                        className="px-3 py-1 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 disabled:opacity-40 cursor-pointer"
+                      >
+                        Keyingi »
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Block User Modal */}
+            {confirmingBlockUser && (
+              <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl border border-amber-900/15">
+                  <div className="flex items-center justify-between border-b border-amber-900/10 pb-3">
+                    <h3 className="font-serif font-bold text-base text-amber-950 flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-amber-700" />
+                      {t('users.confirmBlockTitle')}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingBlockUser(null)}
+                      className="text-stone-400 hover:text-stone-600 text-sm font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-stone-600">
+                    {t('users.confirmBlockPrompt')}
+                  </p>
+
+                  <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-900/10 text-xs">
+                    <div><strong>Ism:</strong> {confirmingBlockUser.name || '—'}</div>
+                    <div><strong>Email:</strong> {confirmingBlockUser.email || '—'}</div>
+                  </div>
+
+                  <form onSubmit={handleBlockUserSubmit} className="space-y-3 text-xs">
+                    <div>
+                      <label className="font-bold text-stone-800 block mb-1">
+                        Bloklash sababi (ixtiyoriy):
+                      </label>
+                      <input
+                        type="text"
+                        value={blockReasonInput}
+                        onChange={(e) => setBlockReasonInput(e.target.value)}
+                        placeholder="Qoidabuzarlik, spam..."
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none focus:bg-white focus:border-amber-700"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingBlockUser(null)}
+                        className="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 font-semibold cursor-pointer"
+                      >
+                        Bekor qilish
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingUserAction}
+                        className="px-4 py-2 rounded-xl bg-amber-800 hover:bg-amber-900 text-white font-bold cursor-pointer disabled:opacity-50"
+                      >
+                        {isSubmittingUserAction ? '...' : t('users.blockButton')}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Delete User Modal (Confirmation Dialog) */}
+            {confirmingDeleteUser && (
+              <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl border border-red-900/20">
+                  <div className="flex items-center justify-between border-b border-red-900/10 pb-3">
+                    <h3 className="font-serif font-bold text-base text-red-950 flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-700" />
+                      {t('users.confirmDeleteTitle')}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDeleteUser(null)}
+                      className="text-stone-400 hover:text-stone-600 text-sm font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-red-800 bg-red-50 p-3 rounded-xl border border-red-200">
+                    {t('users.confirmDeletePrompt')}
+                  </p>
+
+                  <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 text-xs">
+                    <div><strong>Ism:</strong> {confirmingDeleteUser.name || '—'}</div>
+                    <div><strong>Email:</strong> {confirmingDeleteUser.email || '—'}</div>
+                  </div>
+
+                  {userActionError && (
+                    <p className="text-xs text-red-700 font-semibold bg-red-50 p-2 rounded-lg border border-red-200">
+                      {userActionError}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDeleteUser(null)}
+                      className="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 font-semibold cursor-pointer"
+                    >
+                      Bekor qilish
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteUserSubmit}
+                      disabled={isSubmittingUserAction}
+                      className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmittingUserAction ? '...' : t('users.deleteButton')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'threads' && (
           <div className="space-y-6">
             {threads.length === 0 ? (
@@ -1645,80 +2345,116 @@ export default function AdminDashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-amber-900/10">
-                      {threads.map((th) => (
-                        <tr key={th.id} className="hover:bg-amber-50/30 transition-colors">
-                          <td className="p-4">
-                            <div className="font-bold text-stone-900">{th.booking?.student_name || '—'}</div>
-                            <div className="text-[11px] text-stone-500">{th.booking?.email}</div>
-                            <div className="text-[10px] text-amber-800 font-semibold">{th.booking?.telegram}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="font-bold text-amber-950">{th.counselor?.full_name || th.counselor_id}</div>
-                            <div className="text-[10px] text-stone-500 line-clamp-1">{th.counselor?.headline}</div>
-                          </td>
-                          <td className="p-4 font-mono">
-                            {th.questions_used}
-                            {th.soft_cap ? ` / ${th.soft_cap}` : ''}
-                          </td>
-                          <td className="p-4 font-mono font-bold text-amber-900">
-                            {th.total_owed.toLocaleString()} UZS
-                          </td>
-                          <td className="p-4">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                th.payment_status === 'closed'
-                                  ? 'bg-stone-200 text-stone-700 border border-stone-300'
-                                  : th.payment_status === 'awaiting_payment'
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                                  : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                              }`}
-                            >
-                              {th.payment_status === 'closed' ? (
-                                <CheckCircle className="w-3 h-3" />
-                              ) : th.payment_status === 'awaiting_payment' ? (
-                                <Clock className="w-3 h-3" />
-                              ) : (
-                                <MessagesSquare className="w-3 h-3" />
-                              )}
-                              {th.payment_status === 'closed'
-                                ? t('threads.statusClosed')
-                                : th.payment_status === 'awaiting_payment'
-                                ? t('threads.statusAwaitingPayment')
-                                : t('threads.statusActive')}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <div className="space-y-1.5">
-                              {threadActionErrors[th.id] && (
-                                <div className="flex items-start gap-1 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-300 rounded-lg px-2 py-1.5 max-w-[200px]">
-                                  <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                                  <span>{threadActionErrors[th.id]}</span>
+                      {threads.map((th) => {
+                        const totalExpected = (th.questions_paid || th.soft_cap || 1) * th.price_per_question;
+                        const isOverdue = Boolean(
+                          th.is_overdue ||
+                          (th.reply_status === 'pending_mentor_reply' && th.reply_deadline_at && new Date(th.reply_deadline_at).getTime() < Date.now())
+                        );
+
+                        return (
+                          <tr key={th.id} className="hover:bg-amber-50/30 transition-colors">
+                            <td className="p-4">
+                              <div className="font-bold text-stone-900">{th.booking?.student_name || '—'}</div>
+                              <div className="text-[11px] text-stone-500">{th.booking?.email}</div>
+                              <div className="text-[10px] text-amber-800 font-semibold">{th.booking?.telegram}</div>
+                            </td>
+                            <td className="p-4">
+                              <div className="font-bold text-amber-950">{th.counselor?.full_name || th.counselor_id}</div>
+                              <div className="text-[10px] text-stone-500 line-clamp-1">{th.counselor?.headline}</div>
+                            </td>
+                            <td className="p-4 font-mono">
+                              <span className="font-bold">{th.questions_used}</span> / {th.questions_paid || th.soft_cap || 1}
+                            </td>
+                            <td className="p-4">
+                              <div className="font-mono font-bold text-amber-900">
+                                {(th.total_paid || totalExpected).toLocaleString()} UZS
+                              </div>
+                              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 border border-stone-200 mt-1 inline-block">
+                                {th.payment_method || 'click'}
+                              </span>
+                            </td>
+                            <td className="p-4 space-y-1">
+                              <div>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                    th.payment_status === 'closed'
+                                      ? 'bg-stone-200 text-stone-700 border border-stone-300'
+                                      : th.payment_status === 'pending_payment'
+                                      ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                      : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                  }`}
+                                >
+                                  {th.payment_status === 'closed' ? (
+                                    <CheckCircle className="w-3 h-3" />
+                                  ) : th.payment_status === 'pending_payment' ? (
+                                    <Clock className="w-3 h-3" />
+                                  ) : (
+                                    <MessagesSquare className="w-3 h-3" />
+                                  )}
+                                  {th.payment_status === 'closed'
+                                    ? (th.reply_status === 'refunded' ? 'Qaytarilgan (Refunded)' : t('threads.statusClosed'))
+                                    : th.payment_status === 'pending_payment'
+                                    ? t('threads.statusPendingPayment')
+                                    : t('threads.statusPaid')}
+                                </span>
+                              </div>
+
+                              {isOverdue && (
+                                <div>
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-800 border border-red-300">
+                                    <AlertCircle className="w-3 h-3" /> {t('threads.overdueBadge')}
+                                  </span>
                                 </div>
                               )}
-                              {th.payment_status === 'active' && !th.soft_cap && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleThreadAction(th.id, 'flag')}
-                                  disabled={threadActionId === th.id}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-700 hover:bg-amber-800 text-amber-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-                                >
-                                  <Flag className="w-3 h-3" /> {t('threads.flagButton')}
-                                </button>
+
+                              {th.payment_receipt && th.payment_status === 'pending_payment' && (
+                                <div className="text-[10px] text-stone-600 bg-amber-50/80 px-2 py-1 rounded border border-amber-200 max-w-[200px] truncate" title={th.payment_receipt}>
+                                  <strong>Chek:</strong> {th.payment_receipt}
+                                </div>
                               )}
-                              {th.payment_status === 'awaiting_payment' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleThreadAction(th.id, 'confirm_payment')}
-                                  disabled={threadActionId === th.id}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-                                >
-                                  <CheckCircle className="w-3 h-3" /> {t('threads.confirmPaymentButton')}
-                                </button>
+
+                              {th.bank_reference && (
+                                <div className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                                  <strong>Ref:</strong> {th.bank_reference}
+                                </div>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="p-4">
+                              <div className="space-y-1.5">
+                                {th.payment_status === 'pending_payment' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openConfirmModal(th)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-emerald-50 text-[10px] font-bold transition-all shadow-2xs cursor-pointer"
+                                  >
+                                    <CheckCircle className="w-3 h-3" /> {t('threads.confirmPaymentButton')}
+                                  </button>
+                                )}
+
+                                {th.payment_status === 'paid' && isOverdue && (
+                                  <div className="flex flex-col gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRefundThread(th.id)}
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white text-[10px] font-bold transition-all cursor-pointer"
+                                    >
+                                      <XCircle className="w-3 h-3" /> {t('threads.refundButton')}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReassignThread(th.id)}
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-700 hover:bg-stone-800 text-white text-[10px] font-bold transition-all cursor-pointer"
+                                    >
+                                      <UserCheck className="w-3 h-3" /> {t('threads.reassignButton')}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -1,6 +1,7 @@
 export type Tier = 'standard' | 'premium' | 'text_qa' | 'service';
 export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
-export type ThreadPaymentStatus = 'active' | 'awaiting_payment' | 'closed';
+export type ThreadPaymentStatus = 'pending_payment' | 'paid' | 'closed';
+export type ThreadReplyStatus = 'none' | 'pending_mentor_reply' | 'replied' | 'overdue' | 'refunded' | 'reassigned';
 export type ThreadSenderRole = 'student' | 'counselor';
 
 export interface Counselor {
@@ -35,12 +36,21 @@ export interface QuestionThread {
   studentAuthId: string;
   deviceId: string;
   pricePerQuestion: number;
-  softCap: number | null;
+  questionsPaid: number;
   questionsUsed: number;
-  totalOwed: number;
+  totalPaid: number;
+  paymentMethod: 'click' | 'card';
+  softCap: number | null;
+  totalOwed?: number;
   paymentStatus: ThreadPaymentStatus;
   paymentReceipt?: string | null;
   ageConfirmedAt: string;
+  replyDeadlineAt?: string | null;
+  replyStatus?: ThreadReplyStatus;
+  bankReference?: string | null;
+  confirmedAmount?: number | null;
+  confirmedByAdmin?: string | null;
+  adminConfirmedAt?: string | null;
   createdAt: string;
   closedAt?: string | null;
 }

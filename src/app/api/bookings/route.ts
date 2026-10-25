@@ -47,6 +47,7 @@ export async function POST(request: Request) {
   }
   const mentee = await resolveMenteeFromRequest(request);
   if (!mentee) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+  if (mentee.isBlocked) return NextResponse.json({ success: false, error: 'user_blocked' }, { status: 403 });
 
   if (!(await allowRequest(`booking:${mentee.userId}:${requestIp(request)}`, 8, 10 * 60_000))) {
     return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 });

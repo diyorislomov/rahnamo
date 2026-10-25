@@ -413,7 +413,15 @@
       "authFailed": "Sessiyangizni tasdiqlab bo'lmadi. Qayta tizimga kiring.",
       "loginRequiredTitle": "Suhbatni boshlash uchun tizimga kiring",
       "loginRequiredSubtitle": "Savol berish va suhbatni kuzatish uchun bepul hisob yarating yoki tizimga kiring.",
-      "loginRequiredCta": "Kirish yoki hisob yaratish"
+      "loginRequiredCta": "Kirish yoki hisob yaratish",
+      "packLabel": "Savollar to'plamini tanlang",
+      "singleQuestion": "1 ta savol",
+      "packQuestions": "{count} ta savolli to'plam",
+      "paymentMethodLabel": "To'lov usuli",
+      "methodClick": "Click orqali to'lash (onlayn)",
+      "methodCard": "Karta orqali o'tkazma (qo'lda tasdiqlash)",
+      "totalPayable": "Jami to'lov",
+      "payAndStart": "To'lovga o'tish"
     },
     "thread": {
       "questionsLabel": "Savollar: {used}",
@@ -428,7 +436,15 @@
       "startNewButton": "Yangi suhbat boshlash",
       "studentLabel": "Siz",
       "counselorLabel": "Rahnamo",
-      "noMessagesYet": "Hali xabar yo'q. Birinchi savolingizni yozing!"
+      "noMessagesYet": "Hali xabar yo'q. Birinchi savolingizni yozing!",
+      "packStatus": "Savollar: {used} / {paid}",
+      "statusPaid": "Faol to'plam",
+      "statusPendingPayment": "To'lov kutilmoqda",
+      "statusClosed": "Yopilgan",
+      "packExhausted": "To'plamdagi barcha savollar berildi. Yangi savol berish uchun yangi to'plam oling.",
+      "paymentRequiredError": "Savol berish uchun avval to'lov amalga oshirilgan bo'lishi kerak.",
+      "replyDeadlineNotice": "Mentor javobi kutilmoqda (48 soat ichida javob beriladi).",
+      "clickPayNow": "Click orqali to'lash"
     },
     "payment": {
       "cardBoxLabel": "Rahnamo Markaziy Platforma Kartasi (Uzcard / Humo)",
@@ -703,12 +719,23 @@
       "colActions": "Amallar",
       "statusActive": "FAOL",
       "statusAwaitingPayment": "TO'LOV KUTILMOQDA",
-      "statusClosed": "YOPILGAN",
+      "statusClosed": "Yopilgan",
       "flagButton": "To'lovga belgilash",
       "confirmPaymentButton": "To'lovni tasdiqlash",
       "flagFailed": "To'lov uchun belgilashda xatolik yuz berdi. Qayta urinib ko'ring.",
       "confirmFailed": "To'lovni tasdiqlashda xatolik yuz berdi. Qayta urinib ko'ring.",
-      "networkError": "Tarmoq xatoligi yuz berdi. Qayta urinib ko'ring."
+      "networkError": "Tarmoq xatoligi yuz berdi. Qayta urinib ko'ring.",
+      "statusPendingPayment": "To'lov kutilmoqda",
+      "statusPaid": "To'langan",
+      "overdueBadge": "48 soatdan oshgan (Kechikkan)",
+      "refundButton": "Qaytarish (Refund)",
+      "reassignButton": "Boshqa mentorga",
+      "confirmPaymentModalTitle": "Bank to'lovini tasdiqlash",
+      "bankReferenceLabel": "Bank tranzaksiya referensi / chek raqami",
+      "confirmedAmountLabel": "Tasdiqlangan summa (UZS)",
+      "cancelButton": "Bekor qilish",
+      "saveButton": "Tasdiqlash va faollashtirish",
+      "colDeadline": "Muddati / Holat"
     },
     "metrics": {
       "heading": "Platforma ko‘rsatkichlari",
@@ -743,6 +770,38 @@
         "senior": "Senior",
         "founder": "Founder"
       }
+    },
+    "users": {
+      "tabLabel": "Foydalanuvchilar ({count})",
+      "metricTotal": "Jami foydalanuvchilar",
+      "metricSignups7d": "Oxirgi 7 kunda",
+      "metricSignups30d": "Oxirgi 30 kunda",
+      "metricConversion": "To'lov konversiyasi",
+      "metricRepeat": "Takroriy xaridorlar (2+)",
+      "colName": "Foydalanuvchi",
+      "colProvider": "Kirish turi",
+      "colSignup": "Ro'yxatdan o'tgan",
+      "colOrders": "Buyurtmalar & Sharhlar",
+      "colLastActivity": "So'nggi faollik",
+      "colStatus": "Holat",
+      "colActions": "Amallar",
+      "statusActive": "Faol",
+      "statusBlocked": "Bloklangan",
+      "statusTest": "Test hisob",
+      "under18Badge": "Voyaga yetmagan (<18)",
+      "blockButton": "Bloklash",
+      "unblockButton": "Blokdan chiqarish",
+      "deleteButton": "O'chirish",
+      "confirmBlockTitle": "Foydalanuvchini bloklash",
+      "confirmBlockPrompt": "Ushbu foydalanuvchini bloklashni tasdiqlaysizmi? U yangi bron qilolmaydi va savol berolmaydi.",
+      "confirmDeleteTitle": "Foydalanuvchini butunlay o'chirish (Anonymize)",
+      "confirmDeletePrompt": "DIQQAT! Foydalanuvchining barcha shaxsiy ma'lumotlari to'liq o'chiriladi, bron va sharhlari anonimlashtiriladi. Buni ortga qaytarib bo'lmaydi.",
+      "searchPlaceholder": "Ism yoki email bo'yicha qidirish...",
+      "emptyTitle": "Foydalanuvchilar topilmadi",
+      "emptyBody": "Qidiruv shartlariga mos keladigan foydalanuvchi yo'q.",
+      "bookingCount": "{count} ta bron",
+      "threadCount": "{count} ta matnli",
+      "reviewCount": "{count} ta sharh"
     }
   },
   "home": {
