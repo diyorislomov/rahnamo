@@ -600,6 +600,46 @@
   outline: 2px solid #a6b9c9;
   outline-offset: 1px;
 }
+.network-filters {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) repeat(2, minmax(120px, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #dfe5e9;
+  border-radius: 10px;
+}
+.network-filters select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #dce2e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font-size: 13px;
+}
+.network-filter-check {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  gap: 9px;
+  min-height: 42px;
+  color: #526170;
+  font-size: 12px;
+  cursor: pointer;
+}
+.network-filter-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #19364c;
+}
+.network-clear-filters {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
 .network-people-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -686,6 +726,22 @@
   font-size: 11px;
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+.network-mentor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: #647483;
+  font-size: 11px;
+}
+.network-mentor-meta span {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #f5f7f8;
+}
+.network-mentor-meta span + span {
+  color: #27684f;
+  background: #eef8f2;
 }
 .network-section-heading {
   display: flex;
@@ -861,6 +917,61 @@
   flex-direction: column;
   gap: 22px;
   padding: 28px;
+}
+.network-profile-onboarding {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e2eaf0;
+  border-radius: 10px;
+  background: #f7fafc;
+}
+.network-profile-onboarding h2 {
+  margin: 0 0 5px;
+  color: #34475a;
+  font-size: 15px;
+}
+.network-profile-onboarding p,
+.network-form-more > p {
+  margin: 0;
+  color: #697785;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.network-profile-progress {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e3e9ed;
+}
+.network-profile-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #34715d;
+  transition: width 160ms ease;
+}
+.network-profile-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: #77838d;
+  font-size: 12px;
+}
+.network-profile-checklist .complete {
+  color: #34715d;
+  font-weight: 600;
+}
+.network-form-more {
+  display: grid;
+  gap: 16px;
+  padding-top: 2px;
+}
+.network-form-more summary {
+  color: #34475a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 .network-form-grid {
   display: grid;
@@ -1191,6 +1302,11 @@
   .network-people-grid {
     gap: 12px;
   }
+  .network-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+  }
   .network-person-actions {
     gap: 9px;
   }
@@ -1245,6 +1361,9 @@
     width: 16px;
   }
   .network-people-grid {
+    grid-template-columns: 1fr;
+  }
+  .network-filters {
     grid-template-columns: 1fr;
   }
   .network-person .network-person-identity {
