@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import type { NetworkProfile } from "@/lib/networkTypes";
 import { networkApi, useNetworkCopy } from "./NetworkProvider";
@@ -74,6 +75,22 @@ export default function NetworkPeople({
         <h1>{mentors ? t.mentorsTitle : t.peopleTitle}</h1>
         <p>{mentors ? t.mentorsBody : t.peopleBody}</p>
       </header>
+      <nav className="network-tabs" aria-label={t.people}>
+        <Link
+          href="/people"
+          className={!mentors ? "active" : ""}
+          aria-current={!mentors ? "page" : undefined}
+        >
+          {t.people}
+        </Link>
+        <Link
+          href="/mentors"
+          className={mentors ? "active" : ""}
+          aria-current={mentors ? "page" : undefined}
+        >
+          {t.mentors}
+        </Link>
+      </nav>
       <label className="network-search">
         <Search size={19} />
         <span className="sr-only">{t.search}</span>
