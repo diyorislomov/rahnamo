@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { one, insertRow } from '@/lib/database';
 import { resolveMentorFromRequest } from '@/lib/mentorSession';
 import { allowRequest } from '@/lib/rateLimit';
 
@@ -39,26 +39,12 @@ export async function POST(request: Request) {
   const createdAt = new Date().toISOString();
   const answer = { id, questionId, counselorId: mentor.counselorId, body: body.trim(), createdAt };
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch (err) {
-    console.error('Service role client unavailable:', err);
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
-  const { data: question } = await supabase.from('forum_questions').select('id').eq('id', questionId).maybeSingle();
+  const { data: question } = await one('SELECT id FROM forum_questions WHERE id=$1',[questionId]);
   if (!question) {
     return NextResponse.json({ success: false, error: 'question_not_found' }, { status: 404 });
   }
 
-  // Service role, not the anon client -- forum_answers' old
-  // WITH CHECK (true) policy let ANYONE insert an answer as any
-  // counselor directly via the REST API, with or without this route.
-  // That policy is dropped in this same stage (see schema.sql section
-  // 12); this route (already gated by resolveMentorFromRequest above) is
-  // now the only path in, matching how /api/threads/reply already works.
-  const { error } = await supabase.from('forum_answers').insert({
+  const { error } = await insertRow('forum_answers', {
     id,
     question_id: questionId,
     counselor_id: mentor.counselorId,

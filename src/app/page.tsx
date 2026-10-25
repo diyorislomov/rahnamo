@@ -13,9 +13,7 @@ import CatalogIntro, { SortOption } from '@/components/CatalogIntro';
 import CounselorCard from '@/components/CounselorCard';
 import RevealOnScroll from '@/components/RevealOnScroll';
 import GoalWaitlist from '@/components/GoalWaitlist';
-import { INITIAL_COUNSELORS } from '@/lib/mockData';
-import { isSupabaseConfigured, mapCounselorRow, PUBLIC_COUNSELOR_COLUMNS } from '@/lib/counselors';
-import { supabase } from '@/lib/supabase';
+import { mapCounselorRow } from '@/lib/counselors';
 import { SPECIALTY_CONFIG, TRACKS, getTrackBySlug } from '@/lib/specialties';
 import { Counselor } from '@/types';
 import {
@@ -40,21 +38,17 @@ export default function Home() {
   const tBecome = useTranslations('becomeCounselor');
   const locale = useLocale();
 
-  const [counselors, setCounselors] = useState<Counselor[]>(() =>
-    isSupabaseConfigured() ? [] : INITIAL_COUNSELORS
-  );
+  const [counselors, setCounselors] = useState<Counselor[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('rating');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
 
-    Promise.resolve(supabase.from('counselors').select(PUBLIC_COUNSELOR_COLUMNS))
-      .then(({ data, error }) => {
-        if (error) throw error;
-        setCounselors((data || []).map(mapCounselorRow));
+    fetch('/api/counselors').then(async response => { if (!response.ok) throw new Error('catalog_unavailable'); return response.json(); })
+      .then(({ counselors }) => {
+        setCounselors((counselors || []).map(mapCounselorRow));
       })
       .catch((err: unknown) => {
         console.error('[COUNSELORS_FETCH_FAILED]', err);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { postgres } from '@/lib/postgres';
 import { normalizeSlots } from '@/lib/slots';
-import { supabase } from '@/lib/supabase';
+import { one } from '@/lib/database';
 
 export async function GET(
   _request: Request,
@@ -12,11 +12,7 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  const { data: counselor, error } = await supabase
-    .from('counselors')
-    .select('available_slots')
-    .eq('id', id)
-    .maybeSingle();
+  const { data: counselor, error } = await one('SELECT available_slots FROM counselors WHERE id=$1 AND is_active=true', [id]);
   if (error || !counselor) {
     return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 });
   }

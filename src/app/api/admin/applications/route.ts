@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ADMIN_SESSION_COOKIE, verifyAdminSession } from '@/lib/adminSession';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { one } from '@/lib/database';
 import { isSameOrigin } from '@/lib/serverSecurity';
 
 async function requireAdmin() {
@@ -26,18 +26,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
-  const query =
-    action === 'reject'
-      ? supabase.from('counselor_applications').update({ status: 'rejected' }).eq('id', id).eq('status', 'pending')
-      : supabase.from('counselor_applications').delete().eq('id', id);
-  const { data, error } = await query.select('id').single();
+  const { data, error } = action === 'reject'
+    ? await one("UPDATE counselor_applications SET status='rejected' WHERE id=$1 AND status='pending' RETURNING id",[id])
+    : await one('DELETE FROM counselor_applications WHERE id=$1 RETURNING id',[id]);
 
   if (error || !data) {
     console.error('[ADMIN_APPLICATION_ACTION_FAILED]', action, id, error);

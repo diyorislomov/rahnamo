@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CheckCircle2, Loader2, Plus, Power, Trash2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import type { CounselorService } from '@/types';
 
 const SERVICE_TYPES: CounselorService['serviceType'][] = [
@@ -29,20 +28,9 @@ export default function MentorServicesEditor() {
   const [durationMinutes, setDurationMinutes] = useState('30');
   const [price, setPrice] = useState('');
 
-  const authHeaders = useCallback(async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    return token ? { Authorization: `Bearer ${token}` } : null;
-  }, []);
-
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession()
-      .then(({ data }) => {
-        const token = data.session?.access_token;
-        if (!token) throw new Error('unauthorized');
-        return fetch('/api/mentor/services', { headers: { Authorization: `Bearer ${token}` } });
-      })
+    fetch('/api/mentor/services')
       .then(async (response) => ({ response, result: await response.json() }))
       .then(({ response, result }) => {
         if (!active) return;
@@ -64,11 +52,9 @@ export default function MentorServicesEditor() {
     setSaving(true);
     setError('');
     setSaved(false);
-    const auth = await authHeaders();
-    if (!auth) { setSaving(false); setError(t('saveFailed')); return; }
     const response = await fetch('/api/mentor/services', {
       method: 'POST',
-      headers: { ...auth, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, description, serviceType, durationMinutes: Number(durationMinutes), price: Number(price) }),
     });
     const result = await response.json();
@@ -81,11 +67,9 @@ export default function MentorServicesEditor() {
   };
 
   const updateService = async (service: CounselorService, active: boolean) => {
-    const auth = await authHeaders();
-    if (!auth) return;
     const response = await fetch('/api/mentor/services', {
       method: 'PATCH',
-      headers: { ...auth, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...service, active }),
     });
     const result = await response.json();
@@ -96,11 +80,9 @@ export default function MentorServicesEditor() {
 
   const deleteService = async (service: CounselorService) => {
     if (!window.confirm(t('deleteConfirm', { title: service.title }))) return;
-    const auth = await authHeaders();
-    if (!auth) return;
     const response = await fetch('/api/mentor/services', {
       method: 'DELETE',
-      headers: { ...auth, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: service.id }),
     });
     if (response.ok) setServices((current) => current.filter((item) => item.id !== service.id));

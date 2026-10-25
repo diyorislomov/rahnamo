@@ -1,5 +1,5 @@
-import { getServiceRoleClient } from './supabaseServiceRole';
-import { supabase } from './supabase';
+import 'server-only';
+import { postgres } from './postgres';
 
 export interface DbTrack {
   id?: string;
@@ -166,84 +166,14 @@ export const SEED_TRACKS: DbTrack[] = [
   },
 ];
 
-/**
- * Fetch active tracks from DB with graceful fallback to SEED_TRACKS
- */
 export async function getActiveTracks(): Promise<DbTrack[]> {
-  try {
-    const { data, error } = await supabase
-      .from('tracks')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true });
-
-    if (!error && Array.isArray(data) && data.length > 0) {
-      return data;
-    }
-  } catch (err) {
-    console.warn('[TRACKS_DB_FALLBACK]', err);
-  }
-  return SEED_TRACKS.filter((t) => t.is_active);
+  if (!process.env.DATABASE_URL) return SEED_TRACKS.filter(t=>t.is_active);
+  return (await postgres.query<DbTrack>('SELECT * FROM tracks WHERE is_active=true ORDER BY sort_order')).rows;
 }
-
-/**
- * Fetch all tracks (active & inactive) for Admin with approved mentor count
- */
 export async function getAllTracksAdmin(): Promise<DbTrack[]> {
-  try {
-    const client = getServiceRoleClient();
-    const { data: dbTracks, error: tErr } = await client
-      .from('tracks')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    // Fetch approved counselors to compute mentor counts
-    const { data: counselors } = await client
-      .from('counselors')
-      .select('id, specialties, is_active')
-      .neq('is_active', false);
-
-    const counts: Record<string, number> = {};
-    if (Array.isArray(counselors)) {
-      for (const c of counselors) {
-        if (Array.isArray(c.specialties)) {
-          for (const s of c.specialties) {
-            counts[s] = (counts[s] || 0) + 1;
-          }
-        }
-      }
-    }
-
-    const baseList: DbTrack[] =
-      !tErr && Array.isArray(dbTracks) && dbTracks.length > 0 ? dbTracks : SEED_TRACKS;
-
-    return baseList.map((t) => ({
-      ...t,
-      mentor_count: counts[t.slug] || 0,
-    }));
-  } catch (err) {
-    console.warn('[TRACKS_ADMIN_FALLBACK]', err);
-    return SEED_TRACKS.map((t) => ({ ...t, mentor_count: 0 }));
-  }
+  return (await postgres.query<DbTrack>(`SELECT t.*, (SELECT count(*)::int FROM counselors c WHERE c.is_active=true AND t.slug=ANY(c.specialties)) AS mentor_count FROM tracks t ORDER BY sort_order`)).rows;
 }
-
-/**
- * Update a track's status or sort order
- */
-export async function updateTrack(
-  slug: string,
-  updates: { is_active?: boolean; sort_order?: number }
-): Promise<boolean> {
-  try {
-    const client = getServiceRoleClient();
-    const { error } = await client
-      .from('tracks')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('slug', slug);
-
-    return !error;
-  } catch (err) {
-    console.error('[TRACKS_UPDATE_FAILED]', err);
-    return false;
-  }
+export async function updateTrack(slug: string, updates: {is_active?:boolean;sort_order?:number}): Promise<boolean> {
+  const result=await postgres.query('UPDATE tracks SET is_active=COALESCE($1,is_active),sort_order=COALESCE($2,sort_order),updated_at=now() WHERE slug=$3 RETURNING id',[updates.is_active??null,updates.sort_order??null,slug]);
+  return result.rowCount===1;
 }

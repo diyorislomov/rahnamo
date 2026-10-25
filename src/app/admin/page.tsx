@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { BookingTicketData, ForumQuestion, ForumAnswer, SurveyResponse, Counselor } from '@/types';
 import { mapCounselorRow } from '@/lib/counselors';
-import { DbTrack } from '@/lib/tracks';
+import type { DbTrack } from '@/lib/tracks';
 import { mapForumQuestion, mapForumAnswer } from '@/lib/forum';
 import { announceStaleBuild, isRunningStaleBuild } from '@/lib/buildVersion';
 import { Eye, EyeOff, ShieldCheck, UserCheck, Calendar, Video, Mail, ExternalLink, CheckCircle, XCircle, Clock, Search, RefreshCw, Lock, LogOut, KeyRound, MessageCircleQuestion, Trash2, Link as LinkIcon, Pause, Play, AlertCircle, ClipboardList, Users, MessagesSquare, Flag, Target, Banknote } from 'lucide-react';
@@ -126,6 +126,7 @@ const EMPTY_METRICS: PlatformMetrics = {
 };
 
 export default function AdminDashboardPage() {
+  const locale = useLocale();
   const t = useTranslations('admin');
   const tCommon = useTranslations('common');
   const dateLocale = t('dateLocale');
@@ -252,6 +253,7 @@ export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState<PlatformMetrics>(EMPTY_METRICS);
   const [threadActionId, setThreadActionId] = useState<string | null>(null);
   const [threadActionErrors, setThreadActionErrors] = useState<{ [id: string]: string }>({});
+  const [activationLinks, setActivationLinks] = useState<Record<string,string>>({});
   const [applicationActionId, setApplicationActionId] = useState<string | null>(null);
   const [applicationActionErrors, setApplicationActionErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
@@ -422,7 +424,6 @@ export default function AdminDashboardPage() {
 
     // Same reasoning as the booking-submission check: a tab open since
     // before a deploy runs its old JS forever, and old code silently
-    // skipping the whole Supabase branch is exactly how an admin could
     // believe a payment was confirmed when it never actually wrote.
     if (await isRunningStaleBuild()) {
       announceStaleBuild();
@@ -534,11 +535,7 @@ export default function AdminDashboardPage() {
     setBookingActionId(null);
   };
 
-  // Both actions go through /api/admin/threads (service_role behind the
-  // admin session cookie) -- anon has no grant on payment_status, so a
-  // direct supabase.from('question_threads').update(...) the way bookings
-  // does it would just silently fail RLS the same way admin's "confirm
-  // payment" button used to before that got a real UPDATE policy.
+  // Thread payment changes require the signed admin session.
   const handleThreadAction = async (threadId: string, action: 'flag' | 'confirm_payment') => {
     setThreadActionId(threadId);
     setThreadActionErrors((prev) => ({ ...prev, [threadId]: '' }));
@@ -574,14 +571,19 @@ export default function AdminDashboardPage() {
     setThreadActionId(null);
   };
 
-  // Goes through /api/admin/approve-application (service_role behind the
-  // admin session cookie) rather than a direct supabase.from('counselors')
-  // insert -- approving now also invites a real mentor auth account
-  // (inviteUserByEmail needs the service_role key, which must never reach
-  // the browser bundle). Local state only flips to "approved" AFTER a
-  // confirmed success, matching handleThreadAction's discipline above --
-  // not optimistically, since a failed invite or insert must not claim
-  // approval that didn't actually happen.
+  // Approval returns a local, single-use mentor activation link.
+  const handleMentorAccess = async (counselor: Counselor) => {
+    const email = window.prompt(locale === 'ru' ? 'Email ментора:' : locale === 'en' ? 'Mentor email:' : 'Mentorning email manzili:');
+    if (!email) return;
+    try {
+      const response = await fetch('/api/admin/mentor-access', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:counselor.id,email})});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'update_failed');
+      setActivationLinks(current=>({...current,[counselor.id]:result.activationUrl}));
+      setApplicationActionErrors(current=>({...current,[counselor.id]:''}));
+    } catch {setApplicationActionErrors(current=>({...current,[counselor.id]:t('applications.approveFailed')}));}
+  };
+
   const handleApproveApplication = async (app: CounselorApp) => {
     const appKey = app.id || app.email;
     if (!app.id) return;
@@ -609,6 +611,7 @@ export default function AdminDashboardPage() {
         return;
       }
 
+      if(data.activationUrl) setActivationLinks(prev=>({...prev,[appKey]:data.activationUrl}));
       setApplications((prev) =>
         prev.map((a) => ((a.id || a.email) === appKey ? { ...a, status: 'approved' } : a))
       );
@@ -1274,7 +1277,7 @@ export default function AdminDashboardPage() {
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between">
+                    <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between">
                       <div className="text-xs font-serif">
                         <span className="text-stone-400 block text-[10px]">{t('applications.expectedPriceLabel')}</span>
                         <span className="font-bold text-amber-950">{app.expected_standard_price?.toLocaleString()} UZS</span>
@@ -1302,6 +1305,12 @@ export default function AdminDashboardPage() {
                             : t('applications.approve')}
                         </button>
                       </div>
+                      {activationLinks[app.id || app.email] && (
+                        <div className="w-full mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs">
+                          <p>{locale === 'ru' ? 'Передайте ментору ссылку для входа (48 часов):' : locale === 'en' ? 'Share this activation link with the mentor (48 hours):' : 'Mentorga ushbu kirish havolasini yuboring (48 soat):'}</p>
+                          <input aria-label="Mentor activation link" readOnly value={activationLinks[app.id || app.email]} onFocus={e=>e.currentTarget.select()} className="mt-2 w-full rounded border bg-white p-2" />
+                        </div>
+                      )}
                       {applicationActionErrors[app.id || app.email] && (
                         <p className="text-[11px] text-red-600 font-semibold mt-1.5 text-right">
                           {applicationActionErrors[app.id || app.email]}
@@ -1467,7 +1476,7 @@ export default function AdminDashboardPage() {
                       </p>
                     )}
 
-                    <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
+                    <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between text-[11px] text-stone-500">
                       <span>{s.willingToRefer ? t('survey.willingToReferYes') : t('survey.willingToReferNo')}</span>
                       <span>{s.createdAt ? new Date(s.createdAt).toLocaleDateString(dateLocale) : ''}</span>
                     </div>
@@ -1528,13 +1537,13 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
+                      <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between text-[11px] text-stone-500">
                         <span>{t('counselors.ratingLabel', { rating: c.rating, count: c.reviewsCount })}</span>
                         <span>{c.joinedAt ? t('counselors.joinedLabel', { date: new Date(c.joinedAt).toLocaleDateString(dateLocale) }) : ''}</span>
                       </div>
 
                       {/* Phase 4: Pause/Activate and Remove Controls */}
-                      <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between gap-2">
+                      <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between gap-2">
                         <span
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                             c.isActive !== false
@@ -1546,6 +1555,9 @@ export default function AdminDashboardPage() {
                         </span>
 
                         <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>handleMentorAccess(c)} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 bg-amber-50">
+                            {locale === 'ru' ? 'Ссылка для входа' : locale === 'en' ? 'Activation link' : 'Kirish havolasi'}
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleToggleCounselorActive(c)}
@@ -1565,6 +1577,8 @@ export default function AdminDashboardPage() {
                             O'chirish
                           </button>
                         </div>
+                        {activationLinks[c.id] && <input aria-label="Mentor activation link" readOnly value={activationLinks[c.id]} onFocus={e=>e.currentTarget.select()} className="w-full mt-2 border rounded p-2 text-xs" />}
+                        {applicationActionErrors[c.id] && <p className="text-xs text-red-600">{applicationActionErrors[c.id]}</p>}
                       </div>
                     </div>
                   );
@@ -1574,11 +1588,7 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Tab 6: Text Q&A threads. The only actions here go through
-            /api/admin/threads (service_role behind this page's own admin
-            session) -- see handleThreadAction above for why a direct
-            supabase.from(...).update() the way bookings does it wouldn't
-            work for this table. */}
+        {/* Text Q&A changes use the authenticated admin API. */}
         {activeTab === 'threads' && (
           <div className="space-y-6">
             {threads.length === 0 ? (

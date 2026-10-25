@@ -478,7 +478,7 @@
     }
   },
   "mentorAuth": {
-    "passwordTooShort": "Password must be at least 8 characters.",
+    "passwordTooShort": "Password must be at least 12 characters.",
     "passwordMismatch": "Passwords do not match.",
     "submitFailed": "Something went wrong. Please try again.",
     "login": {
@@ -771,7 +771,7 @@
       "items": [
         {
           "q": "What happens if a consultation is cancelled or rescheduled?",
-          "a": "If you contact our administrator at least 12 hours before the session starts, you'll receive a 100% refund, or your session will be moved to another time that works for you."
+          "a": "If you contact our administrator at least 8 hours before the session starts, you'll receive a 100% refund, or your session will be moved to another time that works for you."
         },
         {
           "q": "What platform is the session held on?",

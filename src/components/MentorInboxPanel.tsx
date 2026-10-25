@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Lock, LogIn, Send, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { watchMentorSession } from '@/lib/mentorClient';
 
 interface InboxThreadRow {
   id: string;
@@ -37,19 +37,10 @@ export default function MentorInboxPanel() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function getAccessToken(): Promise<string | null> {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token || null;
-  }
-
   async function loadInbox(): Promise<boolean> {
-    const token = await getAccessToken();
-    if (!token) return false;
-
     try {
       const res = await fetch('/api/threads/mentor-view', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.status === 401) {
@@ -69,27 +60,12 @@ export default function MentorInboxPanel() {
     }
   }
 
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      const isReal = !!data.session?.user && !data.session.user.is_anonymous;
-      if (isReal) await loadInbox();
-      else setIsMentor(false);
-      setCheckingSession(false);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
-        loadInbox();
-      }
-      if (event === 'SIGNED_OUT') {
-        setIsMentor(false);
-        setThreads([]);
-        setMessages([]);
-      }
-    });
-    return () => sub.subscription.unsubscribe();
+  useEffect(() => watchMentorSession(session => {
+    if(session) void loadInbox();
+    else {setIsMentor(false);setThreads([]);setMessages([]);}
+    setCheckingSession(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }),[]);
 
   useEffect(() => {
     if (!isMentor) return;
@@ -107,10 +83,9 @@ export default function MentorInboxPanel() {
     setSendError((prev) => ({ ...prev, [threadId]: '' }));
 
     try {
-      const token = await getAccessToken();
       const res = await fetch('/api/threads/reply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ threadId, body }),
       });
       const data = await res.json();

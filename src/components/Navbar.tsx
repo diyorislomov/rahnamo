@@ -7,7 +7,7 @@ import { signOut, useSession } from 'next-auth/react';
 import { useLocale, useTranslations } from 'next-intl';
 import { RahnamoMonogram } from '@/components/RahnamoLogo';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { supabase } from '@/lib/supabase';
+import { watchMentorSession } from '@/lib/mentorClient';
 import {
   Menu,
   X,
@@ -35,15 +35,7 @@ export default function Navbar() {
   const isSignedIn = Boolean(session?.user?.id);
   const [hasMentorSession, setHasMentorSession] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setHasMentorSession(!!data.session);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event: unknown, sess: unknown) => {
-      setHasMentorSession(!!sess);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+  useEffect(() => watchMentorSession(session => setHasMentorSession(!!session)), []);
 
   useEffect(() => {
     const onScroll = () => {

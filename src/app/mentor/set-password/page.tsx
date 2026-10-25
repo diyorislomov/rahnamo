@@ -3,47 +3,33 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { KeyRound, Lock, Loader2 } from 'lucide-react';
 
-// The invite link from /api/admin/approve-application lands here with the
-// session tokens in the URL hash. supabase-js's default `detectSessionInUrl`
-// picks those up and fires SIGNED_IN automatically -- this page just waits
-// for that before showing the form, rather than assuming a session exists
-// the instant the page mounts.
 export default function SetMentorPasswordPage() {
   const t = useTranslations('mentorAuth');
   const router = useRouter();
 
   const [checkingSession, setCheckingSession] = useState(true);
   const [hasSession, setHasSession] = useState(false);
+  const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setHasSession(!!data.session);
-      setCheckingSession(false);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setHasSession(true);
-        setCheckingSession(false);
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    const value=new URLSearchParams(window.location.hash.slice(1)).get('token') || '';
+    setToken(value); setHasSession(/^[0-9a-f]{64}$/.test(value)); setCheckingSession(false);
+    window.history.replaceState(null,'',window.location.pathname);
+  },[]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (password.length < 8) {
+    if (password.length < 12) {
       setError(t('passwordTooShort'));
       return;
     }
@@ -53,11 +39,10 @@ export default function SetMentorPasswordPage() {
     }
 
     setSubmitting(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const response = await fetch('/api/mentor/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,password})}).catch(()=>null);
     setSubmitting(false);
 
-    if (updateError) {
-      console.error('[SET_MENTOR_PASSWORD_FAILED]', updateError);
+    if (!response?.ok) {
       setError(t('submitFailed'));
       return;
     }

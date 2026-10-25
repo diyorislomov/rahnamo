@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { insertRow } from '@/lib/database';
 
 const FIELDS = [
   'age_range',
@@ -36,13 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
   row.willing_to_refer = input.willing_to_refer === true;
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-  const { error } = await supabase.from('survey_responses').insert(row);
+  const { error } = await insertRow('survey_responses',row);
   if (error) return NextResponse.json({ success: false, error: 'insert_failed' }, { status: 500 });
   return NextResponse.json({ success: true });
 }

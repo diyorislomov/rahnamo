@@ -1,28 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { rows, insertRow } from '@/lib/database';
 import { allowRequest, requestIp } from '@/lib/rateLimit';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function GET() {
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
   const [{ data: questions, error: questionError }, { data: answers, error: answerError }] = await Promise.all([
-    supabase
-      .from('forum_questions')
-      .select('id, student_name_or_anonymous, category, title, body, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200),
-    supabase
-      .from('forum_answers')
-      .select('id, question_id, counselor_id, body, created_at, counselor:counselors(full_name)')
-      .order('created_at', { ascending: true })
-      .limit(1000),
+    rows('SELECT id,student_name_or_anonymous,category,title,body,created_at FROM forum_questions ORDER BY created_at DESC LIMIT 200'),
+    rows(`SELECT a.id,a.question_id,a.counselor_id,a.body,a.created_at,json_build_object('full_name',c.full_name) AS counselor
+          FROM forum_answers a JOIN counselors c ON c.id=a.counselor_id ORDER BY a.created_at LIMIT 1000`),
   ]);
 
   if (questionError || answerError) {
@@ -68,31 +54,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
   }
 
-  let supabase;
-  try {
-    supabase = getServiceRoleClient();
-  } catch {
-    return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
-  }
-
   const id = crypto.randomUUID();
-  const { data, error } = await supabase
-    .from('forum_questions')
-    .insert({
+  const { data, error } = await insertRow('forum_questions', {
       id,
       student_name_or_anonymous: isAnonymous ? 'Anonim' : name,
       email,
       category,
       title,
       body: questionBody,
-    })
-    .select('id, student_name_or_anonymous, category, title, body, created_at')
-    .single();
+    });
 
   if (error || !data) {
     console.error('[FORUM_QUESTION_INSERT_FAILED]', error);
     return NextResponse.json({ success: false, error: 'insert_failed' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, question: data }, { status: 201 });
+  return NextResponse.json({ success: true, question: { id: data.id, student_name_or_anonymous: data.student_name_or_anonymous, category: data.category, title: data.title, body: data.body, created_at: data.created_at } }, { status: 201 });
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
+import { watchMentorSession, mentorLogin, mentorLogout } from '@/lib/mentorClient';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import {
@@ -69,10 +69,8 @@ export default function MentorDashboardPage() {
   const [saved, setSaved] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  const loadCounselor = async (token: string) => {
-    const response = await fetch('/api/mentor/profile', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  const loadCounselor = async () => {
+    const response = await fetch('/api/mentor/profile');
     const result = await response.json();
     if (!response.ok || !result.success) {
       console.error('[MENTOR_DASHBOARD_LOAD_FAILED]', result.error);
@@ -96,45 +94,26 @@ export default function MentorDashboardPage() {
     setAvatarUrl(row.avatar_url || '');
   };
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const uid = data.session?.user.id || null;
-      setUserId(uid);
-      setCheckingSession(false);
-      if (uid && data.session?.access_token) loadCounselor(data.session.access_token);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setUserId(session.user.id);
-        loadCounselor(session.access_token);
-      }
-      if (event === 'SIGNED_OUT') {
-        setUserId(null);
-        setCounselor(null);
-      }
-    });
-    return () => sub.subscription.unsubscribe();
+  useEffect(() => watchMentorSession(session => {
+    setUserId(session?.user.id || null);
+    setCheckingSession(false);
+    if (session) void loadCounselor(); else setCounselor(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }), []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setLoggingIn(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
+    const success = await mentorLogin(loginEmail,loginPassword).catch(()=>false);
     setLoggingIn(false);
-    if (error) {
-      console.error('[MENTOR_LOGIN_FAILED]', error);
+    if (!success) {
       setLoginError(t('login.failed'));
     }
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await mentorLogout();
   };
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,19 +121,11 @@ export default function MentorDashboardPage() {
     if (!file || !userId) return;
 
     setUploadingPhoto(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      setUploadingPhoto(false);
-      setSaveError(td('photoUploadFailed'));
-      return;
-    }
     try {
       const form = new FormData();
       form.set('file', file);
       const response = await fetch('/api/mentor/photo', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
       const result = await response.json();
@@ -176,16 +147,9 @@ export default function MentorDashboardPage() {
     setSaveError('');
     setSaved(false);
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      setSaving(false);
-      setSaveError(td('saveFailed'));
-      return;
-    }
     const response = await fetch('/api/mentor/profile', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         headline,
         bio,

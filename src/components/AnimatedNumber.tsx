@@ -20,7 +20,7 @@ export default function AnimatedNumber({ value, suffix = '', duration = 1500, cl
   const reducedMotion = useRef(false);
 
   // Gate on visibility once; never re-locks, so a later change to `value`
-  // (e.g. the live Supabase count replacing the mock-seeded one after this
+  // (e.g. the live database count replacing the mock-seeded one after this
   // already scrolled into view) still gets picked up by the effect below.
   useEffect(() => {
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

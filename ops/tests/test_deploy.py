@@ -45,6 +45,22 @@ class RequestTests(unittest.TestCase):
         self.assertIn('-i', command)
 
 
+class SchemaApprovalTests(unittest.TestCase):
+    def test_receipt_is_bound_to_both_releases(self):
+        import json
+        with tempfile.TemporaryDirectory() as directory, patch.object(deploy, 'STATE', Path(directory)):
+            previous, target = 'a' * 40, 'b' * 40
+            with self.assertRaises(RuntimeError): deploy.require_schema_approval(previous, target)
+            receipts = Path(directory) / 'schema-approvals'
+            receipts.mkdir()
+            (receipts / (target + '.json')).write_text(json.dumps({'previous': previous, 'target': target, 'status': 'applied'}))
+            deploy.require_schema_approval(previous, target)
+            with self.assertRaises(RuntimeError): deploy.require_schema_approval('c' * 40, target)
+            with self.assertRaises(RuntimeError): deploy.require_schema_approval(previous, 'c' * 40)
+            (receipts / (target + '.json')).write_text('{invalid')
+            with self.assertRaises(RuntimeError): deploy.require_schema_approval(previous, target)
+
+
 class ActivationTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

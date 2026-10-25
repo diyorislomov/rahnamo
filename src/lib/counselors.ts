@@ -1,9 +1,8 @@
 import { Counselor } from '@/types';
 
-export { isSupabaseConfigured } from './supabase';
 
 export const PUBLIC_COUNSELOR_COLUMNS =
-  'id, full_name, headline, avatar_url, specialties, bio, standard_price, premium_price, rating, reviews_count, available_slots, company, why_work_with_me, joined_at, commission_free_until, price_per_question, soft_cap';
+  'id, full_name, headline, avatar_url, specialties, bio, standard_price, premium_price, rating, reviews_count, available_slots, company, why_work_with_me, joined_at, commission_free_until, price_per_question, soft_cap, is_active';
 
 interface CounselorRow {
   id: string;
@@ -26,7 +25,7 @@ interface CounselorRow {
   is_active?: boolean | null;
 }
 
-// Live Supabase rows never carry responseTime/totalSessions/outcomes -- those
+// Database rows never carry responseTime/totalSessions/outcomes -- those
 // are decorative fields only the seeded mock counselors have. All three are
 // optional on the Counselor type and already rendered conditionally.
 export function mapCounselorRow(r: CounselorRow): Counselor {

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { resolveMentorFromRequest } from '@/lib/mentorSession';
 import { allowRequest } from '@/lib/rateLimit';
 import { postgres } from '@/lib/postgres';
-import { getServiceRoleClient } from '@/lib/supabaseServiceRole';
 
 function sanitizeThreadForMentor(thread: Record<string, unknown>) {
   const rawName = (thread.student_name as string) || '';
@@ -50,31 +49,7 @@ export async function POST(request: Request) {
     }
   } catch (pgErr) {
     console.warn('[MENTOR_VIEW_PG_FALLBACK]', pgErr instanceof Error ? pgErr.message : String(pgErr));
-    // Supabase fallback
-    try {
-      const sbClient = getServiceRoleClient();
-      const { data: sbThreads } = await sbClient
-        .from('question_threads')
-        .select('*')
-        .eq('counselor_id', mentor.counselorId)
-        .neq('payment_status', 'closed')
-        .order('created_at', { ascending: false });
-
-      if (sbThreads) {
-        threads = sbThreads;
-        const threadIds = threads.map((t) => t.id);
-        if (threadIds.length > 0) {
-          const { data: sbMessages } = await sbClient
-            .from('thread_messages')
-            .select('*')
-            .in('thread_id', threadIds)
-            .order('created_at', { ascending: true });
-          if (sbMessages) messages = sbMessages;
-        }
-      }
-    } catch (sbErr) {
-      console.warn('[MENTOR_VIEW_SB_FALLBACK_WARN]', sbErr instanceof Error ? sbErr.message : String(sbErr));
-    }
+    return NextResponse.json({success:false,error:'query_failed'},{status:503});
   }
 
   const sanitizedThreads = threads.map(sanitizeThreadForMentor);

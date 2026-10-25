@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveMenteeFromRequest } from '@/lib/menteeSession';
 import { allowRequest } from '@/lib/rateLimit';
 import { postgres } from '@/lib/postgres';
-import { supabase } from '@/lib/supabase';
+import { one } from '@/lib/database';
 import { isSameOrigin } from '@/lib/serverSecurity';
 
 export async function POST(request: Request) {
@@ -33,11 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'thread_already_open', threadId: existing.rows[0].id }, { status: 409 });
   }
 
-  const { data: counselor, error: counselorError } = await supabase
-    .from('counselors')
-    .select('id, full_name, headline, avatar_url, price_per_question, soft_cap')
-    .eq('id', counselorId)
-    .maybeSingle();
+  const { data: counselor, error: counselorError } = await one('SELECT id, full_name, headline, avatar_url, price_per_question, soft_cap FROM counselors WHERE id=$1 AND is_active=true', [counselorId]);
   if (counselorError || !counselor || counselor.price_per_question == null || counselor.price_per_question <= 0) {
     return NextResponse.json({ success: false, error: 'counselor_unavailable' }, { status: 404 });
   }
