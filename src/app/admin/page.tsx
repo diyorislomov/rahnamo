@@ -1277,7 +1277,7 @@ export default function AdminDashboardPage() {
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between">
+                    <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between">
                       <div className="text-xs font-serif">
                         <span className="text-stone-400 block text-[10px]">{t('applications.expectedPriceLabel')}</span>
                         <span className="font-bold text-amber-950">{app.expected_standard_price?.toLocaleString()} UZS</span>
@@ -1306,7 +1306,7 @@ export default function AdminDashboardPage() {
                         </button>
                       </div>
                       {activationLinks[app.id || app.email] && (
-                        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs">
+                        <div className="w-full mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs">
                           <p>{locale === 'ru' ? 'Передайте ментору ссылку для входа (48 часов):' : locale === 'en' ? 'Share this activation link with the mentor (48 hours):' : 'Mentorga ushbu kirish havolasini yuboring (48 soat):'}</p>
                           <input aria-label="Mentor activation link" readOnly value={activationLinks[app.id || app.email]} onFocus={e=>e.currentTarget.select()} className="mt-2 w-full rounded border bg-white p-2" />
                         </div>
@@ -1476,7 +1476,7 @@ export default function AdminDashboardPage() {
                       </p>
                     )}
 
-                    <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
+                    <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between text-[11px] text-stone-500">
                       <span>{s.willingToRefer ? t('survey.willingToReferYes') : t('survey.willingToReferNo')}</span>
                       <span>{s.createdAt ? new Date(s.createdAt).toLocaleDateString(dateLocale) : ''}</span>
                     </div>
@@ -1537,13 +1537,13 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between text-[11px] text-stone-500">
+                      <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between text-[11px] text-stone-500">
                         <span>{t('counselors.ratingLabel', { rating: c.rating, count: c.reviewsCount })}</span>
                         <span>{c.joinedAt ? t('counselors.joinedLabel', { date: new Date(c.joinedAt).toLocaleDateString(dateLocale) }) : ''}</span>
                       </div>
 
                       {/* Phase 4: Pause/Activate and Remove Controls */}
-                      <div className="pt-3 border-t border-amber-900/10 flex items-center justify-between gap-2">
+                      <div className="pt-3 border-t border-amber-900/10 flex flex-wrap gap-3 items-center justify-between gap-2">
                         <span
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                             c.isActive !== false

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import pg from 'pg';
 
 const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:3102';
@@ -343,7 +343,7 @@ try {
   );
   const secondMentor = 'c-' + randomUUID(),
     secondAccount = randomUUID(),
-    secondToken = randomUUID();
+    secondToken = randomBytes(32).toString('hex');
   await db.query(
     "INSERT INTO counselors(id,full_name,headline,avatar_url,bio) VALUES($1,'Other mentor','Other mentor',$2,'Other mentor bio')",
     [secondMentor, uploaded.url],
