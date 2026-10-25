@@ -222,13 +222,13 @@ export default function BecomeCounselorPage() {
       setUploadingPhoto(false);
       const errCode = error instanceof Error ? error.message : 'upload_failed';
       if (errCode === 'rate_limited') {
-        setPhotoError("Juda ko'p rasm yuklandi. Iltimos, arizani suratsiz yuboring yoki birozdan so'ng urinib ko'ring.");
+        setPhotoError("Juda ko'p rasm yuklash so'rovi yuborildi. Iltimos, biroz kutib qayta urinib ko'ring.");
       } else if (errCode === 'invalid_file_type' || errCode === 'invalid_file_signature') {
-        setPhotoError("Rasm formati mos kelmadi (JPG, PNG, WebP tavsiya etiladi). Arizani suratsiz ham topshirishingiz mumkin.");
+        setPhotoError("Faqat JPG, PNG yoki WebP formatidagi suratlarni yuklash mumkin.");
       } else if (errCode === 'file_too_large') {
-        setPhotoError("Rasm hajmi juda katta (maksimal 5MB). Arizani suratsiz ham topshirishingiz mumkin.");
+        setPhotoError("Surat hajmi 5 MB dan oshmasligi kerak.");
       } else {
-        setPhotoError("Suratni yuklab bo'lmadi (ixtiyoriy). Siz arizangizni suratsiz ham topshirishingiz mumkin.");
+        setPhotoError("Suratni yuklab bo'lmadi. Qayta urinib ko'ring yoki boshqa rasm tanlang.");
       }
       return;
     }
