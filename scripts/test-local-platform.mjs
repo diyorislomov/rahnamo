@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import pg from 'pg';
+import imageFixtures from '../tests/fixtures/upload-images.json' with { type: 'json' };
 
 const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:3102';
 const dbUrl = new URL(process.env.DATABASE_URL);
@@ -39,6 +40,33 @@ const cookieFrom = (response) =>
     .getSetCookie()
     .map((value) => value.split(';')[0])
     .join('; ');
+const uploadOrigins = [process.env.NEXT_PUBLIC_SITE_URL || base];
+if (uploadOrigins[0] === 'https://myrahnamo.com') uploadOrigins.push('https://www.myrahnamo.com');
+if (uploadOrigins[0] === 'https://www.myrahnamo.com') uploadOrigins.push('https://myrahnamo.com');
+async function checkPhotoUploads(route, cookie) {
+  let uploaded;
+  for (const origin of uploadOrigins) {
+    for (const fixture of imageFixtures) {
+      const bytes = Buffer.from(fixture.base64, 'base64');
+      const form = new FormData();
+      form.set('file', new File([bytes], 'photo.' + fixture.format, { type: fixture.mime }));
+      uploaded = expectStatus(await request(route, {
+        method: 'POST', body: form, cookie, headers: { Origin: origin },
+      }), 200);
+      assert.match(uploaded.url, /^\/api\/uploads\/[a-f0-9-]{36}\.(png|jpg|webp)$/);
+      const image = await fetch(base + uploaded.url);
+      assert.equal(image.status, 200);
+      assert.equal(image.headers.get('content-type'), fixture.mime);
+      assert.deepEqual(Buffer.from(await image.arrayBuffer()), bytes);
+      checks++;
+    }
+  }
+  expectStatus(await request(route, {
+    method: 'POST', body: new FormData(), cookie,
+    headers: { Origin: 'https://myrahnamo.com.evil.example' },
+  }), 403);
+  return uploaded;
+}
 const suffix = randomUUID();
 try {
   for (let i = 0; i < 40; i++) {
@@ -56,21 +84,8 @@ try {
   expectStatus(admin, 200);
   const adminCookie = cookieFrom(admin.response);
   assert(adminCookie);
-  const png = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
-    'base64',
-  );
-  const form = new FormData();
-  form.set('file', new File([png], 'photo.png', { type: 'image/png' }));
-  const uploaded = expectStatus(
-    await request('/api/applications/photo', { method: 'POST', body: form }),
-    200,
-  );
-  assert.match(uploaded.url, /^\/api\/uploads\//);
-  const image = await fetch(base + uploaded.url);
-  assert.equal(image.status, 200);
-  assert.deepEqual(Buffer.from(await image.arrayBuffer()), png);
-  checks++;
+  expectStatus(await request('/api/mentor/photo', { method: 'POST', body: new FormData() }), 401);
+  const uploaded = await checkPhotoUploads('/api/applications/photo');
   const badForm = new FormData();
   badForm.set('file', new File(['<script>alert(1)</script>'], 'bad.png', { type: 'image/png' }));
   expectStatus(await request('/api/applications/photo', { method: 'POST', body: badForm }), 400);
@@ -150,6 +165,7 @@ try {
   });
   expectStatus(login, 200);
   mentorCookie = cookieFrom(login.response);
+  const mentorPhoto = await checkPhotoUploads('/api/mentor/photo', mentorCookie);
   const slot = new Date(Date.now() + 2 * 86400000).toISOString();
   const profile = expectStatus(
     await request('/api/mentor/profile', { cookie: mentorCookie }),
@@ -161,6 +177,7 @@ try {
       cookie: mentorCookie,
       body: {
         ...profile,
+        avatar_url: mentorPhoto.url,
         headline: 'Updated local mentor',
         available_slots: [slot],
         counselorId: 'somebody-else',
@@ -168,6 +185,7 @@ try {
     }),
     200,
   );
+  assert.equal(expectStatus(await request('/api/mentor/profile', { cookie: mentorCookie }), 200).counselor.avatar_url, mentorPhoto.url);
   expectStatus(
     await request('/api/mentor/profile', {
       method: 'POST',
