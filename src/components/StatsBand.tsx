@@ -110,7 +110,7 @@ export default function StatsBand({ counselors }: StatsBandProps) {
         value: categoryCount,
         suffix: '',
         label: t('specialtyCategories'),
-        sub: 'IT, Xalqaro Grantlar, Tibbiyot, Huquq',
+        sub: 'IT, Data & AI, Moliya, Xalqaro Grantlar',
       },
     ];
   }, [counselors.length, locale, t]);

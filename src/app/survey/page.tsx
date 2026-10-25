@@ -14,14 +14,15 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const INTEREST_AREA_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Medicine', label: 'Tibbiyot' },
-  { value: 'Law', label: 'Huquq' },
-  { value: 'Architecture', label: 'Arxitektura' },
-  { value: 'IT/Programming', label: "IT / Dasturlash" },
-  { value: 'Grants & Scholarships', label: "Xalqaro Grantlar va Stipendiyalar" },
-  { value: 'Agriculture', label: "Qishloq xo'jaligi" },
-  { value: 'Business', label: 'Biznes' },
-  { value: 'Other', label: 'Boshqa' },
+  { value: 'it-software', label: 'IT va dasturlash' },
+  { value: 'data-ai', label: "Data science va sun'iy intellekt" },
+  { value: 'finance', label: 'Moliya, buxgalteriya va bank' },
+  { value: 'marketing-smm', label: 'Marketing va SMM' },
+  { value: 'business', label: 'Biznes va tadbirkorlik' },
+  { value: 'study-abroad', label: "Chet elda o'qish va grantlar" },
+  { value: 'trade-logistics', label: 'Xalqaro savdo va logistika' },
+  { value: 'career-start', label: 'Karyera boshlash (CV, intervyu, birinchi ish)' },
+  { value: 'design-creative', label: 'Dizayn va kreativ (mobil kontent va video)' },
 ];
 
 const ADVICE_SOURCE_OPTIONS: { value: string; label: string }[] = [

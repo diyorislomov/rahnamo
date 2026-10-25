@@ -82,7 +82,7 @@ const ROADMAP_TRACKS: RoadmapTrack[] = [
     title: 'AI Engineer',
     badge: 'HIGH DEMAND • TIER 1',
     avgTimeline: '12–16 Weeks',
-    specialtyMatch: 'Engineering & Tech',
+    specialtyMatch: 'it-software',
     requiredSkills: ['Python', 'SQL', 'Machine Learning', 'LLM & RAG', 'Docker & APIs'],
     milestones: [
       {
@@ -127,7 +127,7 @@ const ROADMAP_TRACKS: RoadmapTrack[] = [
     title: 'Software Engineer',
     badge: 'BIG TECH & UZUM TRACK',
     avgTimeline: '10–14 Weeks',
-    specialtyMatch: 'Engineering & Tech',
+    specialtyMatch: 'it-software',
     requiredSkills: ['JavaScript/TypeScript', 'Python', 'System Design', 'SQL', 'Git/Linux'],
     milestones: [
       {
@@ -210,7 +210,7 @@ const ROADMAP_TRACKS: RoadmapTrack[] = [
     title: 'Data Scientist',
     badge: 'ANALYTICS & FINTECH',
     avgTimeline: '10–14 Weeks',
-    specialtyMatch: 'Engineering & Tech',
+    specialtyMatch: 'it-software',
     requiredSkills: ['Python', 'SQL', 'Data Analysis', 'Machine Learning', 'Statistics'],
     milestones: [
       {
@@ -415,7 +415,7 @@ const CURATED_OPPORTUNITIES: OpportunityItem[] = [
     deadline: 'Annual cycle',
     rewardOrGrant: 'Paid stipend for open-source work with mentors',
     tags: ['Open source', 'Remote', 'Beginner-friendly'],
-    mentorSpecialty: 'Engineering & Tech',
+    mentorSpecialty: 'it-software',
     url: 'https://summerofcode.withgoogle.com/',
   },
   {
@@ -427,7 +427,7 @@ const CURATED_OPPORTUNITIES: OpportunityItem[] = [
     deadline: 'Rolling',
     rewardOrGrant: 'Prizes vary by event',
     tags: ['Build', 'Portfolio', 'Teams'],
-    mentorSpecialty: 'Engineering & Tech',
+    mentorSpecialty: 'it-software',
     url: 'https://devpost.com/hackathons',
   },
   {
@@ -451,7 +451,7 @@ const CURATED_OPPORTUNITIES: OpportunityItem[] = [
     deadline: 'Rolling',
     rewardOrGrant: 'Resident benefits and startup support programs',
     tags: ['Uzbekistan', 'Tech', 'Startups'],
-    mentorSpecialty: 'Engineering & Tech',
+    mentorSpecialty: 'it-software',
     url: 'https://it-park.uz/en',
   },
   {
@@ -463,7 +463,7 @@ const CURATED_OPPORTUNITIES: OpportunityItem[] = [
     deadline: 'Rolling',
     rewardOrGrant: 'Tech ecosystem, acceleration and events',
     tags: ['Kazakhstan', 'Tech', 'Acceleration'],
-    mentorSpecialty: 'Engineering & Tech',
+    mentorSpecialty: 'it-software',
     url: 'https://astanahub.com/',
   },
   {
@@ -475,7 +475,7 @@ const CURATED_OPPORTUNITIES: OpportunityItem[] = [
     deadline: 'Rolling',
     rewardOrGrant: 'Live vacancies across industries',
     tags: ['Local market', 'All fields'],
-    mentorSpecialty: 'Engineering & Tech',
+    mentorSpecialty: 'it-software',
     url: 'https://hh.uz/',
   },
 ];
