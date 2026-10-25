@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import Navbar from '@/components/Navbar';
@@ -134,6 +134,22 @@ export default function AdminDashboardPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const loginInFlight = useRef(false);
+  const [loginRetryAt, setLoginRetryAt] = useState(0);
+  const [loginRetrySeconds, setLoginRetrySeconds] = useState(0);
+
+  useEffect(() => {
+    if (!loginRetryAt) return;
+    const update = () => {
+      const seconds = Math.max(0, Math.ceil((loginRetryAt - Date.now()) / 1000));
+      setLoginRetrySeconds(seconds);
+      if (seconds === 0) setLoginRetryAt(0);
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [loginRetryAt]);
 
   const [activeTab, setActiveTab] = useState<'bookings' | 'applications' | 'waitlist' | 'forum' | 'survey' | 'counselors' | 'threads' | 'tracks'>('bookings');
   const [tracks, setTracks] = useState<DbTrack[]>([]);
@@ -385,7 +401,12 @@ export default function AdminDashboardPage() {
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    if (loginInFlight.current || loginRetryAt > Date.now()) return;
     const entered = adminPassword.trim();
+    if (!entered) return;
+    loginInFlight.current = true;
+    setIsLoggingIn(true);
+    setLoginError('');
 
     fetch('/api/admin/login', {
       method: 'POST',
@@ -399,14 +420,21 @@ export default function AdminDashboardPage() {
           setLoginError('');
           fetchAdminData();
         } else if (res.status === 429) {
-          setLoginError("Urinishlar soni cheklandi (429). Iltimos, bir oz kuting.");
+          const reported = Number(res.headers.get('Retry-After') || data?.retryAfterSeconds);
+          const seconds = Number.isFinite(reported) && reported > 0 ? Math.ceil(reported) : 900;
+          setLoginRetrySeconds(seconds);
+          setLoginRetryAt(Date.now() + seconds * 1000);
         } else if (res.status === 500) {
-          setLoginError("Serverda ADMIN_PASSWORD sozlanmagan.");
+          setLoginError(t('login.checkFailed'));
         } else {
           setLoginError(t('login.wrongPassword'));
         }
       })
-      .catch(() => setLoginError(t('login.checkFailed')));
+      .catch(() => setLoginError(t('login.checkFailed')))
+      .finally(() => {
+        loginInFlight.current = false;
+        setIsLoggingIn(false);
+      });
   };
 
   const handleAdminLogout = () => {
@@ -724,15 +752,20 @@ export default function AdminDashboardPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {loginError && <p className="text-[11px] text-red-600 font-semibold mt-1.5">{loginError}</p>}
+                {(loginError || loginRetrySeconds > 0) && (
+                  <p role="alert" className="text-[11px] text-red-600 font-semibold mt-1.5">
+                    {loginRetrySeconds > 0 ? t('login.rateLimited', { seconds: loginRetrySeconds }) : loginError}
+                  </p>
+                )}
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                disabled={isLoggingIn || loginRetrySeconds > 0 || !adminPassword.trim()}
+                className="w-full py-3.5 bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 font-serif font-bold text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Lock className="w-4 h-4 text-amber-300" />
-                <span>{t('login.submit')}</span>
+                <span>{isLoggingIn ? t('login.checking') : t('login.submit')}</span>
               </button>
             </form>
 

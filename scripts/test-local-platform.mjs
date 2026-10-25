@@ -84,6 +84,35 @@ try {
   expectStatus(admin, 200);
   const adminCookie = cookieFrom(admin.response);
   assert(adminCookie);
+
+  // Isolate failed-login checks from the other HTTP tests and real clients.
+  const loginHeaders = { 'X-Forwarded-For': '192.0.2.19' };
+  const loginKey = 'admin-login:192.0.2.19';
+  const tryAdminLogin = (password) => request('/api/admin/login', {
+    method: 'POST', body: { password }, headers: loginHeaders,
+  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    expectStatus(await tryAdminLogin('incorrect'), 401);
+  }
+  expectStatus(await tryAdminLogin(process.env.ADMIN_PASSWORD), 200);
+  assert.equal((await db.query('SELECT count(*)::int AS count FROM api_rate_limits WHERE key=$1', [loginKey])).rows[0].count, 0);
+  checks++;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    expectStatus(await tryAdminLogin('incorrect'), 401);
+  }
+  const limitedLogin = await tryAdminLogin(process.env.ADMIN_PASSWORD);
+  expectStatus(limitedLogin, 429);
+  const retryAfter = Number(limitedLogin.response.headers.get('retry-after'));
+  assert(retryAfter > 0 && retryAfter <= 900);
+  assert.equal(limitedLogin.data.retryAfterSeconds, retryAfter);
+  assert.equal(limitedLogin.data.error, 'rate_limited');
+  checks++;
+  // An expired database window must allow login without restarting the app.
+  await db.query("UPDATE api_rate_limits SET reset_at=now()-interval '1 second' WHERE key=$1", [loginKey]);
+  expectStatus(await tryAdminLogin(process.env.ADMIN_PASSWORD), 200);
+  assert.equal((await db.query('SELECT count(*)::int AS count FROM api_rate_limits WHERE key=$1', [loginKey])).rows[0].count, 0);
+  checks++;
+
   expectStatus(await request('/api/mentor/photo', { method: 'POST', body: new FormData() }), 401);
   const uploaded = await checkPhotoUploads('/api/applications/photo');
   const badForm = new FormData();
