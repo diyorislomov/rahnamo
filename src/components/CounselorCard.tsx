@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatSlot } from '@/lib/slots';
 import {
   ArrowUpRight,
   Building2,
@@ -44,10 +45,12 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
   const tCommon = useTranslations('common');
   const tHero = useTranslations('hero');
   const tSpecialties = useTranslations('specialties');
+  const locale = useLocale();
 
   const primarySpecialty = counselor.specialties[0];
   const specialtyConfig = SPECIALTY_CONFIG[primarySpecialty];
   const nextSlot = counselor.availableSlots?.[0];
+  const formattedNextSlot = nextSlot ? formatSlot(nextSlot, locale) : null;
   const roots = inferMentorRoots(counselor);
   const sessionsCount = counselor.totalSessions ?? counselor.reviewsCount ?? 0;
   const isNew = sessionsCount === 0 || !counselor.rating || counselor.rating === 0;
@@ -165,10 +168,10 @@ export default function CounselorCard({ counselor }: { counselor: Counselor }) {
           </p>
 
           {/* Next Available Slot */}
-          {nextSlot && (
+          {formattedNextSlot && (
             <div className="mt-3.5 flex items-center gap-2 text-[11px] font-semibold text-[#0F1E36] bg-[#FBF9F5] border border-[#0F1E36]/10 rounded-xl px-3 py-2">
               <Clock className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
-              <span className="truncate">{tHero('nextSlotLabel', { slot: nextSlot })}</span>
+              <span className="truncate">{tHero('nextSlotLabel', { slot: formattedNextSlot })}</span>
             </div>
           )}
         </div>
