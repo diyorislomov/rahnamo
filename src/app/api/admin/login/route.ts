@@ -6,21 +6,31 @@ import { allowRequest, requestIp } from '@/lib/rateLimit';
 import { isSameOrigin, secureEqual } from '@/lib/serverSecurity';
 
 function resolveAdminPassword(): string | null {
-  try {
-    const envPath = path.join(process.cwd(), '.env.local');
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, 'utf8');
-      for (const line of content.split(/\r?\n/)) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('ADMIN_PASSWORD=')) {
-          const val = trimmed.slice('ADMIN_PASSWORD='.length).trim().replace(/^["']|["']$/g, '');
-          if (val) return val;
+  const candidateFiles = [
+    '.env.production.local',
+    '.env.local',
+    '.env.production',
+    '.env',
+  ];
+
+  for (const filename of candidateFiles) {
+    try {
+      const envPath = path.join(process.cwd(), filename);
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, 'utf8');
+        for (const line of content.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('ADMIN_PASSWORD=')) {
+            const val = trimmed.slice('ADMIN_PASSWORD='.length).trim().replace(/^["']|["']$/g, '');
+            if (val) return val;
+          }
         }
       }
+    } catch {
+      // Continue to next candidate
     }
-  } catch {
-    // Fall back to process.env
   }
+
   return process.env.ADMIN_PASSWORD?.trim() || null;
 }
 
