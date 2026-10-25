@@ -1,15 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { query, connect } = vi.hoisted(() => {
+const { query, connect, cookieGet } = vi.hoisted(() => {
   const query = vi.fn();
   const connect = vi.fn().mockResolvedValue({
     query,
     release: vi.fn(),
   });
-  return { query, connect };
+  return { query, connect, cookieGet: vi.fn() };
 });
 
 vi.mock('server-only', () => ({}));
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(async () => ({ get: cookieGet })),
+}));
 vi.mock('../src/lib/postgres', () => ({
   postgres: {
     query,
@@ -50,6 +53,7 @@ describe('Admin Users Management & Audit Security', () => {
   beforeEach(() => {
     query.mockReset();
     connect.mockClear();
+    cookieGet.mockReturnValue({ value: 'valid_admin_token' });
     vi.stubEnv('ADMIN_PASSWORD', 'SuperSecretAdmin123!');
     vi.stubEnv('SESSION_SECRET', 'test-session-secret-longer-than-32-chars-strictly');
   });
@@ -57,6 +61,7 @@ describe('Admin Users Management & Audit Security', () => {
   it('rejects unauthenticated requests to /api/admin/users with 401', async () => {
     const { GET, POST } = await import('../src/app/api/admin/users/route');
 
+    cookieGet.mockReturnValue(undefined);
     // Without valid admin cookie
     const reqGet = new Request('http://localhost/api/admin/users');
     const resGet = await GET(reqGet);

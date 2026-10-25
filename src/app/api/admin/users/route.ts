@@ -8,21 +8,9 @@ import { requestIp } from '@/lib/rateLimit';
 import { deleteUserStoredFiles } from '@/lib/storageCleanup';
 
 // Admin endpoints require a verified admin session
-async function requireAdmin(request?: Request) {
-  if (request) {
-    const cookieHeader = request.headers.get('cookie') || '';
-    const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${ADMIN_SESSION_COOKIE}=([^;]*)`));
-    if (match) {
-      return verifyAdminSession(match[1]);
-    }
-  }
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-    return verifyAdminSession(token);
-  } catch {
-    return false;
-  }
+async function requireAdmin() {
+  const token = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
+  return verifyAdminSession(token);
 }
 
 function hashIp(rawIp: string): string {
@@ -30,7 +18,7 @@ function hashIp(rawIp: string): string {
 }
 
 export async function GET(request: Request) {
-  if (!(await requireAdmin(request))) {
+  if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
@@ -153,7 +141,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ success: false, error: 'invalid_origin' }, { status: 403 });
-  if (!(await requireAdmin(request))) {
+  if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
   }
 
