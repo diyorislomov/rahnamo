@@ -18,6 +18,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { Avatar } from "./network/NetworkAvatar";
 import { useNetwork, useNetworkCopy } from "./network/NetworkProvider";
 import { mentorLogout } from "@/lib/mentorClient";
+import { RahnamoRMark } from "./RahnamoLogo";
 
 export default function Navbar() {
   const router = useRouter();
@@ -59,7 +60,7 @@ export default function Navbar() {
         <div className="network-header-inner">
           <Link className="network-brand" href="/" aria-label="Rahnamo">
             <span className="network-brand-mark">
-              r<span>•</span>
+              <RahnamoRMark className="w-[18px] h-[19px]" light={true} />
             </span>
             <span>
               rahnamo<span className="network-brand-dot">.</span>
