@@ -384,7 +384,6 @@ export function NetworkShell({
               ))}
             </nav>
             <div className="network-small-links">
-              <Link href="/resources">{t.resources}</Link>
               <Link href="/privacy">{t.privacy}</Link>
               <Link href="/mentor/dashboard">{t.mentorOffice}</Link>
               {me.admin && <Link href="/admin/community">{t.moderation}</Link>}

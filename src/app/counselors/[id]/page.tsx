@@ -79,15 +79,19 @@ export default function CounselorPage() {
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const [counselor, setCounselor] = useState<Counselor | undefined>();
-  const [counselorLoading, setCounselorLoading] = useState(true);
+  const [loadedCounselorId, setLoadedCounselorId] = useState<string | undefined>();
+  const counselorLoading = loadedCounselorId !== rawId;
   useEffect(() => {
     if (!rawId) return;
-    setCounselorLoading(true);
+    let active = true;
     fetch(`/api/counselors?id=${encodeURIComponent(rawId)}`)
       .then(async response=>{if(!response.ok) throw new Error('catalog_unavailable');return response.json();})
-      .then(result=>setCounselor(result.counselors[0] ? mapCounselorRow(result.counselors[0]) : undefined))
-      .catch(()=>setCounselor(undefined))
-      .finally(()=>setCounselorLoading(false));
+      .then(result=>{
+        if (active) setCounselor(result.counselors[0] ? mapCounselorRow(result.counselors[0]) : undefined);
+      })
+      .catch(()=>{if (active) setCounselor(undefined);})
+      .finally(()=>{if (active) setLoadedCounselorId(rawId);});
+    return () => { active = false; };
   },[rawId]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);

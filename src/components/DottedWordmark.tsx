@@ -21,7 +21,7 @@ export default function DottedWordmark({ text = 'Rahnamo' }: DottedWordmarkProps
 
     let animId = 0;
     let dots: { x: number; y: number; r: number; phase: number; color: string }[] = [];
-    let pointer = { x: -9999, y: -9999 };
+    const pointer = { x: -9999, y: -9999 };
 
     const buildDots = () => {
       const rect = canvas.getBoundingClientRect();

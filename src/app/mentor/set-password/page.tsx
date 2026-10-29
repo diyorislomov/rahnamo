@@ -21,6 +21,8 @@ export default function SetMentorPasswordPage() {
 
   useEffect(() => {
     const value=new URLSearchParams(window.location.hash.slice(1)).get('token') || '';
+    // The token lives in the URL fragment, which is only available after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setToken(value); setHasSession(/^[0-9a-f]{64}$/.test(value)); setCheckingSession(false);
     window.history.replaceState(null,'',window.location.pathname);
   },[]);

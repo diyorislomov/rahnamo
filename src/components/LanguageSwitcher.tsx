@@ -26,6 +26,8 @@ export default function LanguageSwitcher({ className = '' }: { className?: strin
   const select = (next: Locale) => {
     if (next === optimistic) return;
     setOptimistic(next);
+    // Persist the user's explicit selection for the next server render.
+    // eslint-disable-next-line react-hooks/immutability
     document.cookie = `${localeCookieName}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     startTransition(() => {
       router.refresh();

@@ -730,13 +730,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  useEffect(() => {
-    if (activeTab === 'users') {
-      fetchAdminUsers(userPage, userSearch);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
-
   const handleBlockUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!confirmingBlockUser) return;
@@ -1188,7 +1181,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <Target className="w-4 h-4" />
-            <span>Yo'nalishlar ({tracks.length})</span>
+            <span>Yo&apos;nalishlar ({tracks.length})</span>
           </button>
 
           <button
@@ -1204,7 +1197,10 @@ export default function AdminDashboardPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('users')}
+            onClick={() => {
+              setActiveTab('users');
+              void fetchAdminUsers(userPage, userSearch);
+            }}
             className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'users'
                 ? 'bg-amber-900 text-amber-50 shadow-sm'
@@ -1224,10 +1220,10 @@ export default function AdminDashboardPage() {
                 <div>
                   <h3 className="font-serif font-bold text-lg text-amber-950 flex items-center gap-2">
                     <Target className="w-5 h-5 text-amber-800" />
-                    <span>Yo'nalishlar tizimi (Tracks System)</span>
+                    <span>Yo&apos;nalishlar tizimi (Tracks System)</span>
                   </h3>
                   <p className="text-xs text-stone-600 mt-1">
-                    9 ta start yo'nalishi (faol) va Phase 2 yo'nalishlari (nofaol). Har bir yo'nalishning faollik holati va tartibini boshqaring.
+                    9 ta start yo&apos;nalishi (faol) va Phase 2 yo&apos;nalishlari (nofaol). Har bir yo&apos;nalishning faollik holati va tartibini boshqaring.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-mono">
@@ -1246,7 +1242,7 @@ export default function AdminDashboardPage() {
                     <tr className="bg-amber-50/80 border-b border-amber-900/10 text-amber-950 font-serif font-bold">
                       <th className="p-3 w-20 text-center">Tartib</th>
                       <th className="p-3">Belgi & Slug</th>
-                      <th className="p-3">O'zbekcha nomi</th>
+                      <th className="p-3">O&apos;zbekcha nomi</th>
                       <th className="p-3">Inglizcha / Ruscha</th>
                       <th className="p-3">Tavsif (UZ)</th>
                       <th className="p-3 text-center">Mentorlar</th>
@@ -1638,13 +1634,13 @@ export default function AdminDashboardPage() {
                             <span>Tasdiqlovchi havola (Proof)</span>
                           </a>
                         ) : (
-                          <span className="text-stone-400">Tasdiqlovchi havola yo'q</span>
+                          <span className="text-stone-400">Tasdiqlovchi havola yo&apos;q</span>
                         )}
                       </div>
                     </div>
                     {app.consent_published && (
                       <div className="mt-2 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-medium">
-                        ✓ Platformada e'lon qilinishiga rozilik berilgan: {new Date(app.consent_published).toLocaleString()}
+                        ✓ Platformada e&apos;lon qilinishiga rozilik berilgan: {new Date(app.consent_published).toLocaleString()}
                       </div>
                     )}
 
@@ -1945,7 +1941,7 @@ export default function AdminDashboardPage() {
                             onClick={() => handleDeleteCounselor(c)}
                             className="px-3 py-1.5 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors cursor-pointer"
                           >
-                            O'chirish
+                            O&apos;chirish
                           </button>
                         </div>
                         {activationLinks[c.id] && <input aria-label="Mentor activation link" readOnly value={activationLinks[c.id]} onFocus={e=>e.currentTarget.select()} className="w-full mt-2 border rounded p-2 text-xs" />}
@@ -2347,10 +2343,7 @@ export default function AdminDashboardPage() {
                     <tbody className="divide-y divide-amber-900/10">
                       {threads.map((th) => {
                         const totalExpected = (th.questions_paid || th.soft_cap || 1) * th.price_per_question;
-                        const isOverdue = Boolean(
-                          th.is_overdue ||
-                          (th.reply_status === 'pending_mentor_reply' && th.reply_deadline_at && new Date(th.reply_deadline_at).getTime() < Date.now())
-                        );
+                        const isOverdue = Boolean(th.is_overdue);
 
                         return (
                           <tr key={th.id} className="hover:bg-amber-50/30 transition-colors">
