@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://myrahnamo.com';
-  return ['/', '/people', '/mentors', '/resources', '/become-counselor', '/forum', '/login', '/signup', '/survey'].map((path) => ({
+  return ['/', '/people', '/mentors', '/become-counselor', '/privacy', '/login', '/signup', '/survey'].map((path) => ({
     url: `${origin}${path}`,
     changeFrequency: path === '/' ? 'daily' : 'monthly',
     priority: path === '/' ? 1 : 0.6,

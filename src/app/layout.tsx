@@ -30,11 +30,11 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://myrahnamo.com'),
-  title: "MyRahnamo — Central Asia Career Growth Platform",
-  description: "Maqsadingizdan boshlang: mos Rahnamo, aniq keyingi qadamlar va karyera imkoniyatlarini toping.",
+  title: "Rahnamo — Hamjamiyat va mentorlik",
+  description: "Tajribangizni ulashing. O‘z sohangizdagi odamlar va mentorlar bilan tanishing.",
   openGraph: {
-    title: 'MyRahnamo — Central Asia Career Growth Platform',
-    description: "Maqsadingizdan boshlang: mos Rahnamo, aniq keyingi qadamlar va karyera imkoniyatlarini toping.",
+    title: 'Rahnamo — Hamjamiyat va mentorlik',
+    description: "Tajribangizni ulashing. O‘z sohangizdagi odamlar va mentorlar bilan tanishing.",
     type: 'website',
   },
 };
